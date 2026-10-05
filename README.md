@@ -6,6 +6,10 @@ A proposed Java multi-agent framework for drafting email replies with locally ru
 
 The repository currently contains architecture documentation and diagrams. The Java application has not been implemented yet.
 
+## Language convention
+
+Use English for all project-authored content, including documentation, diagram labels, identifiers, comments, prompts, interface text, logs, test descriptions, and commit messages.
+
 ## Planned workflow
 
 1. Receive an email and store its conversation context.
