@@ -1,0 +1,157 @@
+@startuml
+!pragma layout smetana
+title SuperMAS Email Assistant — Proposed UML Class Diagram
+top to bottom direction
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam nodesep 35
+skinparam ranksep 50
+hide empty members
+
+package "Agent framework" #EEF2FF {
+  interface Agent {
+    + id(): String
+    + handle(request: AgentRequest): AgentResult
+  }
+  class RoutingAgent {
+    + handle(request: AgentRequest): AgentResult
+    + route(email: Email): RoutingDecision
+    + regenerate(draftId: String, feedback: String): DraftReply
+  }
+  class SpecializedAgent {
+    + handle(request: AgentRequest): AgentResult
+    + generate(email: Email, feedback: String): DraftReply
+  }
+  class AgentConfig {
+    + agentId: String
+    + role: String
+    + systemPrompt: String
+    + allowedContextSources: List<String>
+    + contextBudget: int
+  }
+  class AgentRegistry {
+    + listEnabled(): List<Agent>
+    + find(id: String): Agent
+    + register(agent: Agent): void
+  }
+  interface RoutingStrategy {
+    + select(email: Email, agents: List<Agent>): RoutingDecision
+  }
+  class RuleBasedRouting {
+    + select(email: Email, agents: List<Agent>): RoutingDecision
+  }
+  class RoutingDecision <<value object>> {
+    + agentId: String
+    + confidence: double
+    + reason: String
+    + candidates: List<String>
+  }
+  Agent <|.. RoutingAgent
+  Agent <|.. SpecializedAgent
+  RoutingStrategy <|.. RuleBasedRouting
+  RoutingAgent --> "1" RoutingStrategy : delegates selection
+  RoutingAgent --> "1" AgentRegistry : resolves selected agent
+  AgentRegistry "1" o-- "1..*" Agent : registered agents
+  SpecializedAgent "1" *-- "1" AgentConfig : owns configuration
+  RoutingAgent ..> SpecializedAgent : delegates generation
+  RoutingStrategy ..> RoutingDecision : returns
+}
+
+package "Context, conversation and local inference" #ECFDF5 {
+  interface ContextProvider {
+    + loadAllowed(email: Email, config: AgentConfig): ContextBundle
+  }
+  class ContextBundle <<value object>> {
+    + snippets: List<String>
+    + sourceIds: List<String>
+    + tokenEstimate: int
+  }
+  interface ConversationMemory {
+    + recordReceived(email: Email): void
+    + loadAllowedHistory(threadId: String, agentId: String): List<Email>
+    + recordDraft(draft: DraftReply): void
+    + recordFeedback(draftId: String, feedback: String): void
+    + recordSent(email: Email): void
+  }
+  interface LocalLlmClient {
+    + generate(systemPrompt: String, context: ContextBundle): String
+  }
+  class OllamaClient <<adapter>> {
+    - endpoint: URI
+    - model: String
+    + generate(systemPrompt: String, context: ContextBundle): String
+  }
+  LocalLlmClient <|.. OllamaClient
+  SpecializedAgent --> "1" ContextProvider : retrieves scoped knowledge
+  SpecializedAgent --> "1" ConversationMemory : retrieves scoped history
+  SpecializedAgent --> "1" LocalLlmClient : requests local generation
+  RoutingAgent --> "1" ConversationMemory : records incoming email
+  ContextProvider ..> ContextBundle : returns
+  LocalLlmClient ..> ContextBundle : consumes
+}
+
+package "Human review and mail boundary" #FFF7ED {
+  class ReviewService {
+    + propose(draft: DraftReply): void
+    + reject(draftId: String, feedback: String): void
+    + approveAndSend(draftId: String, finalText: String): SendResult
+  }
+  interface DraftRepository {
+    + save(draft: DraftReply): void
+    + find(draftId: String): DraftReply
+  }
+  interface EmailGateway {
+    + receive(): Email
+    + sendApproved(email: Email): SendResult
+  }
+  class Email <<entity>> {
+    + id: String
+    + threadId: String
+    + sender: String
+    + recipients: List<String>
+    + subject: String
+    + body: String
+    + metadata: Map<String, String>
+  }
+  class DraftReply <<entity>> {
+    + id: String
+    + sourceEmailId: String
+    + threadId: String
+    + agentId: String
+    + content: String
+    + status: DraftStatus
+    + revision: int
+  }
+  ReviewService --> "1" DraftRepository : persists review state
+  ReviewService --> "1" EmailGateway : sends after explicit approval
+  ReviewService --> "1" ConversationMemory : records drafts, feedback and sent mail
+  ReviewService --> "1" RoutingAgent : requests regeneration
+  DraftRepository ..> DraftReply
+  DraftReply "0..*" --> "1" Email : replies to
+  EmailGateway ..> Email
+}
+
+note bottom of SpecializedAgent
+  Separate configured instances:
+  Student / Teacher / Administration /
+  ResearchProject / Generic.
+  Each owns a prompt and allowed sources.
+end note
+note bottom of ContextBundle
+  Assembly includes the email, selected knowledge,
+  allowed history and explicit user feedback.
+  Enforce a context budget before inference.
+end note
+legend bottom
+  Hollow triangle: interface realization (dashed line).
+  Black diamond: configuration ownership; white diamond: registry aggregation.
+  AgentRequest, AgentResult, DraftStatus and SendResult are supporting types
+  omitted from the diagram for readability. No implementation is implied.
+endlegend
+@enduml

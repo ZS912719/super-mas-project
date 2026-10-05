@@ -1,0 +1,26 @@
+# Temporary PDF previews and downloaded rendering tools
+/tmp/
+
+# Java build outputs
+/target/
+/build/
+/.gradle/
+*.class
+
+# Local development settings and credentials
+/.idea/
+/.vscode/
+*.iml
+.env
+.env.*
+!.env.example
+
+# Local runtime data and logs
+*.log
+*.db
+*.db-shm
+*.db-wal
+
+# Operating system metadata
+.DS_Store
+Thumbs.db
