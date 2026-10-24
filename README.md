@@ -8,10 +8,6 @@ This revision contains **interfaces and data contracts only**. Concrete methods,
 
 The API describes an extensible organization coordinated through a task blackboard. It does not implement or validate the proposed runtime behavior.
 
-## Language convention
-
-All project files, identifiers, comments, prompts, UI text, logs, tests and documentation use English. Discussion with the project owner may use Chinese.
-
 ## Build
 
 Requirements: JDK 17 and Maven 3.9 or later.
