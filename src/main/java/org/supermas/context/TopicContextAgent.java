@@ -39,9 +39,15 @@ public final class TopicContextAgent implements SpecializedAgent {
     private final TopicDefinition topic;
     private final AgentConfig config;
     private final AgentContextAccess access;
+    private final CorrespondentSettings correspondent;
 
     public TopicContextAgent(TopicDefinition topic, LuceneContextRetriever retriever) {
+        this(topic, retriever, CorrespondentSettings.off());
+    }
+
+    public TopicContextAgent(TopicDefinition topic, LuceneContextRetriever retriever, CorrespondentSettings correspondent) {
         this.topic = topic;
+        this.correspondent = correspondent;
         // A fixed template: email text can never reach an agent's configuration.
         this.config = new AgentConfig(topic.agentId(), "context-" + topic.type().name().toLowerCase(java.util.Locale.ROOT),
                 "", Set.of(CAPABILITY), topic.keywords(), topic.sourceIds(), false);
@@ -66,10 +72,26 @@ public final class TopicContextAgent implements SpecializedAgent {
         if (topic.type() == TopicType.DISCUSSION) {
             return new AgentAssessment(config.id(), 1, ranAlready(state), "Every email has a thread");
         }
+        if (topic.type() == TopicType.CORRESPONDENT) {
+            boolean active = correspondentActive(state);
+            return new AgentAssessment(config.id(), active ? 1 : 0, active && ranAlready(state),
+                    active ? "The sender is verified" : "Off, or the sender is not verified");
+        }
         long matched = matchedKeywords(state);
         double score = topic.keywords().isEmpty() ? 0
                 : Math.min(1, (double) matched / Math.min(FULL_MATCH_KEYWORDS, topic.keywords().size()));
         return new AgentAssessment(config.id(), score, ranAlready(state), matched + " topic keywords matched");
+    }
+
+    private boolean correspondentActive(BlackboardSnapshot state) {
+        return correspondent.enabled() && TopicTagger.verified(state.email(), correspondent.verifier());
+    }
+
+    /** Checked here as well as in {@code assess}, because a scheduler may run an agent without assessing it. */
+    private Set<String> tags(BlackboardSnapshot state) {
+        return topic.type() == TopicType.CORRESPONDENT
+                ? Set.of(TopicTagger.senderTag(state.email().sender()))
+                : Set.of(topic.tag());
     }
 
     private long matchedKeywords(BlackboardSnapshot state) {
@@ -90,6 +112,9 @@ public final class TopicContextAgent implements SpecializedAgent {
         BlackboardSnapshot state = board.snapshot();
         if (!topic.projectId().equals(state.id().scope().projectId())) {
             return new AgentOutcome(TaskStatus.SUCCEEDED, "Topic belongs to another project", List.of(), Optional.empty());
+        }
+        if (topic.type() == TopicType.CORRESPONDENT && !correspondentActive(state)) {
+            return new AgentOutcome(TaskStatus.SUCCEEDED, "Off, or the sender is not verified", List.of(), Optional.empty());
         }
         try {
             RetrievalResult result = needOf(task).map(need -> furtherRetrieval(state, need)).orElseGet(() -> retrieve(state));
@@ -112,14 +137,14 @@ public final class TopicContextAgent implements SpecializedAgent {
         }
         List<String> terms = new ArrayList<>(need.searchTerms());
         terms.addAll(queryTerms(state));
-        return access.domain(state.id(), terms, Set.of(topic.tag()), true, topic.maxCharacters());
+        return access.domain(state.id(), terms, tags(state), true, topic.maxCharacters());
     }
 
     private RetrievalResult retrieve(BlackboardSnapshot state) {
         if (topic.type() == TopicType.DISCUSSION) {
             return newestWithinBudget(access.thread(state.id(), THREAD_HISTORY));
         }
-        return access.domain(state.id(), queryTerms(state), Set.of(topic.tag()), false, topic.maxCharacters());
+        return access.domain(state.id(), queryTerms(state), tags(state), false, topic.maxCharacters());
     }
 
     /** Newest first, as the rank. Messages that do not fit are left out whole, never cut. */
