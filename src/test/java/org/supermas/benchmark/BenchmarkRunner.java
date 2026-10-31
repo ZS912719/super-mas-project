@@ -13,15 +13,21 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.Supplier;
 
 /**
  * Runs one predictor over a dataset and writes a Markdown report.
  * Usage: BenchmarkRunner DATA_DIRECTORY REPORT_FILE PREDICTOR_NAME
  */
 public final class BenchmarkRunner {
-    private static final Map<String, Predictor> PREDICTORS = Map.of(
-            "empty", rawEmail -> Extraction.empty(),
-            "facts", new FactsPredictor());
+    /** Suppliers, so that a variant's models are loaded only when that variant runs. */
+    private static final Map<String, Supplier<Predictor>> PREDICTORS = Map.of(
+            "empty", () -> rawEmail -> Extraction.empty(),
+            "facts", FactsPredictor::new,
+            "entity-rules", EntityPredictor::rulesOnly,
+            "entity-gliner", () -> EntityPredictor.gliner(false),
+            "entity-gliner-rules", () -> EntityPredictor.gliner(true),
+            "entity-hybrid", EntityPredictor::hybrid);
 
     private BenchmarkRunner() { }
 
@@ -34,7 +40,7 @@ public final class BenchmarkRunner {
             System.err.println("Predictors: " + PREDICTORS.keySet());
             System.exit(2);
         }
-        Result result = run(args[2], Dataset.load(Path.of(args[0])), PREDICTORS.get(args[2]));
+        Result result = run(args[2], Dataset.load(Path.of(args[0])), PREDICTORS.get(args[2]).get());
         Path reportFile = Path.of(args[1]).toAbsolutePath();
         Files.createDirectories(reportFile.getParent());
         Files.writeString(reportFile, report(result, args[0]));
