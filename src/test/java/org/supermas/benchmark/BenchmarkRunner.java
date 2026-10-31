@@ -20,7 +20,8 @@ import java.util.TreeMap;
  */
 public final class BenchmarkRunner {
     private static final Map<String, Predictor> PREDICTORS = Map.of(
-            "empty", rawEmail -> Extraction.empty());
+            "empty", rawEmail -> Extraction.empty(),
+            "facts", new FactsPredictor());
 
     private BenchmarkRunner() { }
 

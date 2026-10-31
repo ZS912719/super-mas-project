@@ -7,6 +7,8 @@
   <properties>
     <maven.compiler.release>17</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- Default for `mvn exec:java`; override with -Dexec.mainClass=... for other tools. -->
+    <exec.mainClass>org.supermas.benchmark.BenchmarkRunner</exec.mainClass>
   </properties>
   <dependencies>
     <!-- MIME and header parsing for the MetadataAgent (step 1.1). Deliberately a different parser
@@ -43,7 +45,7 @@
     <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-jar-plugin</artifactId><version>3.4.2</version></plugin>
     <plugin>
       <groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId><version>3.5.0</version>
-      <configuration><mainClass>org.supermas.benchmark.BenchmarkRunner</mainClass><classpathScope>test</classpathScope></configuration>
+      <configuration><mainClass>${exec.mainClass}</mainClass><classpathScope>test</classpathScope></configuration>
     </plugin>
   </plugins></build>
 </project>

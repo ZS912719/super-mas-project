@@ -5,8 +5,12 @@
 # Keep downloaded Enron data and personal mail only under these ignored folders.
 /benchmark/data/enron/
 /benchmark/data/enron-raw/
+/benchmark/data/enron-validate/
 /benchmark/data/personal/
 /benchmark/private/
+# Downloaded corpus archives must never be committed, wherever they land.
+*.tar.gz
+enron_mail_*.tar.gz
 
 # Java build outputs
 /target/

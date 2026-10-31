@@ -76,7 +76,7 @@ public final class Scorer {
                 .stream().boxed().findFirst().orElse(null);
     }
 
-    static String normalize(String text) {
+    public static String normalize(String text) {
         String composed = Normalizer.normalize(text, Normalizer.Form.NFC);
         return composed.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ").trim();
     }
