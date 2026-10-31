@@ -1,0 +1,21 @@
+{
+  "sender": "scolarite@example.fr",
+  "recipients": [
+    "etudiants@example.fr",
+    "direction@example.fr"
+  ],
+  "date": "2026-11-03T09:30:00Z",
+  "threadId": "<fr-b1@example.fr>",
+  "currentText": "Chers étudiants,\n\nLe service de scolarité vous rappelle que les inscriptions pédagogiques se terminent le 20 novembre 2026. Merci de remplir le formulaire sur l'ENT.",
+  "entities": [
+    {
+      "type": "DEADLINE",
+      "text": "20 novembre 2026"
+    }
+  ],
+  "speechActs": [
+    "request"
+  ],
+  "roleHint": "administration",
+  "language": "fr"
+}

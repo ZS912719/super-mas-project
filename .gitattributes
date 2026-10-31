@@ -1,0 +1,2 @@
+# Benchmark data must stay byte-identical on every platform, because reports record its hash.
+benchmark/data/** -text

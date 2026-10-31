@@ -1,0 +1,25 @@
+{
+  "sender": "mei.tan@students.example.edu",
+  "recipients": [
+    "k.osei@example.edu",
+    "e.martin@example.edu"
+  ],
+  "date": "2026-11-05T18:40:00Z",
+  "threadId": "<en-e1@students.example.edu>",
+  "currentText": "Hi Kofi,\n\nPlease see the message below about the Databases exam. Do you know which room we are in?",
+  "entities": [
+    {
+      "type": "PERSON",
+      "text": "Kofi"
+    },
+    {
+      "type": "COURSE",
+      "text": "Databases"
+    }
+  ],
+  "speechActs": [
+    "request"
+  ],
+  "roleHint": null,
+  "language": "en"
+}

@@ -1,0 +1,24 @@
+{
+  "sender": "support@example.fr",
+  "recipients": [
+    "p.garnier@example.fr"
+  ],
+  "date": "2026-11-05T10:45:00Z",
+  "threadId": "<fr-d1@example.fr>",
+  "currentText": "Bonjour,\n\nVotre ticket INC-77120 est résolu. Votre compte a été rétabli le 5 novembre.",
+  "entities": [
+    {
+      "type": "ID",
+      "text": "INC-77120"
+    },
+    {
+      "type": "DATE",
+      "text": "5 novembre"
+    }
+  ],
+  "speechActs": [
+    "deliver"
+  ],
+  "roleHint": "administration",
+  "language": "fr"
+}

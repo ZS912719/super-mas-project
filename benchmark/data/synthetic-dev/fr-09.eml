@@ -1,0 +1,23 @@
+From: Paul Girard <p.girard@example.fr>
+To: l1-info@example.fr
+Subject: =?utf-8?q?Cours_annul=C3=A9?=
+Date: Fri, 06 Nov 2026 08:15:00 +0100
+Message-ID: <fr-f1@example.fr>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="b1"
+
+--b1
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Chers étudiants,
+
+Je ne pourrai pas assurer mon cours d'Algorithmique le lundi 9 novembre : la séance est annulée. Les diapositives sont en ligne.
+
+Paul Girard
+--b1
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+<html><body><p>Chers étudiants,</p><p>Je ne pourrai pas assurer mon cours d'Algorithmique le lundi 9 novembre : la séance est annulée. Les diapositives sont en ligne.</p><p>Paul Girard<br></p></body></html>
+--b1--

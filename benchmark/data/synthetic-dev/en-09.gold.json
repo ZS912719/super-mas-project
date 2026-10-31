@@ -1,0 +1,24 @@
+{
+  "sender": "d.lee@example.edu",
+  "recipients": [
+    "cs101-students@example.edu"
+  ],
+  "date": "2026-11-06T13:00:00Z",
+  "threadId": "<en-f1@example.edu>",
+  "currentText": "Dear class,\n\nI will not be able to teach Introduction to Programming on Monday 9 November, so the lecture is cancelled. The slides for my course are now online.",
+  "entities": [
+    {
+      "type": "COURSE",
+      "text": "Introduction to Programming"
+    },
+    {
+      "type": "DATE",
+      "text": "Monday 9 November"
+    }
+  ],
+  "speechActs": [
+    "deliver"
+  ],
+  "roleHint": "teacher",
+  "language": "en"
+}

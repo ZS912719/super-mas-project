@@ -1,0 +1,20 @@
+{
+  "sender": "y.benali@etu.example.fr",
+  "recipients": [
+    "bureau-memoires@example.fr"
+  ],
+  "date": "2026-11-06T12:40:00Z",
+  "threadId": "<fr-g1@etu.example.fr>",
+  "currentText": "Bonjour,\n\nMa directrice de mémoire, Sophie Lambert, a signé le formulaire. Comment puis-je le déposer ? Je suis étudiant en master.",
+  "entities": [
+    {
+      "type": "PERSON",
+      "text": "Sophie Lambert"
+    }
+  ],
+  "speechActs": [
+    "request"
+  ],
+  "roleHint": "student",
+  "language": "fr"
+}

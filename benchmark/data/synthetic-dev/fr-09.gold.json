@@ -1,0 +1,24 @@
+{
+  "sender": "p.girard@example.fr",
+  "recipients": [
+    "l1-info@example.fr"
+  ],
+  "date": "2026-11-06T07:15:00Z",
+  "threadId": "<fr-f1@example.fr>",
+  "currentText": "Chers étudiants,\n\nJe ne pourrai pas assurer mon cours d'Algorithmique le lundi 9 novembre : la séance est annulée. Les diapositives sont en ligne.",
+  "entities": [
+    {
+      "type": "COURSE",
+      "text": "Algorithmique"
+    },
+    {
+      "type": "DATE",
+      "text": "lundi 9 novembre"
+    }
+  ],
+  "speechActs": [
+    "deliver"
+  ],
+  "roleHint": "teacher",
+  "language": "fr"
+}

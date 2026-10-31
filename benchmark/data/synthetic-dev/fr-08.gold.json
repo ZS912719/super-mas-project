@@ -1,0 +1,25 @@
+{
+  "sender": "ines.roux@etu.example.fr",
+  "recipients": [
+    "m.faure@etu.example.fr",
+    "c.dubois@example.fr"
+  ],
+  "date": "2026-11-05T19:00:00Z",
+  "threadId": "<fr-e1@etu.example.fr>",
+  "currentText": "Salut Mathis,\n\nRegarde le message ci-dessous sur l'examen de Réseaux. Tu sais dans quelle salle nous sommes ?",
+  "entities": [
+    {
+      "type": "PERSON",
+      "text": "Mathis"
+    },
+    {
+      "type": "COURSE",
+      "text": "Réseaux"
+    }
+  ],
+  "speechActs": [
+    "request"
+  ],
+  "roleHint": null,
+  "language": "fr"
+}

@@ -1,0 +1,24 @@
+{
+  "sender": "a.rossi@example.edu",
+  "recipients": [
+    "t.weber@lab.example.org"
+  ],
+  "date": "2026-11-04T17:02:00Z",
+  "threadId": "<en-c1@lab.example.org>",
+  "currentText": "Hi Tom,\n\nThursday works for me. I will read the draft before then and send you my comments.",
+  "entities": [
+    {
+      "type": "PERSON",
+      "text": "Tom"
+    },
+    {
+      "type": "DATE",
+      "text": "Thursday"
+    }
+  ],
+  "speechActs": [
+    "commit"
+  ],
+  "roleHint": null,
+  "language": "en"
+}

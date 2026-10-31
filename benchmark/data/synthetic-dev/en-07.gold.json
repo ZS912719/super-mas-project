@@ -1,0 +1,24 @@
+{
+  "sender": "helpdesk@example.edu",
+  "recipients": [
+    "s.nguyen@example.edu"
+  ],
+  "date": "2026-11-05T11:20:00Z",
+  "threadId": "<en-d1@example.edu>",
+  "currentText": "Hello,\n\nYour ticket INC-48213 has been resolved. Your account was restored on 5 November.",
+  "entities": [
+    {
+      "type": "ID",
+      "text": "INC-48213"
+    },
+    {
+      "type": "DATE",
+      "text": "5 November"
+    }
+  ],
+  "speechActs": [
+    "deliver"
+  ],
+  "roleHint": "administration",
+  "language": "en"
+}

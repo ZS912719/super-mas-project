@@ -1,0 +1,13 @@
+{
+  "sender": "bibliotheque@example.fr",
+  "recipients": [
+    "y.benali@etu.example.fr"
+  ],
+  "date": "2026-11-07T06:45:00Z",
+  "threadId": "<fr-h1@example.fr>",
+  "currentText": "La bibliothèque sera fermée ce week-end pour maintenance. Les horaires habituels reprendront ensuite.",
+  "entities": [],
+  "speechActs": [],
+  "roleHint": null,
+  "language": "fr"
+}
