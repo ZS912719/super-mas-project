@@ -13,6 +13,8 @@ We have **two weeks** to build the `MetadataAgent` and the `ContextAgent` part o
 | Structured contributions for the blackboard | Local LLM integration, final email writing, UI, sending |
 | | Changing shared interfaces alone: all three members must validate them |
 
+**Who decides:** the project owner alone decides everything in the left column. Only shared interfaces and the right column need the team.
+
 **This list is why the plan changed.** The earlier version had us building a coordinator and an Ollama adapter, and changing shared records. Section 5 now treats those as marked prototype stand-ins or team proposals.
 
 ## 2. Decisions
@@ -32,18 +34,18 @@ We have **two weeks** to build the `MetadataAgent` and the `ContextAgent` part o
 | UML and docs for contract changes | Not during implementation; all done at the end | Step 7.3 |
 | Reporting | A detailed `.md` report after each step | Section 5 |
 | Topic design | T2 + O2 | Section 4 |
+| Correspondent topics | May read across threads only within the same project and only for verified senders. Switch off by default | Step 4.9; update `docs/architecture.md` in step 7.3 |
+| Proposals 6 and 7 (section 3) | Accepted by the project owner | Steps 3.3 and 4.1 |
 | Topic discovery (T3) | Possible later experiment, not part of the two-week scope | Section 4 |
 | Hardware | This laptop for development (i5-8265U, 7 GB RAM, no dedicated GPU), better machines later | Small models stay local |
-| LLM during development | A small-scale online LLM, because this laptop is too weak | Section 3, step 5.1 |
+| LLM during development | A small-scale online LLM is accepted, because this laptop is too weak. Switching to a local one must be easy | Section 3, step 5.1 |
 | `AgentContribution` | Planned by the team, not ours to define | Use `Evidence` and `AgentOutcome` until it arrives, then adapt |
 
 ### Open
 
 | # | Question | Default until answered |
 | --- | --- | --- |
-| 1 | **Contract changes.** Do the other two members accept the proposals in section 3? | Keep them in our prototype layer |
-| 2 | **May correspondent topics cross threads?** Current docs say threads stay isolated | No cross-thread access without an explicit permission |
-| 3 | **Online LLM during development.** Does the team accept this exception to the local-only rule? | Synthetic and public data only (see below) |
+| 1 | **Shared interface changes (team decision).** The project owner accepts proposals 1-5, 8 and 9 in section 3. The other two members validate them later | Work proceeds as if validated, using the rules in section 3 |
 
 ## 3. Target design and contract proposals
 
@@ -61,7 +63,7 @@ Coordinator.run: one action at a time
 
 Each pipeline stage has a switch in one configuration record, so any benchmark variant in section 6 runs without code changes.
 
-**Online LLM during development.** The project's documented invariant is local-only inference, and `LocalLlm` and `ModelConfig` assume it. An online LLM is therefore a temporary development exception, with these rules:
+**Online LLM during development.** The project's documented invariant is local-only inference, and `LocalLlm` and `ModelConfig` assume it. An online LLM is therefore an accepted, temporary development exception, with these rules:
 
 - **No real mail goes online.** Only synthetic and public data (such as Enron) may reach it. Your university mail stays local, because sending it would pass other people's personal data to a third party.
 - **It is off by default and explicit.** A configuration flag names the remote endpoint and is clearly marked as development only. The local-only check stays the default, so the later local deployment is not weakened.
@@ -69,19 +71,41 @@ Each pipeline stage has a switch in one configuration record, so any benchmark v
 - **Online results do not carry over.** Accuracy and latency must be measured again on the final local model and hardware. A report must name the model and where it ran.
 - **Use a model that can also run locally,** so the later move changes as little as possible.
 
-**Proposals for team validation, not to be merged alone:**
+**Switching to a local LLM must be a configuration change only:**
 
-| # | Gap | Proposal | Until validated |
+- Agents depend only on the `LocalLlm` interface and never on a provider.
+- One adapter speaks the OpenAI-compatible chat API, which Ollama also offers. If the chosen online provider does not offer it, it gets a second small adapter behind the same interface.
+- Endpoint and model come from `ModelConfig` values in configuration. The API key comes from the environment and is optional, because a local model needs none.
+- Prompts and JSON schemas contain nothing provider-specific.
+- A shared test suite runs against a fake server for both configurations, so structured output and failure handling stay equivalent. **Step 5.1 is done only when one real call to a local Ollama model has also worked**, on any machine able to run it.
+
+**Limit:** this makes the *switch* easy, not the *results* identical. A local model may be weaker, so the benchmark must be re-run after switching.
+
+**Proposals.** Numbers 6 and 7 are behavior inside our agents, so the project owner decides them; if `ContextQuery.agentId` is documented as shared, tell the team what it means. The rest change shared interfaces or team-owned parts and still need team validation, which comes later. Work proceeds as if it were given, under these rules so that any choice can be changed easily:
+
+- **Marked in code.** Every place that depends on an unvalidated choice carries this comment, so one search finds it all:
+  ```java
+  // ASSUMED-TEAM-DECISION(P<number>): <the choice made>. Pending team validation.
+  // If rejected: <what to change>.
+  ```
+- **One proposal, one commit.** Each proposal gets its own commit, so it can be reverted alone.
+- **Listed in one place.** `docs/plans/assumed-decisions.md` lists each proposal with its status, commit and affected files. This is what goes to the team.
+- **Isolated from agent logic.** Agents read these fields through small helpers where practical, so a rejected change touches few files.
+
+Teammates may be coding against `Domain.java` too, so changed records can conflict with their work. Tell them before merging changes to it.
+
+
+| # | Gap | Proposal | Current handling |
 | --- | --- | --- | --- |
-| 1 | `Analysis` has no per-field confidence or source | Add a field record | Wrapper in our package |
-| 2 | `Task` has no information need | Add a structured need | Encode in our own task object |
-| 3 | `ModelRequest` has no response schema | Add an optional schema | Stand-in adapter only |
+| 1 | `Analysis` has no per-field confidence or source | Add a field record | Change the record, marked |
+| 2 | `Task` has no information need | Add a structured need | Change the record, marked |
+| 3 | `ModelRequest` has no response schema | Add an optional schema | Change the record, marked |
 | 4 | Agents in `AgentRegistry.all()` could become reply candidates | Filter on `AgentConfig.capabilities` | Stand-in registry filters |
 | 5 | Every agent can call `submitDraft` | Reject it unless the agent has a drafting capability | Stand-in blackboard rejects |
 | 6 | Confused deputy: a broad context agent fetches for a specialist with fewer rights | Evidence rights are source rights ∩ requester rights; `ContextQuery.agentId` means the requester | Enforced in our retriever |
 | 7 | `sufficientContext` means something else for a context agent | Define it in writing | Documented in the `ContextAgent` |
 | 8 | Each volunteer uses up `ExecutionLimits` rounds | Agree how context budget is counted | Test in the stand-in |
-| 9 | `Feedback` covers drafts, not metadata | Add a metadata correction record | Local file |
+| 9 | `Feedback` covers drafts, not metadata | Add a metadata correction record | Add the record, marked; local file for storage |
 
 ## 4. Context agents: one agent per topic
 
@@ -126,7 +150,7 @@ You proposed one agent per topic, with possible overlap, where a topic may be a 
 
 Use T2 + O2 in this order:
 1. Subject and discussion types.
-2. Correspondent type behind a switch, only after the isolation decision (open question 2).
+2. Correspondent type behind a switch that is off by default: same project and verified senders only.
 3. Merge step.
 
 ### Possible later experiment: T3 discovered topics
@@ -153,9 +177,9 @@ T3 is not in the two-week scope and nothing depends on it. If time allows after 
 `docs/plans/stand-ins.md` lists them for your coworker's agents.
 
 ### Phase 0: Foundations (days 1-2)
-- **0.1** Send the section 3 proposals and the online LLM exception to the team.
+- **0.1** Create `docs/plans/assumed-decisions.md`. Sending it to the team can wait, but tell the LLM integration owner that it must stay switchable.
 - **0.2** Add JUnit 5 with one trivial test.
-- **0.3** Install JDK 17 and Maven. Ollama is not needed on this laptop while the online LLM is used.
+- **0.3** Install JDK 17 and Maven. Ollama is not needed on this laptop while the online LLM is used, except for the one local check in step 5.1 with a very small model.
 - **0.4** Write the field schema: facts (sender, recipients, date, thread), entities (person, course, date, deadline, ID), labels (request, propose, commit, deliver, role hint).
 - **0.5** Build the benchmark runner with a baseline that predicts nothing.
 - **0.6** Create 20-30 synthetic English and French development emails so work can start without the final dataset.
@@ -201,13 +225,13 @@ Only what is really missing at this point. Check first whether a teammate has de
 - **4.6** **Missing-information check with rules:** a table of what each label needs (a meeting request needs a date, for example).
 - **4.7** **LLM variant behind a switch:** the LLM receives field *names and presence*, not raw email, and returns which required fields are missing from a fixed list.
 - **4.8** Bounded further retrieval when something is missing.
-- **4.9** Correspondent type behind a switch, if open question 2 allows it.
+- **4.9** Correspondent type behind a switch that is off by default: same project and verified senders only, with forged-sender and cross-project tests. Unverifiable senders get no cross-thread history.
 - **4.10** Benchmark C3 vs C1.
 
 **Gate:** zero isolation violations and a written C3 vs C1 result, including if C1 wins.
 
 ### Phase 5: Optional LLM checker (days 12-13, cut first)
-- **5.1** Stand-in LLM adapter behind `LocalLlm`, with explicit failures. Local endpoint by default, online endpoint only through the development flag in section 3.
+- **5.1** Stand-in LLM adapter behind `LocalLlm`, with explicit failures. Local endpoint by default, online endpoint only through the development flag, and switching by configuration only (section 3).
 - **5.2** Checker prompt using the anti-anchoring design below.
 - **5.3** Allowlist of fields the LLM cannot change, and evidence-only output.
 - **5.4** Benchmark on and off, plus the injection suite.
@@ -230,7 +254,7 @@ Corrections are human labels, which removes the LLM label risks. **Limitation:**
 ### Phase 7: Finish (day 14)
 - **7.1** Final benchmark, on the frozen data.
 - **7.2** Final report, with C3 vs C1 and every switch combination run.
-- **7.3** Update UML and docs for validated contract changes.
+- **7.3** Apply the team's validation results by finding every `ASSUMED-TEAM-DECISION` marker. Update UML and docs for validated contract changes, and the thread isolation rule in `docs/architecture.md` for correspondent topics.
 
 ## 6. Benchmarks
 
