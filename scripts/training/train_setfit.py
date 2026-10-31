@@ -3,6 +3,7 @@ it for Java. See docs/reports/step-1.7.md.
 
     tmp/venv/bin/python -I scripts/training/train_setfit.py cv DEV_DIR OUT.json [--only-fold N]
     tmp/venv/bin/python -I scripts/training/train_setfit.py export DEV_DIR OUT_DIR [--model headOnly|setfit]
+    tmp/venv/bin/python -I scripts/training/train_setfit.py parity DEV_DIR OUT_DIR
 
 Run both under a memory cap so that overshooting kills only this job:
 
@@ -217,6 +218,29 @@ def export(args):
         sys.exit("exported model disagrees with the Python model")
 
 
+def parity(args):
+    """Writes Python's output for each dev email, so a Java test can compare the whole chain."""
+    import numpy as np
+    import onnxruntime
+    from tokenizers import Tokenizer
+    directory = Path(args.model_dir)
+    head = json.loads((directory / "head.json").read_text())
+    tokenizer = Tokenizer.from_file(str(directory / "tokenizer.json"))
+    tokenizer.enable_truncation(max_length=head["maxTokens"])
+    tokenizer.no_padding()
+    session = onnxruntime.InferenceSession(str(directory / "model.onnx"), providers=["CPUExecutionProvider"])
+    out = []
+    for stem, text, _ in load(args.dev_dir)[0]:
+        encoded = tokenizer.encode(text)
+        embedding = session.run(None, {"input_ids": np.array([encoded.ids], dtype=np.int64),
+                                       "attention_mask": np.array([encoded.attention_mask], dtype=np.int64)})[0][0]
+        acts = [act for act, c in zip(head["acts"], head["classifiers"])
+                if np.dot(embedding, c["coefficients"]) + c["intercept"] > 0]
+        out.append({"stem": stem, "acts": acts, "embedding": embedding.tolist()})
+    (directory / "parity.json").write_text(json.dumps(out))
+    print(f"{len(out)} emails, peak {peak_mb()} MB")
+
+
 def main():
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
     parser = argparse.ArgumentParser()
@@ -241,6 +265,10 @@ def main():
     p.add_argument("--model", choices=["headOnly", "setfit"], default="headOnly")
     p.add_argument("--batch-size", type=int, default=16)
     p.set_defaults(run=export)
+    p = commands.add_parser("parity")
+    p.add_argument("dev_dir")
+    p.add_argument("model_dir")
+    p.set_defaults(run=parity)
     args = parser.parse_args()
     args.run(args)
 

@@ -27,7 +27,9 @@ public final class BenchmarkRunner {
             "entity-rules", EntityPredictor::rulesOnly,
             "entity-gliner", () -> EntityPredictor.gliner(false),
             "entity-gliner-rules", () -> EntityPredictor.gliner(true),
-            "entity-hybrid", EntityPredictor::hybrid);
+            "entity-hybrid", EntityPredictor::hybrid,
+            "labels-rules", LabelPredictor::rules,
+            "labels-model", LabelPredictor::model);
 
     private BenchmarkRunner() { }
 
