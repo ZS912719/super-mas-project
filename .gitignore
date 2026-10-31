@@ -1,6 +1,13 @@
 # Temporary PDF previews and downloaded rendering tools
 /tmp/
 
+# Real email corpora contain personal data and must never be committed.
+# Keep downloaded Enron data and personal mail only under these ignored folders.
+/benchmark/data/enron/
+/benchmark/data/enron-raw/
+/benchmark/data/personal/
+/benchmark/private/
+
 # Java build outputs
 /target/
 /build/

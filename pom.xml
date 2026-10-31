@@ -21,6 +21,14 @@
       <version>2.18.2</version>
       <scope>test</scope>
     </dependency>
+    <!-- Independent mail parser for gold facts, deliberately different from the MetadataAgent's
+         own parser (step 1.2) so gold labels are not produced by the code they later grade. -->
+    <dependency>
+      <groupId>org.eclipse.angus</groupId>
+      <artifactId>angus-mail</artifactId>
+      <version>2.0.3</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <build><plugins>
     <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.13.0</version></plugin>
