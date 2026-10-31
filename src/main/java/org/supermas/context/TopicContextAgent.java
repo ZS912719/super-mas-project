@@ -17,6 +17,8 @@ import org.supermas.model.Domain.BlackboardSnapshot;
 import org.supermas.model.Domain.Evidence;
 import org.supermas.model.Domain.Failure;
 import org.supermas.model.Domain.FailureKind;
+import org.supermas.model.Domain.HistoryQuery;
+import org.supermas.model.Domain.MessageKind;
 import org.supermas.model.Domain.RetrievalResult;
 import org.supermas.model.Domain.Task;
 import org.supermas.model.Domain.TaskStatus;
@@ -28,6 +30,10 @@ import org.supermas.model.Domain.TaskStatus;
 public final class TopicContextAgent implements SpecializedAgent {
     public static final String CAPABILITY = "context-retrieval";
     private static final int FULL_MATCH_KEYWORDS = 3;
+    private static final int MAX_THREAD_MESSAGES = 50;
+    /** Drafts are left out, so an unsent draft can never be read as something that was said. */
+    private static final HistoryQuery THREAD_HISTORY = new HistoryQuery(
+            Set.of(MessageKind.RECEIVED, MessageKind.SENT), MAX_THREAD_MESSAGES);
 
     private final TopicDefinition topic;
     private final AgentConfig config;
@@ -55,6 +61,9 @@ public final class TopicContextAgent implements SpecializedAgent {
         BlackboardSnapshot state = board.snapshot();
         if (!topic.projectId().equals(state.id().scope().projectId())) {
             return new AgentAssessment(config.id(), 0, false, "Topic belongs to another project");
+        }
+        if (topic.type() == TopicType.DISCUSSION) {
+            return new AgentAssessment(config.id(), 1, ranAlready(state), "Every email has a thread");
         }
         long matched = matchedKeywords(state);
         double score = topic.keywords().isEmpty() ? 0
@@ -92,7 +101,25 @@ public final class TopicContextAgent implements SpecializedAgent {
     }
 
     private RetrievalResult retrieve(BlackboardSnapshot state) {
+        if (topic.type() == TopicType.DISCUSSION) {
+            return newestWithinBudget(access.thread(state.id(), THREAD_HISTORY));
+        }
         return access.domain(state.id(), queryTerms(state), Set.of(topic.tag()), false, topic.maxCharacters());
+    }
+
+    /** Newest first, as the rank. Messages that do not fit are left out whole, never cut. */
+    private RetrievalResult newestWithinBudget(RetrievalResult thread) {
+        List<Evidence> newestFirst = new ArrayList<>(thread.evidence());
+        java.util.Collections.reverse(newestFirst);
+        List<Evidence> kept = new ArrayList<>();
+        int used = 0;
+        for (Evidence item : newestFirst) {
+            if (used + item.text().length() <= topic.maxCharacters()) {
+                used += item.text().length();
+                kept.add(item);
+            }
+        }
+        return new RetrievalResult(kept, !kept.isEmpty(), thread.explanation());
     }
 
     /** Trusted topic words first, because a very long email reaches the query term limit. */
@@ -109,7 +136,8 @@ public final class TopicContextAgent implements SpecializedAgent {
         List<Evidence> added = new ArrayList<>();
         for (Evidence item : found) {
             String id = TopicEvidence.id(item.id(), config.id());
-            if (existing.add(id)) {
+            // Once indexed, the email being answered would otherwise be returned as its own context.
+            if (!item.id().equals(state.email().id()) && existing.add(id)) {
                 added.add(new Evidence(id, item.scope(), item.kind(), item.provenance(), item.text(),
                         item.permittedAgentIds()));
             }
