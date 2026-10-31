@@ -38,9 +38,9 @@ class TopicCandidateFilterTest {
 
     @Test
     void onlyTheBestSubjectsRunEvenWithManyMatches() {
-        List<TopicContextAgent> agents = List.of(subject("a", "budget", "travel"), subject("b", "budget"),
-                subject("c", "budget", "travel", "visa"));
-        assertEquals(List.of("b", "c"), select(2, agents, "budget travel visa"));
+        List<TopicContextAgent> agents = List.of(subject("a", "budget", "absent", "missing"),
+                subject("b", "budget", "travel", "absent"), subject("c", "budget", "travel", "visa"));
+        assertEquals(List.of("c", "b"), select(2, agents, "budget travel visa"));
     }
 
     @Test
