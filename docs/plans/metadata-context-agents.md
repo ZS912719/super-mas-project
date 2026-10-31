@@ -23,7 +23,7 @@ We have **two weeks** to build the `MetadataAgent` and the `ContextAgent` part o
 
 | Topic | Decision | Effect |
 | --- | --- | --- |
-| Email languages | English and French | Everything is built, labeled and reported per language |
+| Email languages | English and French, but **English only for now** while French real data is blocked | French work (analyzers, labeled French data, per-language French results) is deferred, not removed. MIME parsing stays language-agnostic |
 | Metadata | Rules first, then GLiNER and SetFit | Phase 1 |
 | LLM checker | Set aside, kept as a switch that is **off by default**, benchmarked later | Phase 5 |
 | Improving the workers | No LLM-driven learning. Optional iteration from user corrections | Phase 6 |

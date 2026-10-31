@@ -9,6 +9,13 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   <dependencies>
+    <!-- MIME and header parsing for the MetadataAgent (step 1.1). Deliberately a different parser
+         from the importer's Jakarta Mail, so gold facts are independent of the code under test. -->
+    <dependency>
+      <groupId>org.apache.james</groupId>
+      <artifactId>apache-mime4j-dom</artifactId>
+      <version>0.8.11</version>
+    </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
