@@ -11,9 +11,10 @@ These classes exist only because the Metadata and Context agents need something 
 | `ScriptedCoordinator` | Coordinator | Preprocessing on receive, one action per round, restricted board access for agents, enforced budgets |
 | `ScoreRoutingStrategy` | Routing | Clear, ambiguous and absent matches, with candidates and reasons kept |
 | `DraftFirstCoordinationStrategy` | Scheduling | The next action is chosen from board state |
+| `ContextFirstCoordinationStrategy` | Scheduling | Each selected context agent runs once before routing, then the missing-information check, then one pending further retrieval, keeping rounds back for the reply |
 
 ## Known gaps for the real implementation
 
 - `Blackboard` cannot record feedback or approval, so revision after rejection does not run.
-- Tasks proposed by agents are stored but not scheduled.
+- `ScriptedCoordinator` carries out a pending task of the scheduled action, but only `ContextFirstCoordinationStrategy` schedules them, and only for further retrieval. Other suggested tasks are stored and not run.
 - There is no wall-clock timeout around agents.

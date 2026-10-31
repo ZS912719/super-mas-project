@@ -18,6 +18,7 @@ import org.supermas.model.Domain.Evidence;
 import org.supermas.model.Domain.Failure;
 import org.supermas.model.Domain.FailureKind;
 import org.supermas.model.Domain.HistoryQuery;
+import org.supermas.model.Domain.InformationNeed;
 import org.supermas.model.Domain.MessageKind;
 import org.supermas.model.Domain.RetrievalResult;
 import org.supermas.model.Domain.Task;
@@ -91,13 +92,27 @@ public final class TopicContextAgent implements SpecializedAgent {
             return new AgentOutcome(TaskStatus.SUCCEEDED, "Topic belongs to another project", List.of(), Optional.empty());
         }
         try {
-            RetrievalResult result = retrieve(state);
+            RetrievalResult result = needOf(task).map(need -> furtherRetrieval(state, need)).orElseGet(() -> retrieve(state));
             int added = submit(result.evidence(), state, board);
             return new AgentOutcome(TaskStatus.SUCCEEDED, added + " evidence items added", List.of(), Optional.empty());
         } catch (UncheckedIOException e) {
             Failure failure = new Failure(FailureKind.CONTEXT, "The index could not be read", true);
             return new AgentOutcome(TaskStatus.FAILED, failure.message(), List.of(), Optional.of(failure));
         }
+    }
+
+    private static Optional<InformationNeed> needOf(Task task) {
+        return task == null ? Optional.empty() : task.need();
+    }
+
+    /** A wider search with the need's fixed terms added. Subject types only: a thread is already complete. */
+    private RetrievalResult furtherRetrieval(BlackboardSnapshot state, InformationNeed need) {
+        if (topic.type() == TopicType.DISCUSSION) {
+            return new RetrievalResult(List.of(), false, "A thread has nothing further to find");
+        }
+        List<String> terms = new ArrayList<>(need.searchTerms());
+        terms.addAll(queryTerms(state));
+        return access.domain(state.id(), terms, Set.of(topic.tag()), true, topic.maxCharacters());
     }
 
     private RetrievalResult retrieve(BlackboardSnapshot state) {

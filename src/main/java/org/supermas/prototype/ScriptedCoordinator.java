@@ -140,8 +140,21 @@ public final class ScriptedCoordinator implements Coordinator {
         Optional<SpecializedAgent> agent = next.agentId().isPresent()
                 ? registry.find(next.agentId().get())
                 : registry.fallback();
-        Task task = new Task(taskId(state), state.id(), next.action(), next.agentId(), TaskStatus.RUNNING, next.reason());
-        board.enqueue(task);
+        // A pending suggestion for this action is carried out, with its information need, instead of a new task.
+        Optional<Task> pending = state.tasks().stream()
+                .filter(item -> item.status() == TaskStatus.PENDING && item.action() == next.action()
+                        && (item.agentId().isEmpty() || item.agentId().equals(next.agentId())))
+                .findFirst();
+        Task task;
+        if (pending.isPresent()) {
+            Task found = pending.get();
+            task = new Task(found.id(), found.boardId(), found.action(), next.agentId(), TaskStatus.RUNNING,
+                    found.reason(), found.need());
+            board.updateTask(task);
+        } else {
+            task = new Task(taskId(state), state.id(), next.action(), next.agentId(), TaskStatus.RUNNING, next.reason());
+            board.enqueue(task);
+        }
         Failure failure;
         String summary;
         if (agent.isEmpty()) {
