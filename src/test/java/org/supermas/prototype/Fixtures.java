@@ -3,14 +3,22 @@ package org.supermas.prototype;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import org.supermas.agent.SpecializedAgent;
+import org.supermas.blackboard.AgentBlackboard;
+import org.supermas.blackboard.BlackboardView;
+import org.supermas.model.Domain.AgentAssessment;
 import org.supermas.model.Domain.AgentConfig;
+import org.supermas.model.Domain.AgentOutcome;
 import org.supermas.model.Domain.Analysis;
 import org.supermas.model.Domain.Email;
 import org.supermas.model.Domain.Evidence;
 import org.supermas.model.Domain.EvidenceKind;
 import org.supermas.model.Domain.Provenance;
 import org.supermas.model.Domain.Scope;
+import org.supermas.model.Domain.Task;
+import org.supermas.model.Domain.TaskStatus;
 
 /** Shared test data for the stand-ins. */
 final class Fixtures {
@@ -32,5 +40,25 @@ final class Fixtures {
 
     static Evidence evidence(String id, Scope scope, EvidenceKind kind, String source, Set<String> permitted) {
         return new Evidence(id, scope, kind, new Provenance(source, "test", NOW), "text", permitted);
+    }
+
+    /** An agent that only reports its configuration and a fixed score. */
+    static SpecializedAgent idleAgent(AgentConfig config, double score) {
+        return new SpecializedAgent() {
+            @Override
+            public AgentConfig config() {
+                return config;
+            }
+
+            @Override
+            public AgentAssessment assess(Task task, BlackboardView board) {
+                return new AgentAssessment(config.id(), score, true, "fixed score");
+            }
+
+            @Override
+            public AgentOutcome execute(Task task, AgentBlackboard board) {
+                return new AgentOutcome(TaskStatus.SUCCEEDED, "nothing to do", List.of(), Optional.empty());
+            }
+        };
     }
 }
