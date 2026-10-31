@@ -282,7 +282,7 @@ public final class InMemoryBlackboard implements Blackboard {
                     }
                 }
                 proposed.forEach(task -> tasks.add(new Task(task.id(), task.boardId(), task.action(), task.agentId(),
-                        TaskStatus.PENDING, task.reason())));
+                        TaskStatus.PENDING, task.reason(), task.need())));
             }
         }
     }

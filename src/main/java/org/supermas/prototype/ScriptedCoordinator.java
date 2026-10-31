@@ -175,7 +175,7 @@ public final class ScriptedCoordinator implements Coordinator {
 
     private void finish(Blackboard board, Task task, String reason, TaskStatus status, String summary,
                         Optional<Failure> failure) {
-        board.updateTask(new Task(task.id(), task.boardId(), task.action(), task.agentId(), status, task.reason()));
+        board.updateTask(new Task(task.id(), task.boardId(), task.action(), task.agentId(), status, task.reason(), task.need()));
         Instant now = clock.instant();
         board.recordExecution(new ExecutionRecord(task.id(), reason, status, now, now, summary, failure));
     }

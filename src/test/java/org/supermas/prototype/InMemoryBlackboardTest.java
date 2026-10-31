@@ -146,4 +146,18 @@ class InMemoryBlackboardTest {
         Email foreign = email(new Scope("other", "thread"), "body");
         assertThrows(IllegalArgumentException.class, () -> new InMemoryBlackboard(ID, foreign, analysis(), CLOCK));
     }
+
+    @Test
+    void aProposedTaskKeepsItsInformationNeed() {
+        org.supermas.model.Domain.Scope scope = new org.supermas.model.Domain.Scope("p", "t");
+        org.supermas.model.Domain.BoardId id = new org.supermas.model.Domain.BoardId(scope, "task");
+        InMemoryBlackboard board = new InMemoryBlackboard(id, Fixtures.email(scope, "body"), Fixtures.analysis(),
+                java.time.Clock.systemUTC());
+        var need = new org.supermas.model.Domain.InformationNeed(java.util.Set.of("DATE"), java.util.List.of("schedule"));
+        board.accessFor(Fixtures.agent("a", java.util.Set.of(), java.util.Set.of(), false)).proposeTasks(java.util.List.of(
+                new org.supermas.model.Domain.Task("need", id, org.supermas.model.Domain.Action.RETRIEVE_CONTEXT,
+                        java.util.Optional.empty(), org.supermas.model.Domain.TaskStatus.RUNNING, "r",
+                        java.util.Optional.of(need))));
+        org.junit.jupiter.api.Assertions.assertEquals(java.util.Optional.of(need), board.snapshot().tasks().get(0).need());
+    }
 }
