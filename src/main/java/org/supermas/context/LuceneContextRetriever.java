@@ -57,6 +57,24 @@ public final class LuceneContextRetriever implements ContextRetriever {
         return new RetrievalResult(evidence, !evidence.isEmpty(), evidence.size() + " thread messages found");
     }
 
+    /**
+     * Thread history for one agent. The thread itself is exact, and each message must also pass the same
+     * source rights as domain search, so a thread does not become a way around them.
+     */
+    public RetrievalResult retrieveThread(BoardId boardId, HistoryQuery query, String agentId) {
+        String project = boardId.scope().projectId();
+        List<Evidence> evidence = new ArrayList<>();
+        for (Evidence item : retrieveThread(boardId, query).evidence()) {
+            String source = item.provenance().sourceId();
+            if (isAuthorized(source, project, agentId) && item.permittedAgentIds().contains(agentId)) {
+                Set<String> permitted = new HashSet<>(item.permittedAgentIds());
+                permitted.retainAll(sources.get(source).permittedAgentIds());
+                evidence.add(new Evidence(item.id(), item.scope(), item.kind(), item.provenance(), item.text(), permitted));
+            }
+        }
+        return new RetrievalResult(evidence, !evidence.isEmpty(), evidence.size() + " permitted thread messages found");
+    }
+
     /** Authorized domain search with no topic restriction. */
     @Override
     public RetrievalResult retrieveDomain(ContextQuery query) {
