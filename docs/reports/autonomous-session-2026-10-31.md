@@ -51,7 +51,7 @@ mvn -q exec:java -Dexec.args="benchmark/data/synthetic-dev target/benchmark/fact
 # import a labelling sample from the real corpus (writes to an ignored folder):
 mvn -q exec:java -Dexec.mainClass=org.supermas.benchmark.dataset.EnronImporter \
   -Dexec.classpathScope=test \
-  -Dexec.args="benchmark/data/enron-raw/maildir/<user> benchmark/data/enron 120 20260101"
+  -Dexec.args="benchmark/data/enron-raw/maildir/allen-p benchmark/data/enron 120 20260101"
 ```
 
 ## Suggested next step when you are back

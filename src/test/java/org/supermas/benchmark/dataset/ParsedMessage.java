@@ -1,8 +1,6 @@
 package org.supermas.benchmark.dataset;
 
-import jakarta.mail.Message;
 import jakarta.mail.Session;
-import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import java.io.ByteArrayInputStream;
 import java.security.MessageDigest;
@@ -27,6 +25,8 @@ public record ParsedMessage(byte[] raw, String messageId, boolean syntheticId, I
                             List<String> warnings) {
     private static final Session SESSION = Session.getInstance(new Properties());
     private static final Pattern MESSAGE_ID = Pattern.compile("<[^<>\\s]+>");
+    private static final Pattern LENIENT_ADDRESS =
+            Pattern.compile("[^\\s<>,;:\"()]+@[^\\s<>,;:\"()]+");
 
     public static ParsedMessage parse(byte[] raw) {
         List<String> warnings = new ArrayList<>();
@@ -98,9 +98,9 @@ public record ParsedMessage(byte[] raw, String messageId, boolean syntheticId, I
 
     private static String sender(MimeMessage message, List<String> warnings) {
         try {
-            if (message.getFrom() != null && message.getFrom().length > 0
-                    && message.getFrom()[0] instanceof InternetAddress address) {
-                return address.getAddress().toLowerCase(Locale.ROOT);
+            List<String> from = lenientAddresses(message, "From");
+            if (!from.isEmpty()) {
+                return from.get(0);
             }
         } catch (Exception ignored) {
             // Fall through to the warning below.
@@ -111,22 +111,32 @@ public record ParsedMessage(byte[] raw, String messageId, boolean syntheticId, I
 
     private static List<String> recipients(MimeMessage message, List<String> warnings) {
         List<String> recipients = new ArrayList<>();
-        for (Message.RecipientType type : new Message.RecipientType[] {
-                Message.RecipientType.TO, Message.RecipientType.CC}) {
+        for (String name : new String[] {"To", "Cc"}) {
             try {
-                jakarta.mail.Address[] addresses = message.getRecipients(type);
-                if (addresses != null) {
-                    for (jakarta.mail.Address address : addresses) {
-                        if (address instanceof InternetAddress internet) {
-                            recipients.add(internet.getAddress().toLowerCase(Locale.ROOT));
-                        }
-                    }
-                }
+                recipients.addAll(lenientAddresses(message, name));
             } catch (Exception e) {
-                warnings.add("could not read " + type + " recipients");
+                warnings.add("could not read " + name + " recipients");
             }
         }
         return recipients;
+    }
+
+    /**
+     * Finds addresses with a pattern instead of Jakarta Mail's parser, which rejects a whole header
+     * over one address such as {@code a..martin@enron.com}, even in non-strict mode. Display names
+     * are removed first, because they can themselves contain an address.
+     */
+    private static List<String> lenientAddresses(MimeMessage message, String name)
+            throws jakarta.mail.MessagingException {
+        String value = message.getHeader(name, ",");
+        List<String> addresses = new ArrayList<>();
+        if (value != null) {
+            Matcher matcher = LENIENT_ADDRESS.matcher(value.replaceAll("\"[^\"]*\"", ""));
+            while (matcher.find()) {
+                addresses.add(matcher.group().replaceAll("^'|'$", "").toLowerCase(Locale.ROOT));
+            }
+        }
+        return addresses;
     }
 
     private static String syntheticId(byte[] raw) {

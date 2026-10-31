@@ -7,10 +7,10 @@ This schema defines what the `MetadataAgent` extracts and how gold data is label
 | Field | Kind | Values | Empty allowed |
 | --- | --- | --- | --- |
 | `sender` | Fact | Address from the `From` header, lowercase | No |
-| `recipients` | Fact | Addresses from `To` and `Cc` | No |
+| `recipients` | Fact | Addresses from `To` and `Cc` | Yes, when the headers name none |
 | `date` | Fact | `Date` header as a UTC instant, such as `2026-11-03T08:12:00Z` | No |
 | `threadId` | Fact | `Message-ID` of the thread's first message, with angle brackets | No |
-| `currentText` | Fact | New text written by the sender, as defined below | No |
+| `currentText` | Fact | New text written by the sender, as defined below | Yes, for a pure forward or attachments only |
 | `entities` / `PERSON` | Entity | Name without title | Yes |
 | `entities` / `COURSE` | Entity | Course name or code | Yes |
 | `entities` / `DATE` | Entity | A date mentioned that is not a deadline | Yes |
@@ -30,6 +30,9 @@ This schema defines what the `MetadataAgent` extracts and how gold data is label
 - Keep the greeting and the new message.
 - Remove quoted replies, forwarded content, the sign-off and the signature. "Best regards," and "Cordialement," are part of the sign-off.
 - Scoring ignores differences in whitespace and letter case.
+- A note added above a forward, such as "FYI", is the current text. A forward with no added note has empty current text.
+- Keep a PS, and remove the sign-off before it.
+- Automated, bulk and marketing mail follows the same rules. Leave out unsubscribe footers, machine log lines and web form diagnostics.
 
 ### Entities
 - Label only entities found in `currentText`, never in quoted text or signatures.
@@ -38,9 +41,12 @@ This schema defines what the `MetadataAgent` extracts and how gold data is label
 - List an entity once per email, even when it appears several times.
 - A date is either `DATE` or `DEADLINE`, never both.
 - Course codes are `COURSE`, not `ID`.
+- A person named in several forms is listed once, in the fullest form.
+- Weekdays and written dates count (`Friday`, `next Friday`, `6/1/03`). Bare `today`, `tomorrow` and `yesterday` do not.
+- `ID` covers account, order, ticket, document, tag and bill numbers, written without a leading `#`. Phone numbers are not IDs.
 
 ### Speech acts
-Label the whole email. Several acts may apply, and purely informational mail may have none. These follow the email act categories of Cohen, Carvalho & Mitchell (2004).
+Label the whole email. Several acts may apply, and purely informational mail may have none. These follow the email act categories of Cohen, Carvalho & Mitchell (2004). Unsolicited news, announcements and marketing have no `deliver` unless they carry a file or a report of work done. A note above a forward, such as "FYI", is `deliver`.
 
 | Act | Meaning | Example |
 | --- | --- | --- |

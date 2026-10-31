@@ -88,6 +88,21 @@ class EnronImporterTest {
     }
 
     @Test
+    void oneMalformedAddressDoesNotLoseTheWholeHeader() {
+        ParsedMessage message = ParsedMessage.parse("""
+                Message-ID: <malformed@enron.com>
+                From: houston <.ward@enron.com>
+                To: alice@enron.com, a..martin@enron.com
+                Cc: carol@enron.com
+
+                Body.
+                """.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+        assertEquals(".ward@enron.com", message.sender());
+        assertEquals(List.of("alice@enron.com", "a..martin@enron.com", "carol@enron.com"),
+                message.recipients());
+    }
+
+    @Test
     void synthesizesMissingMessageId() throws IOException {
         var result = EnronImporter.select(EnronImporter.readAll(input), 0, 1L);
         ParsedMessage synthetic = result.selected().stream()

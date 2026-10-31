@@ -26,7 +26,8 @@ We have **two weeks** to build the `MetadataAgent` and the `ContextAgent` part o
 | Email languages | English and French, but **English only for now** while French real data is blocked | French work (analyzers, labeled French data, per-language French results) is deferred, not removed. MIME parsing stays language-agnostic |
 | Metadata | Rules first, then GLiNER and SetFit | Phase 1 |
 | LLM checker | Set aside, kept as a switch that is **off by default**, benchmarked later | Phase 5 |
-| Improving the workers | No LLM-driven learning. Optional iteration from user corrections | Phase 6 |
+| Improving the workers | No LLM-driven learning in the product. Optional iteration from user corrections | Phase 6 |
+| Labelling benchmark and training data | An LLM labels public data. A person reviews the flagged dev labels and hand-labels a random 25 test emails without seeing the LLM's labels. Agreement is reported with every accuracy result. Test labels are frozen before any model runs on those emails | Section 6; `docs/reports/labeling-setup.md` |
 | Missing information | Predict what is missing from extracted data | Phase 4 |
 | Context | Implement both C1 and C3 and benchmark them | Phases 3 and 4 |
 | Missing runtime parts | Build only what is really missing, as commented stand-ins for the coworker's agents | Phase 2 |
@@ -264,7 +265,7 @@ The sources are **Enron and personal mail** (decision by the project owner; the 
 
 | Set | Purpose | Note |
 | --- | --- | --- |
-| **Small, labeled** (about 100-200 emails) | Accuracy numbers | Dev and frozen test split, labeled by hand from Enron |
+| **Small, labeled** (200 emails from all 150 Enron mailboxes) | Accuracy numbers | 100 dev and training emails labelled by an LLM, with flagged labels reviewed by a person; 100 frozen test emails labelled by an LLM, with 25 audited by hand |
 | **Private real** (personal mail) | Final check, English and French | Totals only in reports, no email content; currently blocked |
 | **Big** (Enron, 10,000+) | Speed, robustness, retrieval at scale | Without labels it **cannot give accuracy** |
 | Quagga zones | Segmentation | English only |
