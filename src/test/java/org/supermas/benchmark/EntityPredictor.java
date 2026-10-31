@@ -9,6 +9,7 @@ import java.util.Map;
 import org.supermas.metadata.EntityMention;
 import org.supermas.metadata.GlinerEntityExtractor;
 import org.supermas.metadata.GlinerEntityModel;
+import org.supermas.metadata.MetadataAgent;
 import org.supermas.metadata.RuleEntityExtractor;
 
 /** Facts plus entities from rules, GLiNER, or both, for comparing extraction variants. */
@@ -50,17 +51,15 @@ public final class EntityPredictor implements Predictor {
     public Extraction predict(byte[] rawEmail) throws Exception {
         Extraction base = facts.predict(rawEmail);
         Map<String, Extraction.Entity> entities = new LinkedHashMap<>();
-        // The model goes first, so it decides the type when both sources find the same text.
+        List<EntityMention> fromModel = gliner == null ? List.of() : gliner.extract(base.currentText());
+        List<EntityMention> fromRules = rules == null ? List.of() : rules.extract(base.currentText());
         List<EntityMention> mentions = new ArrayList<>();
-        if (gliner != null) {
-            gliner.extract(base.currentText()).stream()
-                    .filter(m -> !hybrid || !List.of("DATE", "DEADLINE").contains(m.type()))
-                    .forEach(mentions::add);
-        }
-        if (rules != null) {
-            rules.extract(base.currentText()).stream()
-                    .filter(m -> !hybrid || !List.of("PERSON", "COURSE").contains(m.type()))
-                    .forEach(mentions::add);
+        if (hybrid) {
+            mentions.addAll(MetadataAgent.hybrid(fromModel, fromRules));
+        } else {
+            // The model goes first, so it decides the type when both sources find the same text.
+            mentions.addAll(fromModel);
+            mentions.addAll(fromRules);
         }
         for (EntityMention mention : mentions) {
             entities.putIfAbsent(mention.text().toLowerCase(Locale.ROOT),
