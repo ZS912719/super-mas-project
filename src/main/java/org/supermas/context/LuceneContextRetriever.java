@@ -22,6 +22,9 @@ import org.supermas.model.Domain.RetrievalResult;
  * evidence with its source, and is never interpreted here.
  */
 public final class LuceneContextRetriever implements ContextRetriever {
+    private static final int INITIAL_RESULTS = 10;
+    private static final int SUPPLEMENTAL_RESULTS = 30;
+
     private final ProjectIndexes indexes;
     private final Map<String, ContextSource> sources;
     private final Function<String, Optional<AgentConfig>> agents;
@@ -54,9 +57,60 @@ public final class LuceneContextRetriever implements ContextRetriever {
         return new RetrievalResult(evidence, !evidence.isEmpty(), evidence.size() + " thread messages found");
     }
 
+    /** Authorized domain search with no topic restriction. */
     @Override
     public RetrievalResult retrieveDomain(ContextQuery query) {
-        throw new UnsupportedOperationException("Added in step 3.3");
+        return retrieveDomain(query, Set.of());
+    }
+
+    /**
+     * Rights are checked before any index is read. A source is usable only if it belongs to the board's
+     * project, permits the requester, and is in the requester's configuration. {@code query.agentId()} is
+     * the requester, not whoever makes the call, so a broad agent cannot fetch for a narrower one beyond
+     * the narrower one's rights.
+     *
+     * <p>Results carry the board's scope, as the board requires. The originating thread is in the provenance.
+     * Results that do not fit the budget are left out whole and counted, and are never cut.
+     *
+     * @param topicTags when not empty, only documents with one of these tags
+     */
+    public RetrievalResult retrieveDomain(ContextQuery query, Set<String> topicTags) {
+        String project = query.boardId().scope().projectId();
+        Set<String> allowed = new HashSet<>();
+        List<String> denied = new ArrayList<>();
+        for (String sourceId : query.sourceIds()) {
+            (isAuthorized(sourceId, project, query.agentId()) ? allowed : denied).add(sourceId);
+        }
+        java.util.Collections.sort(denied);
+        int limit = query.supplemental() ? SUPPLEMENTAL_RESULTS : INITIAL_RESULTS;
+        List<Evidence> evidence = new ArrayList<>();
+        int used = 0;
+        int omitted = 0;
+        for (ProjectIndex.Hit hit : indexes.forProject(project)
+                .search(String.join(" ", query.keywords()), allowed, query.agentId(), topicTags, limit)) {
+            IndexedDocument document = hit.document();
+            String text = withSubject(document);
+            if (used + text.length() > query.maxCharacters()) {
+                omitted++;
+                continue;
+            }
+            used += text.length();
+            Set<String> permitted = new HashSet<>(document.permittedAgentIds());
+            permitted.retainAll(sources.get(document.sourceId()).permittedAgentIds());
+            evidence.add(new Evidence(document.id(), query.boardId().scope(), EvidenceKind.RETRIEVED_EVIDENCE,
+                    new Provenance(document.sourceId(), "From thread " + document.scope().threadId(),
+                            document.recordedAt()), text, permitted));
+        }
+        return new RetrievalResult(evidence, !evidence.isEmpty(), evidence.size() + " results, " + omitted
+                + " over budget, denied sources: " + denied);
+    }
+
+    private boolean isAuthorized(String sourceId, String project, String agentId) {
+        ContextSource source = sources.get(sourceId);
+        return source != null
+                && project.equals(source.projectId())
+                && source.permittedAgentIds().contains(agentId)
+                && agents.apply(agentId).map(agent -> agent.contextSourceIds().contains(sourceId)).orElse(false);
     }
 
     private static String withSubject(IndexedDocument document) {
