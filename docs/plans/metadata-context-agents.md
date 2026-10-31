@@ -30,7 +30,7 @@ We have **two weeks** to build the `MetadataAgent` and the `ContextAgent` part o
 | Missing information | Predict what is missing from extracted data | Phase 4 |
 | Context | Implement both C1 and C3 and benchmark them | Phases 3 and 4 |
 | Missing runtime parts | Build only what is really missing, as commented stand-ins for the coworker's agents | Phase 2 |
-| Benchmark data | Decide at benchmarking time, possibly own university mail. Test on a small and a big set | Section 6 |
+| Benchmark data | Enron plus personal mail (Debian and Webis dropped). Test on a small and a big set | Section 6 |
 | UML and docs for contract changes | Not during implementation; all done at the end | Step 7.3 |
 | Reporting | A detailed `.md` report after each step | Section 5 |
 | Topic design | T2 + O2 | Section 4 |
@@ -259,18 +259,23 @@ Corrections are human labels, which removes the LLM label risks. **Limitation:**
 ## 6. Benchmarks
 
 ### Data
+
+The sources are **Enron and personal mail** (decision by the project owner; the Debian and Webis options were dropped). The Enron importer is built (`docs/reports/data-import-enron.md`); personal mail is blocked, see below.
+
 | Set | Purpose | Note |
 | --- | --- | --- |
-| **Small, labeled** (about 100-200 emails, English + French) | Accuracy numbers | Dev and frozen test split |
-| **Big** (Enron and similar; own mail if allowed) | Speed, robustness, retrieval at scale | Without labels it **cannot give accuracy** |
+| **Small, labeled** (about 100-200 emails) | Accuracy numbers | Dev and frozen test split, labeled by hand from Enron |
+| **Private real** (personal mail) | Final check, English and French | Totals only in reports, no email content; currently blocked |
+| **Big** (Enron, 10,000+) | Speed, robustness, retrieval at scale | Without labels it **cannot give accuracy** |
 | Quagga zones | Segmentation | English only |
 | De Felice speech acts | Label sanity check | English only |
 | Attack emails | Security | Types modeled on AgentDojo |
 
 **Data problems to settle:**
-- **Timing.** Waiting for the database until benchmarking conflicts with SetFit, which needs labeled training mail in Phase 1. Step 0.6 only partly covers this: synthetic data reflects its author. Choose the real data by day 3 at the latest.
-- **French.** The public annotated sets I found are English, so French accuracy depends on your own labeled data.
-- **Your university mail contains other people's personal data.** Keep it local and out of Git, pseudonymize it, and never send it to the online LLM. LLM variants therefore cannot be benchmarked on it until a local model is available. **Ask your supervisor or the university's data protection contact before using it.**
+- **Timing.** SetFit needs labeled training mail in Phase 1, so the Enron labeling must start early. Step 0.6's synthetic set reflects its author and is development-only.
+- **French is the main gap.** Enron is English only. French real data was to come from personal mail, which is blocked (below), so French accuracy currently rests on the synthetic set alone. If the mailbox stays inaccessible, reconsider a public French source.
+- **Personal mail is blocked.** The Microsoft 365 export did not work; the administrator has been asked. Legitimate routes: a scoped request to the admin, Outlook-on-the-web export, or forwarding selected mail to a personal account. Do not attempt to bypass the block.
+- **Personal mail contains other people's personal data.** Keep it in an ignored folder (`.gitignore` covers `benchmark/data/personal/` and similar), never send it to the online LLM, and put only totals in reports. LLM variants cannot be benchmarked on it until a local model exists. **Ask your supervisor or the university's data protection contact before using it.**
 
 ### Metadata variants
 | Variant | Answers |
