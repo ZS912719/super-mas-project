@@ -41,14 +41,15 @@ import org.supermas.model.Domain.Scope;
  * <p>Usage: C1Benchmark MAILDIR MIN_MESSAGES QUERIES_PER_PROJECT REPORT_FILE INDEX_DIR
  */
 public final class C1Benchmark {
-    private static final long SEED = 20261101L;
-    private static final int K = 10;
+    static final long SEED = 20261101L;
+    static final int K = 10;
     private static final int BOOTSTRAP_SAMPLES = 1000;
     private static final String SOURCE_SUFFIX = "-mailbox";
 
-    private record Message(Email email, String threadId, String text, Instant at) { }
+    /** @param folders every folder holding a copy of this message, relative to the mailbox */
+    record Message(Email email, String threadId, String text, Instant at, Set<String> folders) { }
 
-    private record Scores(double recall5, double recall10, double reciprocalRank, double ndcg10) { }
+    record Scores(double recall5, double recall10, double reciprocalRank, double ndcg10) { }
 
     private C1Benchmark() { }
 
@@ -113,16 +114,17 @@ public final class C1Benchmark {
         }
     }
 
-    private static final class Counts {
+    static final class Counts {
         int messages;
         int unparseable;
         int duplicates;
     }
 
-    private static List<Message> load(Path mailbox, Counts counts) throws Exception {
+    static List<Message> load(Path mailbox, Counts counts) throws Exception {
         MimeEmailParser parser = new MimeEmailParser();
         QuoteSignatureStripper stripper = new QuoteSignatureStripper();
         Map<String, Email> emails = new LinkedHashMap<>();
+        Map<String, Set<String>> folders = new HashMap<>();
         List<Path> files;
         try (Stream<Path> walk = Files.walk(mailbox)) {
             files = walk.filter(Files::isRegularFile).sorted().toList();
@@ -134,8 +136,13 @@ public final class C1Benchmark {
                 String content = email.sender() + "\n" + email.receivedAt() + "\n" + email.subject() + "\n" + email.body();
                 if (email.id() == null || email.receivedAt() == null) {
                     counts.unparseable++;
-                } else if (emails.putIfAbsent(content, email) != null) {
-                    counts.duplicates++;
+                } else {
+                    if (emails.putIfAbsent(content, email) != null) {
+                        counts.duplicates++;
+                    }
+                    // Keyed by the kept copy's identifier, since each filed copy has its own.
+                    folders.computeIfAbsent(emails.get(content).id(), id -> new HashSet<>())
+                            .add(mailbox.relativize(file.getParent()).toString());
                 }
             } catch (Exception e) {
                 counts.unparseable++;
@@ -148,7 +155,8 @@ public final class C1Benchmark {
         for (Email email : emails.values()) {
             String body = email.body() == null ? "" : email.body();
             String thread = numbered.computeIfAbsent(threads.get(email.id()), id -> "thread-" + numbered.size());
-            messages.add(new Message(email, thread, stripper.currentText(body), email.receivedAt()));
+            messages.add(new Message(email, thread, stripper.currentText(body), email.receivedAt(),
+                    folders.get(email.id())));
         }
         return messages;
     }
@@ -294,7 +302,7 @@ public final class C1Benchmark {
         return out.toString();
     }
 
-    private static Scores score(List<String> ranked, Set<String> relevant) {
+    static Scores score(List<String> ranked, Set<String> relevant) {
         int hits5 = 0;
         int hits10 = 0;
         double reciprocal = 0;
@@ -324,7 +332,7 @@ public final class C1Benchmark {
                 .append(interval(recency, value)).append(" |\n");
     }
 
-    private static String interval(List<Scores> scores, java.util.function.ToDoubleFunction<Scores> value) {
+    static String interval(List<Scores> scores, java.util.function.ToDoubleFunction<Scores> value) {
         double[] values = scores.stream().mapToDouble(value).toArray();
         double mean = java.util.Arrays.stream(values).average().orElse(0);
         double[] means = new double[BOOTSTRAP_SAMPLES];
@@ -341,11 +349,11 @@ public final class C1Benchmark {
                 means[(int) (BOOTSTRAP_SAMPLES * 0.975)]);
     }
 
-    private static String row(String name, Object value) {
+    static String row(String name, Object value) {
         return "| " + name + " | " + value + " |\n";
     }
 
-    private static String milliseconds(long nanos) {
+    static String milliseconds(long nanos) {
         return String.format(Locale.ROOT, "%.1f ms", nanos / 1_000_000.0);
     }
 }
