@@ -24,3 +24,10 @@
 # Operating system metadata
 .DS_Store
 Thumbs.db
+
+# Mailbox application dependencies and generated assets
+/mailbox/node_modules/
+/mailbox/public/
+
+# Private project progress notes
+/.project-progress.local.md
