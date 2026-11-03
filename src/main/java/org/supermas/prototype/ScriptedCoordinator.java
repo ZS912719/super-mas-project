@@ -16,13 +16,16 @@ import org.supermas.blackboard.Preprocessor;
 import org.supermas.coordinator.CoordinationStrategy;
 import org.supermas.coordinator.Coordinator;
 import org.supermas.coordinator.RoutingStrategy;
+import org.supermas.memory.ConversationRecorder;
 import org.supermas.model.Domain.Action;
 import org.supermas.model.Domain.AgentAssessment;
 import org.supermas.model.Domain.AgentOutcome;
+import org.supermas.model.Domain.Analysis;
 import org.supermas.model.Domain.BlackboardSnapshot;
 import org.supermas.model.Domain.BoardId;
 import org.supermas.model.Domain.BoardStatus;
 import org.supermas.model.Domain.BudgetUsage;
+import org.supermas.model.Domain.Draft;
 import org.supermas.model.Domain.Email;
 import org.supermas.model.Domain.ExecutionLimits;
 import org.supermas.model.Domain.ExecutionRecord;
@@ -48,9 +51,18 @@ public final class ScriptedCoordinator implements Coordinator {
     private final CoordinationStrategy strategy;
     private final Clock clock;
     private final Map<BoardId, Blackboard> boards = new ConcurrentHashMap<>();
+    private final Optional<ConversationRecorder> recorder;
 
     public ScriptedCoordinator(Preprocessor preprocessor, BlackboardFactory factory, InMemoryAgentRegistry registry,
                                RoutingStrategy routing, CoordinationStrategy strategy, Clock clock) {
+        this(preprocessor, factory, registry, routing, strategy, clock, Optional.empty());
+    }
+
+    /** @param recorder stores each received email and each new draft as conversation history */
+    public ScriptedCoordinator(Preprocessor preprocessor, BlackboardFactory factory, InMemoryAgentRegistry registry,
+                               RoutingStrategy routing, CoordinationStrategy strategy, Clock clock,
+                               Optional<ConversationRecorder> recorder) {
+        this.recorder = recorder;
         this.preprocessor = preprocessor;
         this.factory = factory;
         this.registry = registry;
@@ -61,9 +73,13 @@ public final class ScriptedCoordinator implements Coordinator {
 
     @Override
     public BoardId receive(Email email) {
-        Blackboard board = factory.create(email, preprocessor.analyze(email));
+        Analysis analysis = preprocessor.analyze(email);
+        Blackboard board = factory.create(email, analysis);
         BoardId id = board.snapshot().id();
         boards.put(id, board);
+        // ASSUMED-TEAM-DECISION(P10): the coordinator records each received email. Pending team validation.
+        // If rejected: remove this call and record wherever the team handles incoming mail.
+        recorder.ifPresent(found -> record(board, () -> found.onReceived(email, analysis), "Received email stored"));
         return id;
     }
 
@@ -175,6 +191,13 @@ public final class ScriptedCoordinator implements Coordinator {
         }
         finish(board, task, next.reason(), failure == null ? TaskStatus.SUCCEEDED : TaskStatus.FAILED, summary,
                 Optional.ofNullable(failure));
+        // ASSUMED-TEAM-DECISION(P10): new drafts are recorded as history. Pending team validation.
+        List<Draft> drafts = board.snapshot().drafts();
+        if (recorder.isPresent() && drafts.size() > state.drafts().size()) {
+            for (Draft draft : drafts.subList(state.drafts().size(), drafts.size())) {
+                record(board, () -> recorder.get().onDraft(board.snapshot().id(), draft), "Draft stored");
+            }
+        }
         if (failure == null) {
             return;
         }
@@ -191,6 +214,21 @@ public final class ScriptedCoordinator implements Coordinator {
         board.updateTask(new Task(task.id(), task.boardId(), task.action(), task.agentId(), status, task.reason(), task.need()));
         Instant now = clock.instant();
         board.recordExecution(new ExecutionRecord(task.id(), reason, status, now, now, summary, failure));
+    }
+
+    /** History is kept beside the board, so a storage failure is recorded and processing goes on. */
+    private void record(Blackboard board, java.util.function.BooleanSupplier store, String summary) {
+        Instant now = clock.instant();
+        String task = "history-" + board.snapshot().executions().size();
+        try {
+            store.getAsBoolean();
+            board.recordExecution(new ExecutionRecord(task, "History", TaskStatus.SUCCEEDED, now, now, summary,
+                    Optional.empty()));
+        } catch (RuntimeException e) {
+            Failure failure = new Failure(FailureKind.STORAGE, "History not stored: " + e.getMessage(), true);
+            board.recordExecution(new ExecutionRecord(task, "History", TaskStatus.FAILED, now, now, failure.message(),
+                    Optional.of(failure)));
+        }
     }
 
     private static void fail(Blackboard board, Failure failure) {
