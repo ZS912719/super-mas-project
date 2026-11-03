@@ -29,6 +29,8 @@ import org.supermas.model.Domain.TaskStatus;
  */
 public final class MissingInformationAgent implements SpecializedAgent {
     public static final String CAPABILITY = "missing-information-check";
+    /** The inference's text is this prefix, then field names from the fixed list, separated by ", ". */
+    public static final String TEXT_PREFIX = "Possibly missing: ";
     private static final String EVIDENCE_ID = "missing-information";
     private static final Map<InformationField, List<String>> SEARCH_TERMS = new EnumMap<>(Map.of(
             InformationField.DATE, List.of("date", "schedule", "calendar"),
@@ -80,7 +82,7 @@ public final class MissingInformationAgent implements SpecializedAgent {
         readers.add(config.id());
         board.submitEvidence(List.of(new Evidence(EVIDENCE_ID, state.id().scope(), EvidenceKind.MODEL_INFERENCE,
                 new Provenance(config.id(), "Missing-information check, from " + result.source(), state.email().receivedAt()),
-                "Possibly missing: " + String.join(", ", fields), readers)));
+                TEXT_PREFIX + String.join(", ", fields), readers)));
         List<String> terms = new ArrayList<>();
         result.fields().stream().sorted().forEach(field -> terms.addAll(SEARCH_TERMS.get(field)));
         Task further = new Task(state.id().taskId() + "-further-retrieval", state.id(), Action.RETRIEVE_CONTEXT,
