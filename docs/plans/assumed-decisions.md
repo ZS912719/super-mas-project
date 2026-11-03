@@ -17,6 +17,7 @@ To find every affected place in the code, search for `ASSUMED-TEAM-DECISION`.
 | P5 | Every agent can call `submitDraft` | Reject it unless the agent has a drafting capability | Stand-in blackboard | Implemented, pending validation | 79577fe | `Capabilities`, `InMemoryBlackboard` | Follow the code markers, because the commit holds the whole blackboard. Remove the check, or apply the team's permission rule |
 | P8 | Each volunteering agent uses `ExecutionLimits` rounds | Each context agent execution counts as one round | Stand-in coordinator | Implemented, pending validation | 8109a01 | `ScriptedCoordinator` | Follow the code marker, because the commit holds the whole coordinator. Change the counting in the stand-in and its tests |
 | P9 | `Feedback` covers drafts, not metadata | Add a metadata correction record, stored in a local file | `Domain.java` | Not implemented | - | - | Revert the commit; keep corrections in a private format |
+| P10 | Nothing records conversation history when an email arrives, a draft is made or a send is confirmed | The coordinator, the board or review service and the mail transport call `ConversationRecorder` (`onReceived`, `onDraft`, `onSentConfirmed`) | `memory/ConversationRecorder` | Implemented, pending validation | step 8.2 | `ConversationRecorder`, later the stand-in coordinator (step 8.3) | Call `IndexConversationRepository` from wherever the team records these events |
 
 P8's counting rule is a starting assumption. The plan only says that the team should agree how context budget is counted.
 
