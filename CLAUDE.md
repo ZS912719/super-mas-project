@@ -8,7 +8,7 @@ Use English for all project-authored content (documentation, diagrams, identifie
 
 ## Project status
 
-SuperMAS is a Java API for a blackboard-based multi-agent email reply assistant using local language models. **This revision contains interfaces and data records only.** There is no executable application, concrete implementation, model adapter, mock, or email transport, and no agent framework, database, inference SDK, or UI has been chosen. `docs/architecture.md` lists the open design decisions; these require discussion with the user, so do not settle them silently by adding implementations.
+SuperMAS is a Java API for a blackboard-based multi-agent email reply assistant using local language models. The shared contracts are interfaces and records in `org.supermas.model`, `agent`, `blackboard`, `coordinator`, `llm`, `persistence` and `review`. On the `docs/metadata-context-plan` branch, this member's part is implemented: `metadata` (MetadataAgent), `context` (retrieval, topic agents, discovered topics, missing information), `memory` (conversation history and knowledge loading) and `agent.role` (configurable specialized agents and their prompts). Parts owned by teammates exist only as marked stand-ins in `org.supermas.prototype` (search `PROTOTYPE-STAND-IN`). There is no email transport, UI or real LLM adapter. `docs/architecture.md` lists the open design decisions; shared ones require the team, so do not settle them silently. `docs/plans/metadata-context-agents.md` is the plan, and `docs/reports/` has one report per step.
 
 ## Commands
 
@@ -19,7 +19,7 @@ mvn package    # compile and build target/supermas-1.0.0-SNAPSHOT.jar (library, 
 mvn compile    # compile only
 ```
 
-There are no tests and no test dependencies, so a successful build verifies only compilation and packaging. No linter is configured. The future behavioral requirements are in the validation checklist in `docs/architecture.md`.
+`mvn test` runs the JUnit 5 suite. Benchmarks are test-scope main classes run with `mvn exec:java` (see the step reports). No linter is configured. The future behavioral requirements are in the validation checklist in `docs/architecture.md`.
 
 Render UML (needs PowerShell, a JDK, and a PlantUML JAR, by default the Git-ignored `tmp/tools/plantuml.jar`):
 

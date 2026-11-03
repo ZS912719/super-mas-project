@@ -1,6 +1,6 @@
 # Metadata and Context Agents: Implementation and Benchmark Plan
 
-**Status:** updated with the project owner's inline replies. Implementation has not started. Decisions still open are listed in section 2.
+**Status:** Phases 0-4 are implemented (reports in `docs/reports`). Phases 8-10 were added on 2026-11-03 and approved by the project owner. Decisions still open are listed in section 2.
 
 ## 1. Context and scope
 
@@ -37,7 +37,9 @@ We have **two weeks** to build the `MetadataAgent` and the `ContextAgent` part o
 | Topic design | T2 + O2 | Section 4 |
 | Correspondent topics | May read across threads only within the same project and only for verified senders. Switch off by default | Step 4.9; update `docs/architecture.md` in step 7.3 |
 | Proposals 6 and 7 (section 3) | Accepted by the project owner | Steps 3.3 and 4.1 |
-| Topic discovery (T3) | Possible later experiment, not part of the two-week scope | Section 4 |
+| Topic discovery (T3) | **Changed 2026-11-03:** subject topics are discovered and regrouped automatically, with no action from the user and no approval step | Phase 10. This replaces the "a person approves" form in section 4 |
+| Specialized agents | One configurable class, roles defined in JSON files with their own prompt files. A specialist writes a structured reply plan, then asks the team's `GenerationService` for the draft | Phase 9 |
+| Memory | Conversation history is stored in the per-project index, kinds kept separate, and `SENT` only after a confirmed send | Phase 8 |
 | Hardware | This laptop for development (i5-8265U, 7 GB RAM, no dedicated GPU), better machines later | Small models stay local |
 | LLM during development | A small-scale online LLM is accepted, because this laptop is too weak. Switching to a local one must be easy | Section 3, step 5.1 |
 | `AgentContribution` | Planned by the team, not ours to define | Use `Evidence` and `AgentOutcome` until it arrives, then adapt |
@@ -251,6 +253,31 @@ Only what is really missing at this point. Check first whether a teammate has de
 - **6.3** Promote only if it beats the current model on the frozen test set.
 
 Corrections are human labels, which removes the LLM label risks. **Limitation:** an edited draft does not reveal which extracted field was wrong, so a draft diff alone cannot train the workers.
+
+### Phase 8: Memory
+- **8.0** Bring `CLAUDE.md` and this plan up to date.
+- **8.1** `IndexConversationRepository` implements `ConversationRepository` over the project index, exact scope, kinds kept apart, idempotent append.
+- **8.2** `ConversationRecorder`: received mail, generated and user-edited drafts, and `SENT` only for an approved version with a confirmed send.
+- **8.3** The stand-in coordinator records each received email, so the next email in the thread sees it.
+- **8.4** History on disk survives a restart.
+- **8.5** Knowledge loading: trusted documents per source, with readers per source, from a folder.
+- **8.6** Correspondent facts (optional, off by default). Cut first.
+
+### Phase 9: Specialized agents
+- **9.1** Define `assess` for reply agents in writing.
+- **9.2** `RoleDefinition` and a JSON role catalogue with one prompt file per role. Adding a role is a file, not code.
+- **9.3** `RoleAgent`: deterministic `assess` for routing; Student, Teacher, Research, Administration and Generic (fallback) are configuration.
+- **9.4** `execute` writes a structured reply plan to the board, citing only evidence the agent may read.
+- **9.5** Prompt building: trusted system prompt, untrusted data, input budget, then the draft through `GenerationService`.
+- **9.6** Optional LLM extraction of the questions to answer, verified against the email, off by default.
+- **9.7** Stand-in template generation service and an end-to-end test.
+- **9.8** Routing and plan benchmark on the synthetic set.
+
+### Phase 10: Discovered topics
+- **10.1** Cluster a project's threads into topics with keywords, in Java, deterministic, with no user input.
+- **10.2** Regroup automatically: stable topic identifiers across runs, index tags updated, and a refresh after enough new mail.
+- **10.3** One discovered-topics context agent with a fixed configured identity, so discovery never grants rights.
+- **10.4** Benchmark discovered topics against declared topics and C1 on the folder proxy of step 4.10.
 
 ### Phase 7: Finish (day 14)
 - **7.1** Final benchmark, on the frozen data.
