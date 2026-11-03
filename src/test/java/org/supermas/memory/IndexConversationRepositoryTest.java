@@ -68,6 +68,20 @@ class IndexConversationRepositoryTest {
     }
 
     @Test
+    void domainSearchNeverReturnsAnUnsentDraft() {
+        Scope scope = new Scope("p1", "t");
+        repository.append(message("in", scope, MessageKind.RECEIVED, "budget question", 0));
+        repository.append(message("draft", scope, MessageKind.GENERATED_DRAFT, "budget draft answer", 1));
+        repository.append(message("edit", scope, MessageKind.USER_EDITED_DRAFT, "budget edited answer", 2));
+        repository.append(message("out", scope, MessageKind.SENT, "budget sent answer", 3));
+
+        List<String> found = indexes.forProject("p1").search("budget answer", Set.of("mail-p1"), "reader", Set.of(), 10)
+                .stream().map(hit -> hit.document().id()).sorted().toList();
+
+        assertEquals(List.of("in", "out"), found);
+    }
+
+    @Test
     void anIdenticalRepeatIsIgnoredAndAConflictingOneIsRefused() {
         Scope scope = new Scope("p1", "t");
         assertTrue(repository.appendIfAbsent(message("m", scope, MessageKind.RECEIVED, "text", 0), Set.of()));

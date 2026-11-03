@@ -159,6 +159,9 @@ public final class ProjectIndex implements AutoCloseable {
         if (!topicTags.isEmpty()) {
             query.add(anyOf(TOPIC, topicTags), BooleanClause.Occur.FILTER);
         }
+        // Unsent drafts are history of what the system proposed, never something said, so search never returns them.
+        query.add(anyOf(KIND, List.of(MessageKind.GENERATED_DRAFT.name(), MessageKind.USER_EDITED_DRAFT.name())),
+                BooleanClause.Occur.MUST_NOT);
         query.add(terms, BooleanClause.Occur.MUST);
         List<Hit> hits = new ArrayList<>();
         withSearcher(searcher -> {
@@ -177,6 +180,20 @@ public final class ProjectIndex implements AutoCloseable {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    /** Every document of this project, for maintenance such as regrouping topics. */
+    public List<IndexedDocument> all() {
+        List<IndexedDocument> documents = new ArrayList<>();
+        withSearcher(searcher -> {
+            int count = searcher.count(new MatchAllDocsQuery());
+            if (count > 0) {
+                for (ScoreDoc hit : searcher.search(new MatchAllDocsQuery(), count).scoreDocs) {
+                    documents.add(fromLucene(searcher.storedFields().document(hit.doc)));
+                }
+            }
+        });
+        return documents;
     }
 
     /** The document with this identifier, if this project has it. */
