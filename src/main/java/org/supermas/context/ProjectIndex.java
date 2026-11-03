@@ -169,6 +169,17 @@ public final class ProjectIndex implements AutoCloseable {
         return hits;
     }
 
+    /** The document with this identifier, if this project has it. */
+    public Optional<IndexedDocument> find(String documentId) {
+        List<IndexedDocument> found = new ArrayList<>();
+        withSearcher(searcher -> {
+            for (ScoreDoc hit : searcher.search(new TermQuery(new Term(ID, documentId)), 1).scoreDocs) {
+                found.add(fromLucene(searcher.storedFields().document(hit.doc)));
+            }
+        });
+        return found.stream().findFirst();
+    }
+
     /** Replaces a document's topic tags and keeps everything else. False if the document is unknown. */
     public boolean retag(String documentId, Set<String> topicTags) {
         List<IndexedDocument> found = new ArrayList<>();
