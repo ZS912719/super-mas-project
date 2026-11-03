@@ -2,7 +2,9 @@
 
 ## Status
 
-This revision contains interfaces and data contracts only. Concrete implementation requires further discussion. [The current UML diagrams](uml/README.md) reflect these Java contracts; the earlier UML proposal has been removed. Java 17 is the baseline; no external agent framework, database, inference SDK or UI has been chosen.
+The Java module contains interfaces and data contracts only. [The current UML diagrams](uml/README.md) reflect these unchanged Java contracts. Java 17 is the baseline for that module.
+
+The separate [mailbox application](../mailbox/README.md) runs in an Electron desktop window. Its main process owns a Node.js loopback HTTP server serving the bundled UI. Provider authorization opens in the system browser and returns to the initiating desktop session through expiring single-use OAuth state and PKCE. It implements mail transport, session state, draft review and direct local reply generation without implementing `Coordinator`, specialist agents, blackboard storage or `GenerationService`. Its classification adapter accepts externally supplied JSON; automatic agent execution remains deferred. These application modules are intentionally separate from the Java contract UML until an integration protocol is agreed.
 
 ## Collaboration boundaries
 
@@ -29,7 +31,7 @@ The five role interfaces are extension points, not instantiated agents. Trusted 
 
 `DraftReviewService.edit` must preserve prior versions and invalidate approval. `reject` saves feedback and exposes revision work to a later `Coordinator.run`. Neither action sends or approves the new output.
 
-`GENERATED_DRAFT`, `USER_EDITED_DRAFT`, `RECEIVED` and `SENT` remain separate history kinds. Future integrations may record `SENT` only after an externally confirmed send. There is no mail transport in this revision.
+`GENERATED_DRAFT`, `USER_EDITED_DRAFT`, `RECEIVED` and `SENT` remain separate history kinds in the Java contract. The mailbox keeps drafts separate from provider history, marks provider acceptance as submitted, and populates real Sent history only through provider synchronization.
 
 ## Context and generation
 
@@ -79,4 +81,4 @@ These are requirements for later behavioral tests, not passing tests in this rev
 - Embedded instructions cannot grant access or authorize sending.
 - Stale versions cannot be approved; no unapproved message can be sent.
 
-Build validation currently verifies API compilation and packaging only. No email-processing workflow is executable yet.
+The Maven build verifies API compilation and packaging only. The mailbox has separate behavior tests and a runnable demo; it does not validate the proposed multi-agent workflow.

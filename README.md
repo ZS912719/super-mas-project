@@ -2,7 +2,7 @@
 
 > STOP AI SLOP!!! Every line written shall be verified manually!!!
 
-A blackboard-based multi-agent email reply assistant project with Java API contracts and a separate local web mailbox.
+A blackboard-based multi-agent email reply assistant project with Java API contracts and a separate desktop mailbox.
 
 ## Project progress
 
@@ -10,7 +10,7 @@ A blackboard-based multi-agent email reply assistant project with Java API contr
 | --- | --- |
 | Java framework | Interfaces and data contracts are defined; coordinator, blackboard runtime and specialist implementations remain deferred. |
 | UML | Documents the current Java packages, interfaces and selected records. |
-| Web mailbox | Provides a browser UI, demo workspace, Gmail/Outlook adapters, conversation history, classification JSON import and reviewed drafts. |
+| Desktop mailbox | Electron opens an independent window and owns its local server; the UI provides demo mail, Gmail/Outlook adapters, history, labels and reviewed drafts. |
 | Local generation | The mailbox calls local Ollama directly; it does not implement the Java generation or agent interfaces. |
 | Integration | The mailbox and Java contracts are not connected. Automatic multi-agent classification and scheduling remain deferred. |
 | Persistence | The mailbox uses session memory; durable application storage remains deferred. |
@@ -20,7 +20,7 @@ A blackboard-based multi-agent email reply assistant project with Java API contr
 | Module | Requirements | Dependency configuration |
 | --- | --- | --- |
 | Java contracts | JDK 17 and Maven 3.9 or later | [pom.xml](pom.xml); no application or test-library dependencies |
-| Web mailbox | Node.js 22 or later and npm | [mailbox/package.json](mailbox/package.json) and [lockfile](mailbox/package-lock.json); esbuild bundles browser assets |
+| Desktop mailbox development | Node.js 22.12 or later and npm | [mailbox/package.json](mailbox/package.json) and [lockfile](mailbox/package-lock.json); Electron runs the window, esbuild bundles assets and electron-builder packages Windows builds |
 | Reply generation | A running local Ollama service and an installed model | [mailbox/.env.example](mailbox/.env.example) |
 | Live mail accounts | User-provided Gmail or Outlook OAuth credentials and an Internet connection | [Mailbox setup](mailbox/README.md#connect-a-real-mailbox) |
 | UML rendering | A JDK and a locally supplied PlantUML JAR | [Rendering instructions](docs/uml/README.md#render-locally) |
@@ -40,6 +40,7 @@ A blackboard-based multi-agent email reply assistant project with Java API contr
 |   |-- persistence/
 |   `-- review/
 |-- mailbox/
+|   |-- desktop/
 |   |-- server.js
 |   |-- lib/
 |   |-- web/
@@ -62,13 +63,13 @@ A blackboard-based multi-agent email reply assistant project with Java API contr
 | `persistence` | Blackboard, conversation and agent-configuration storage contracts |
 | `review` | Versioned editing, rejection feedback and explicit approval contracts |
 
-The mailbox browser code is in `mailbox/web`; `mailbox/server.js` exposes the local HTTP application. Its `lib` modules handle provider calls, local generation, draft review, classification imports and demo data. This application operates independently of the Java interfaces.
+The desktop entry in `mailbox/desktop/main.js` starts `mailbox/server.js` and opens the UI from `mailbox/web` in an isolated application window. Its `lib` modules handle provider calls, local generation, draft review, classification imports and demo data. This application operates independently of the Java interfaces.
 
 See [architecture details](docs/architecture.md), [current UML](docs/uml/README.md) and [mailbox documentation](mailbox/README.md) for module boundaries and API usage.
 
 ## Deployment and usage
 
-### Web mailbox
+### Desktop mailbox
 
 Run from the repository root:
 
@@ -79,7 +80,9 @@ npm run build
 npm start
 ```
 
-Open [the local mailbox](http://127.0.0.1:4317) and select **Explore the demo** to browse sample mail without credentials. Demo sending is simulated; **Generate reply** still requires a running local model.
+`npm start` opens the desktop application. Select **Explore the demo** to browse sample mail without credentials. Demo sending is simulated; **Generate reply** still requires a running local model. `npm run package:win` produces a portable executable in `mailbox/dist` with its runtime included.
+
+For browser-only debugging, use `npm run start:web` after building the assets. Do not run it alongside the desktop application on the same port.
 
 For real accounts or local generation, copy `mailbox/.env.example` to `mailbox/.env` and configure the required values before starting the server. See [OAuth setup](mailbox/README.md#connect-a-real-mailbox) and [local model configuration](mailbox/README.md#local-reply-generation). The mailbox uses **Save draft → Approve → Send** with version-specific approval.
 
