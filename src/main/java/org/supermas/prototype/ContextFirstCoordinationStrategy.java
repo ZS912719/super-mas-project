@@ -2,6 +2,7 @@ package org.supermas.prototype;
 
 import java.util.List;
 import java.util.Optional;
+import org.supermas.agent.SpecializedAgent;
 import org.supermas.blackboard.BlackboardView;
 import org.supermas.context.TopicCandidateFilter;
 import org.supermas.context.TopicContextAgent;
@@ -21,6 +22,7 @@ import org.supermas.model.Domain.TaskStatus;
 /** Context first, then whatever comes next. Rounds are kept back so that context can never use up the reply's budget. */
 public final class ContextFirstCoordinationStrategy implements CoordinationStrategy {
     private final List<TopicContextAgent> topics;
+    private final List<SpecializedAgent> others;
     private final TopicCandidateFilter filter;
     private final Optional<String> checkAgentId;
     private final CoordinationStrategy then;
@@ -33,6 +35,17 @@ public final class ContextFirstCoordinationStrategy implements CoordinationStrat
      */
     public ContextFirstCoordinationStrategy(List<TopicContextAgent> topics, TopicCandidateFilter filter,
                                             Optional<String> checkAgentId, CoordinationStrategy then, int reservedRounds) {
+        this(topics, List.of(), filter, checkAgentId, then, reservedRounds);
+    }
+
+    /**
+     * @param others further context agents, such as the discovered-topics agent. Each runs once, after the topic
+     *               candidates, when its assessment score is above zero
+     */
+    public ContextFirstCoordinationStrategy(List<TopicContextAgent> topics, List<SpecializedAgent> others,
+                                            TopicCandidateFilter filter, Optional<String> checkAgentId,
+                                            CoordinationStrategy then, int reservedRounds) {
+        this.others = List.copyOf(others);
         this.topics = List.copyOf(topics);
         this.filter = filter;
         this.checkAgentId = checkAgentId;
@@ -54,6 +67,12 @@ public final class ContextFirstCoordinationStrategy implements CoordinationStrat
                 return retrieve(agent.config().id(), "Topic candidate that has not run");
             }
         }
+        List<SpecializedAgent> fitting = others.stream().filter(agent -> fits(agent, board)).toList();
+        for (SpecializedAgent agent : fitting) {
+            if (!hasRun(state, agent.config().id())) {
+                return retrieve(agent.config().id(), "Context agent that fits and has not run");
+            }
+        }
         if (checkAgentId.isPresent() && !hasRun(state, checkAgentId.get())) {
             return retrieve(checkAgentId.get(), "Missing-information check");
         }
@@ -65,8 +84,22 @@ public final class ContextFirstCoordinationStrategy implements CoordinationStrat
             if (subject.isPresent()) {
                 return retrieve(subject.get().config().id(), "Further retrieval for a possibly missing field");
             }
+            if (!fitting.isEmpty()) {
+                return retrieve(fitting.get(0).config().id(), "Further retrieval for a possibly missing field");
+            }
         }
         return then.next(board, limits);
+    }
+
+    /** A failing assessment counts as not fitting, so one faulty agent does not stop the loop. */
+    private static boolean fits(SpecializedAgent agent, BlackboardView board) {
+        try {
+            Task task = new Task("context-first", board.snapshot().id(), Action.RETRIEVE_CONTEXT, Optional.empty(),
+                    TaskStatus.PENDING, "Context selection");
+            return agent.assess(task, board).score() > 0;
+        } catch (RuntimeException e) {
+            return false;
+        }
     }
 
     private static boolean hasRun(BlackboardSnapshot state, String agentId) {
