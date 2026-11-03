@@ -27,6 +27,10 @@ import org.supermas.context.ProjectIndexes;
 import org.supermas.context.SenderVerifier;
 import org.supermas.context.TopicCandidateFilter;
 import org.supermas.context.TopicContextAgent;
+import org.supermas.context.TopicRegrouper;
+import org.supermas.context.TopicDiscovery;
+import org.supermas.context.TopicCatalog;
+import org.supermas.context.DiscoveredTopicsAgent;
 import org.supermas.context.TopicContextSelector;
 import org.supermas.context.TopicDefinition;
 import org.supermas.context.TopicEvidence;
@@ -62,6 +66,9 @@ public final class C3Benchmark {
     private static final String READER = "reader";
     private static final String DISCUSSION = "discussion";
     private static final String CORRESPONDENT = "correspondent";
+    private static final String DISCOVERED = "discovered";
+    /** How many discovered topics one email may search, fixed before the run (step 10.3). */
+    private static final int MAX_DISCOVERED = 2;
     private static final SenderVerifier SIMULATED_VERIFIED = email -> true;
     /** Folders that mail systems create, or that hold no single subject. */
     private static final Set<String> GENERIC_FOLDERS = Set.of("all_documents", "sent", "sent_items", "_sent_mail",
@@ -71,9 +78,17 @@ public final class C3Benchmark {
 
     private C3Benchmark() { }
 
+    private static final String C1_THREAD = "C1 + thread history";
+    private static final String DISCOVERED_ONLY = "Discovered topics only";
+    private static final String C3_DISCOVERED = "C3 discovered (discussion + discovered)";
+    private static final String C3_ALL = "C3 all (declared + discussion + discovered)";
+    private static final List<String> VARIANTS = List.of("C1", C1_THREAD, "Recency", "C3 subject only", "C3",
+            "C3 + correspondent (simulated)", "Thread only", DISCOVERED_ONLY, C3_DISCOVERED, C3_ALL);
+
     private record Project(String id, String source, List<Message> messages, List<TopicContextAgent> subjects,
                            TopicContextAgent discussion, TopicContextAgent correspondent,
-                           TopicContextAgent forgedCorrespondent, AgentConfig reader, Map<String, Set<String>> declaredFolders) { }
+                           TopicContextAgent forgedCorrespondent, AgentConfig reader, Map<String, Set<String>> declaredFolders,
+                           DiscoveredTopicsAgent discovered, TopicRegrouper.Result discovery) { }
 
     private static final class Variant {
         final List<Scores> threadProxy = new ArrayList<>();
@@ -86,6 +101,8 @@ public final class C3Benchmark {
         int forgedSenderProbes;
         long agentRuns;
         long boards;
+        long discoveredAssessed;
+        long discoveredActive;
         long entries;
         long uniqueDocuments;
         final List<Long> latencies = new ArrayList<>();
@@ -126,7 +143,8 @@ public final class C3Benchmark {
                 definitions.put(project, declare(project, entry.getValue(), declared.get(project)));
                 Set<String> everyone = new HashSet<>();
                 definitions.get(project).forEach(definition -> everyone.add(definition.agentId()));
-                everyone.addAll(List.of(project + "-" + DISCUSSION, project + "-" + CORRESPONDENT, project + "-" + READER));
+                everyone.addAll(List.of(project + "-" + DISCUSSION, project + "-" + CORRESPONDENT, project + "-" + READER,
+                        project + "-" + DISCOVERED));
                 readers.put(project, everyone);
                 sources.put(project + "-mailbox", new ContextSource(project + "-mailbox", project,
                         URI.create("file:///benchmark"), everyone));
@@ -199,7 +217,17 @@ public final class C3Benchmark {
         }
         indexes.forProject(project).addAll(documents);
         indexes.forProject(project).commit();
-        return new Project(project, source, messages, subjects, discussion, correspondent, forged, readerConfig, declared);
+        // Discovered topics use all of the project's mail, with the settings fixed in step 10.1.
+        TopicCatalog catalog = TopicCatalog.inMemory();
+        TopicRegrouper.Result discovery = new TopicRegrouper(indexes, catalog,
+                new TopicDiscovery(TopicDiscovery.Settings.defaults())).refresh(project);
+        AgentConfig discoveredConfig = new AgentConfig(project + "-" + DISCOVERED, "context-discovered", "",
+                Set.of(TopicContextAgent.CAPABILITY), List.of(), Set.of(source), false);
+        agents.put(discoveredConfig.id(), discoveredConfig);
+        DiscoveredTopicsAgent discovered = new DiscoveredTopicsAgent(discoveredConfig, project, catalog, retriever,
+                MAX_DISCOVERED, NO_LIMIT);
+        return new Project(project, source, messages, subjects, discussion, correspondent, forged, readerConfig, declared,
+                discovered, discovery);
     }
 
     private static InMemoryBlackboard board(Scope scope, Message query) {
@@ -212,11 +240,28 @@ public final class C3Benchmark {
     /** Runs the selected agents and the merge, as the pipeline would, and checks every result for isolation. */
     private static List<String> topics(List<TopicContextAgent> agents, Scope scope, Message query, Project project,
                                        Set<String> projectIds, Stats stats, boolean record) {
+        return topics(agents, false, false, scope, query, project, projectIds, stats, record);
+    }
+
+    /** As above, and with the discovered-topics agent after the declared ones when it fits, as the stand-in strategy runs it. */
+    private static List<String> topics(List<TopicContextAgent> agents, boolean withDiscovered, boolean countDiscovered,
+                                       Scope scope, Message query, Project project, Set<String> projectIds, Stats stats,
+                                       boolean record) {
         InMemoryBlackboard board = board(scope, query);
         long start = System.nanoTime();
         List<TopicContextAgent> selected = new TopicCandidateFilter(MAX_SUBJECTS).select(agents, board);
         for (TopicContextAgent agent : selected) {
             agent.execute(null, board.accessFor(agent.config()));
+        }
+        if (withDiscovered) {
+            boolean active = project.discovered().assess(null, board).score() > 0;
+            if (active) {
+                project.discovered().execute(null, board.accessFor(project.discovered().config()));
+            }
+            if (countDiscovered) {
+                stats.discoveredAssessed++;
+                stats.discoveredActive += active ? 1 : 0;
+            }
         }
         List<Evidence> merged = new TopicContextSelector().select(board, project.reader(), NO_LIMIT).evidence();
         if (record) {
@@ -274,7 +319,7 @@ public final class C3Benchmark {
     private static String run(Map<String, Project> projects, LuceneContextRetriever retriever, C1Benchmark.Counts counts,
                               int queriesPerProject) {
         Map<String, Variant> variants = new LinkedHashMap<>();
-        for (String name : List.of("C1", "Recency", "C3 subject only", "C3", "C3 + correspondent (simulated)", "Thread only")) {
+        for (String name : VARIANTS) {
             variants.put(name, new Variant());
         }
         Stats stats = new Stats();
@@ -385,15 +430,26 @@ public final class C3Benchmark {
         all.add(project.correspondent());
         ranked.put("C3 + correspondent (simulated)", keep(topics(all, scope, query, project, projectIds, stats, false),
                 byId, query, dropOwnThread));
-        ranked.put("Thread only", keep(topics(List.of(project.discussion()), scope, query, project, projectIds, stats, false),
+        List<String> thread = topics(List.of(project.discussion()), scope, query, project, projectIds, stats, false);
+        ranked.put("Thread only", keep(thread, byId, query, dropOwnThread));
+        // The fair baseline missing from step 4.10: the thread's history first, then C1's results.
+        List<String> c1Thread = new ArrayList<>(thread);
+        c1.stream().filter(id -> !c1Thread.contains(id)).forEach(c1Thread::add);
+        ranked.put(C1_THREAD, keep(c1Thread, byId, query, dropOwnThread));
+        ranked.put(DISCOVERED_ONLY, keep(topics(List.of(), true, record, scope, query, project, projectIds, stats, false),
                 byId, query, dropOwnThread));
+        ranked.put(C3_DISCOVERED, keep(topics(List.of(project.discussion()), true, false, scope, query, project, projectIds, stats,
+                false), byId, query, dropOwnThread));
+        ranked.put(C3_ALL, keep(topics(c3, true, false, scope, query, project, projectIds, stats, false), byId, query,
+                dropOwnThread));
         return ranked;
     }
 
     private static String report(Map<String, Project> projects, C1Benchmark.Counts counts, Map<String, Variant> variants,
                                  Stats stats, int subjects, int folderQueries) {
-        StringBuilder out = new StringBuilder("# C3 Against C1 on Enron\n\n");
-        out.append("Quality uses two proxies, not human relevance labels. See `docs/reports/step-4.10.md`.\n\n");
+        StringBuilder out = new StringBuilder("# Discovered Topics Against Declared Topics and C1 on Enron\n\n");
+        out.append("Quality uses two proxies, not human relevance labels. See `docs/reports/step-4.10.md` and "
+                + "`docs/reports/step-10.4.md`.\n\n");
         out.append("| Item | Value |\n| --- | --- |\n");
         out.append(C1Benchmark.row("Projects (mailboxes)", projects.size()));
         out.append(C1Benchmark.row("Unique messages indexed", counts.messages));
@@ -401,6 +457,22 @@ public final class C3Benchmark {
         out.append(C1Benchmark.row("Thread-proxy queries", variants.get("C1").threadProxy.size()));
         out.append(C1Benchmark.row("Folder-proxy queries", folderQueries));
         out.append(C1Benchmark.row("Maximum subject agents per email", MAX_SUBJECTS));
+        int topicsFound = 0;
+        int clustered = 0;
+        int threadsSeen = 0;
+        long discoveryMillis = 0;
+        for (Project project : projects.values()) {
+            topicsFound += project.discovery().topics();
+            clustered += project.discovery().threadsClustered();
+            threadsSeen += project.discovery().threadsSeen();
+            discoveryMillis += project.discovery().millis();
+        }
+        out.append(C1Benchmark.row("Discovered topics, all projects", topicsFound));
+        out.append(C1Benchmark.row("Threads in a discovered topic", clustered + " of " + threadsSeen));
+        out.append(C1Benchmark.row("Discovery and retagging time, all projects", discoveryMillis + " ms"));
+        out.append(C1Benchmark.row("Maximum discovered topics searched per email", MAX_DISCOVERED));
+        out.append(C1Benchmark.row("Emails where the discovered agent fits (thread proxy)", stats.discoveredActive + " of "
+                + stats.discoveredAssessed));
         out.append(C1Benchmark.row("Agents run per email, C3", String.format(Locale.ROOT, "%.2f", (double) stats.agentRuns / stats.boards)));
         out.append(C1Benchmark.row("Evidence entries per email before merging, C3", String.format(Locale.ROOT, "%.2f", (double) stats.entries / stats.boards)));
         out.append(C1Benchmark.row("Documents per email after merging, C3", String.format(Locale.ROOT, "%.2f", (double) stats.uniqueDocuments / stats.boards)));
@@ -418,12 +490,14 @@ public final class C3Benchmark {
 
         out.append("\n## Paired differences from C1, with 95% bootstrap intervals\n\n");
         out.append("| Proxy | Variant | Recall@10 | nDCG@10 |\n| --- | --- | --- | --- |\n");
-        for (String name : List.of("C3 subject only", "C3", "C3 + correspondent (simulated)")) {
+        List<String> compared = List.of(C1_THREAD, "C3 subject only", "C3", "C3 + correspondent (simulated)", DISCOVERED_ONLY,
+                C3_DISCOVERED, C3_ALL);
+        for (String name : compared) {
             out.append("| Thread | ").append(name).append(" | ")
                     .append(difference(variants.get(name).threadProxy, variants.get("C1").threadProxy, Scores::recall10)).append(" | ")
                     .append(difference(variants.get(name).threadProxy, variants.get("C1").threadProxy, Scores::ndcg10)).append(" |\n");
         }
-        for (String name : List.of("C3 subject only", "C3", "C3 + correspondent (simulated)")) {
+        for (String name : compared) {
             out.append("| Folder | ").append(name).append(" | ")
                     .append(difference(variants.get(name).folderProxy, variants.get("C1").folderProxy, Scores::recall10)).append(" | ")
                     .append(difference(variants.get(name).folderProxy, variants.get("C1").folderProxy, Scores::ndcg10)).append(" |\n");
