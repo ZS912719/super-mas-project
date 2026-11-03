@@ -1,0 +1,6 @@
+# Bundled roles, one JSON file each. Add a line to add a role.
+student.json
+teacher.json
+research.json
+administration.json
+generic.json
