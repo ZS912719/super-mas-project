@@ -169,6 +169,16 @@ public final class ProjectIndex implements AutoCloseable {
         return hits;
     }
 
+    /** Removes every document of one source, for example before reloading it. */
+    public void deleteSource(String sourceId) {
+        try {
+            writer.deleteDocuments(new Term(SOURCE, sourceId));
+            searchers.maybeRefreshBlocking();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     /** The document with this identifier, if this project has it. */
     public Optional<IndexedDocument> find(String documentId) {
         List<IndexedDocument> found = new ArrayList<>();
