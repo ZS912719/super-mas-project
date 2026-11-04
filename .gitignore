@@ -28,6 +28,8 @@ Thumbs.db
 # Mailbox application dependencies and generated assets
 /mailbox/node_modules/
 /mailbox/public/
+/mailbox/dist/
+/runtime/
 
 # Private project progress notes
 /.project-progress.local.md

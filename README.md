@@ -68,6 +68,8 @@ See [architecture details](docs/architecture.md), [current UML](docs/uml/README.
 
 ## Deployment and usage
 
+GitHub Actions verifies the Java project on Linux and Windows. Mailbox and formal checks activate when their modules are present in the checked-out branch. Delivery workflows prepare component packages and draft releases when the required implementation is available. See [CI and delivery](docs/ci-cd.md) for setup and release commands.
+
 ### Web mailbox
 
 Run from the repository root:

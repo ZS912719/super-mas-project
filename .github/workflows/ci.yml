@@ -1,0 +1,169 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  modules:
+    name: Detect available modules
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      mailbox: ${{ steps.detect.outputs.mailbox }}
+      formal: ${{ steps.detect.outputs.formal }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Detect committed modules and reject incomplete checkouts
+        id: detect
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $mailbox = @(git ls-files mailbox).Count -gt 0
+          $formal = @(git ls-files formal).Count -gt 0
+          if ($mailbox) {
+              foreach ($file in @('mailbox/package.json', 'mailbox/package-lock.json')) {
+                  if (-not (Test-Path -LiteralPath $file)) { throw "Incomplete mailbox: missing $file" }
+              }
+          }
+          if ($formal) {
+              foreach ($file in @('formal/tasks.smv', 'formal/projection.smv', 'scripts/check-formal.ps1')) {
+                  if (-not (Test-Path -LiteralPath $file)) { throw "Incomplete formal module: missing $file" }
+              }
+          }
+          "mailbox=$($mailbox.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          "formal=$($formal.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
+  java:
+    name: Java (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Verify Java implementation
+        run: mvn -B -ntp clean verify
+      - name: Upload test reports
+        if: always() && hashFiles('target/surefire-reports/*') != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: java-reports-${{ matrix.os }}
+          path: target/surefire-reports/
+          retention-days: 14
+      - name: Upload Java library
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: java-library-${{ matrix.os }}
+          path: target/supermas-*.jar
+          if-no-files-found: error
+          retention-days: 14
+
+  mailbox:
+    name: Mailbox (Windows)
+    needs: modules
+    if: needs.modules.outputs.mailbox == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: mailbox
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: mailbox/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Build portable application without publishing
+        shell: pwsh
+        run: |
+          $package = Get-Content -Raw package.json | ConvertFrom-Json
+          if ($package.scripts.'package:win') {
+              npm run package:win -- --publish never
+              if ($LASTEXITCODE -ne 0) { throw 'Portable mailbox packaging failed.' }
+          } else {
+              Write-Output 'Desktop packaging is unavailable in this mailbox version.'
+          }
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: hashFiles('mailbox/dist/*.exe') != ''
+        with:
+          name: mailbox-windows-x64
+          path: mailbox/dist/*.exe
+          if-no-files-found: error
+          retention-days: 14
+
+  formal:
+    name: Formal models
+    needs: modules
+    if: needs.modules.outputs.formal == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Install verified nuXmv archive
+        shell: pwsh
+        run: ./scripts/install-nuxmv.ps1
+      - name: Check models and negative controls
+        shell: pwsh
+        run: ./scripts/check-formal.ps1
+      - name: Upload model checking logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: formal-reports
+          path: target/formal/
+          retention-days: 14
+
+  gate:
+    name: CI gate
+    if: always()
+    needs: [modules, java, mailbox, formal]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every validation job to succeed
+        env:
+          JAVA_RESULT: ${{ needs.java.result }}
+          MAILBOX_RESULT: ${{ needs.mailbox.result }}
+          FORMAL_RESULT: ${{ needs.formal.result }}
+          MODULES_RESULT: ${{ needs.modules.result }}
+          HAS_MAILBOX: ${{ needs.modules.outputs.mailbox }}
+          HAS_FORMAL: ${{ needs.modules.outputs.formal }}
+        run: |
+          test "$MODULES_RESULT" = success
+          test "$JAVA_RESULT" = success
+          if [ "$HAS_MAILBOX" = true ]; then
+            test "$MAILBOX_RESULT" = success
+          else
+            test "$MAILBOX_RESULT" = skipped
+          fi
+          if [ "$HAS_FORMAL" = true ]; then
+            test "$FORMAL_RESULT" = success
+          else
+            test "$FORMAL_RESULT" = skipped
+          fi
