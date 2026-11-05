@@ -20,6 +20,8 @@ Markdown notes, Obsidian links and keyword search provide manual/agent-driven re
 4. Inspect referenced source and tests at the correct revision. Resolve stale summaries against source and explicit decisions.
 5. Carry forward a compact objective, constraints, relevant symbols, supporting evidence and open questions. Include source citations in reports.
 
+On other branches, follow [[Knowledge-Branch-Access]] to resolve a knowledge commit and read its notes through Git. A vault copy, watcher and semantic index are not prerequisites.
+
 Personal notes may provide optional local context but cannot be a team dependency. Referenced feature code is not silently promoted to main behavior.
 
 ## Proposed semantic ingestion contract

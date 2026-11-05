@@ -14,15 +14,17 @@ Clone the project using its normal repository access. Open `super-mas-team-dev-v
 
 The parent project's Git history is the shared version source. Use it to exchange notes alongside code; do not run `git init` inside this vault. Avoid using a second synchronization mechanism on the same team folder. Members may use a Markdown editor instead of Obsidian.
 
+Knowledge lives on `team-knowledge-vault`; application code lives on separate branches. Use direct Git reads for agents or a separate knowledge checkout for persistent Obsidian access; see [[Knowledge-Branch-Access]]. Do not merge this knowledge-only tree into application branches.
+
 ## Before editing
 
 Inspect branch, HEAD and working-tree changes. Update from the team's accepted base through the ordinary Git workflow; do not discard others' edits. Prefer task branches such as `codex/<topic>` unless the user specifies otherwise. Read only the relevant knowledge and source files, checking their branch applicability.
 
 ## Editing and review
 
-Keep one topic per note and stable filenames/ids. Shared notes must contain source paths and a date; implementation claims must identify branch/revision. Label proposals, historical evidence and superseded decisions explicitly. Change affected notes in the same PR as code. Do not paste complete source files, generated diagrams already in Git or whole conversations into notes.
+Keep one topic per note and stable filenames/ids. Shared notes must contain source paths and a date; implementation claims must identify branch/revision. Label proposals, historical evidence and superseded decisions explicitly. Pair each implementation change with a separate knowledge update targeting this branch, citing the code commit or PR. Do not paste complete source files, generated diagrams already in Git or whole conversations into notes.
 
-Use English Conventional Commits when committing is authorized, for example `docs(knowledge): clarify blackboard recovery guarantees`. Submit through the team's PR workflow when publishing is authorized. Review correctness, source applicability, privacy, links and any affected commands. Merging code should include its knowledge changes. A local note update does not imply a commit, push or PR has occurred.
+Use English Conventional Commits when committing is authorized, for example `docs(knowledge): clarify blackboard recovery guarantees`. Knowledge PRs target `team-knowledge-vault`; implementation PRs target their code branches. Review correctness, source applicability, privacy, links and commands. Track the related knowledge update when reviewing code. A local note update does not imply a commit, push or PR has occurred.
 
 ## Conflict handling
 

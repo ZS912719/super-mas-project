@@ -10,6 +10,8 @@ status: active
 
 This Git-versioned Obsidian vault holds shareable development knowledge. Open this directory as an existing vault, or read its Markdown files in an editor. Git in the parent project is the synchronization and review mechanism; there is no nested repository or required Obsidian plugin.
 
+The dedicated `team-knowledge-vault` branch stores knowledge only. Application source remains on its respective branches; inspect it through Git or a separate code checkout. Do not merge this branch into a code branch. See [[Knowledge-Branch-Access]] for reading notes while another branch is checked out.
+
 Start with [[Project-Status]], then select a topic from [[Source-Index]]. Verify claims against the appropriate revision before changing code. Repository paths in notes are relative to the project root, not this vault.
 
 ## Navigation
@@ -21,6 +23,7 @@ Start with [[Project-Status]], then select a topic from [[Source-Index]]. Verify
 - [[Validation-and-Limits]] — recorded evidence and what it does not prove.
 - [[Decisions-and-Open-Questions]] — established boundaries and unresolved design choices.
 - [[Contribution-Workflow]] — onboarding, Git review and knowledge maintenance.
+- [[Knowledge-Branch-Access]] — direct Git reads, change detection and optional hook design.
 - [[Retrieval-and-RAG]] — context retrieval and future ingestion contract.
 - [[Agent-Guide]] — agent handoff and optional skill design.
 - [[Templates]] — reusable decision, evidence and handoff formats.

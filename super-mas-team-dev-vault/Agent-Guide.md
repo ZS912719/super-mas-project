@@ -12,6 +12,8 @@ status: active
 
 `AGENTS.md` is the project entry point. Read [[Home]] and [[Project-Status]], then retrieve task-relevant notes and source. Keep source facts, intended contracts, proposals and historical tests distinct. Do not require the personal vault or local Chinese progress log for shared understanding.
 
+For cross-branch work, use [[Knowledge-Branch-Access]]. Check the knowledge ref before a task and at meaningful checkpoints in long tasks, then read changed relevant notes. A hook notification does not mean an agent has read or understood new content. Code-branch instruction pointers are separate integration work; this branch cannot change files on other branches by itself.
+
 At completion, update affected knowledge with the actual source scope and evidence. For unfinished work use the handoff format in [[Templates]]: objective, accepted decisions, relevant source, completed work, verification, blockers and next action. Remove private chat/recovery details before sharing.
 
 ## Should this become a skill?
