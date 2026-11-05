@@ -33,3 +33,6 @@ Thumbs.db
 # Private project progress notes
 /.project-progress.local.md
 /runtime/
+
+# Local development context and Obsidian workspace
+/super-mas-dev-vault/
