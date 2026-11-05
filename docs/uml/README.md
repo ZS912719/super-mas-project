@@ -1,6 +1,6 @@
 # Current Java API UML
 
-These diagrams replace the former class, sequence and agent-organization proposal. They describe the current Java interfaces and selected data contracts, not a running email assistant.
+These diagrams describe the Java interfaces, selected data contracts and the first local SQLite blackboard runtime. A complete email-processing assistant is not implemented.
 
 ## Diagrams
 
@@ -10,8 +10,9 @@ These diagrams replace the former class, sequence and agent-organization proposa
 | Blackboard and specialist interfaces | [PlantUML](class-diagram.puml) | [SVG](class-diagram.svg) | [PNG](class-diagram.png) |
 | Coordination, context, model, storage and review interfaces | [PlantUML](service-contracts.puml) | [SVG](service-contracts.svg) | [PNG](service-contracts.png) |
 | Core task, evidence and draft data contracts | [PlantUML](data-contracts.puml) | [SVG](data-contracts.svg) | [PNG](data-contracts.png) |
+| SQLite blackboard runtime and Markdown observations | [PlantUML](runtime.puml) | [SVG](runtime.svg) | [PNG](runtime.png) |
 
-All 23 current interfaces are covered across the blackboard/specialist and service views. Method names, parameter types, return types and interface inheritance match `src/main/java/org/supermas`. Long parameter lists use display-only line breaks. The five specialist role interfaces currently declare no additional methods.
+All 24 current interfaces are covered across the blackboard/specialist and service views, including the new `blackboard.persistence.BlackboardStore`. Blackboard service contracts live in `blackboard.api`; snapshot and transactional storage contracts live in `blackboard.persistence`, separate from their implementations. Method names, parameter types, return types and interface inheritance match `src/main/java/org/supermas`. Long parameter lists use display-only line breaks. The five specialist role interfaces currently declare no additional methods.
 
 The data view shows 15 selected records nested in `org.supermas.model.Domain`, including all components of each displayed record. Supporting routing, context and model records/enums remain defined in `Domain.java` and appear by type name in signatures and fields. Field-reference multiplicities express intended API semantics, not runtime validation.
 
@@ -21,9 +22,9 @@ The data view shows 15 selected records nested in `org.supermas.model.Domain`, i
 - Hollow triangle arrows represent actual interface inheritance.
 - Dotted arrows in the interface view represent parameter/return type dependencies, not runtime calls or stored fields.
 - Data arrows represent record-component references. They do not assert lifecycle ownership or implementation-level aggregation.
-- Service placement does not prescribe execution order or dependency injection. No implementation wiring exists yet.
-- No sequence diagram is included: the code does not yet implement the scheduling, retrieval or feedback loops. Their intended contracts are described in [the architecture notes](../architecture.md).
-- Interface declarations do not enforce access control, budgets, draft transitions or local-only inference. Those behaviors require later implementation and tests.
+- Service placement in contract views does not prescribe execution order or dependency injection. The runtime view documents the implemented storage/observation relationships.
+- No sequence diagram is included. Task/storage/publication transitions are described in [runtime notes](../blackboard-runtime.md) and [Kripke models](../../formal/README.md); scheduling, retrieval and feedback loops remain deferred.
+- Interface declarations alone do not enforce behavior. The runtime implements an initial scope/source/lease boundary and monotonic budget counters; human review and local-only inference remain deferred.
 
 ## Render locally
 
@@ -36,7 +37,7 @@ A JDK and PlantUML JAR are required. The existing local JAR at `tmp/tools/plantu
 To select explicit tool locations:
 
 ```powershell
-./docs/uml/render.ps1 -PlantUmlJar 'C:/tools/plantuml.jar' -JavaExecutable 'C:/Program Files/Java/jdk-17/bin/java.exe'
+./docs/uml/render.ps1 -PlantUmlJar './tmp/tools/plantuml.jar' -JavaExecutable './tmp/jdk-17/bin/java.exe'
 ```
 
 The renderer uses the supplied Java executable, otherwise `JAVA_HOME`, otherwise `java` from PATH. It discovers current `.puml` files, validates syntax, and produces SVG and PNG locally without uploading project data. All views use the Smetana layout engine, so Graphviz is not required.

@@ -53,14 +53,34 @@ interface AgentConfigRepository {
   +find(String agentId): Optional<AgentConfig>
   +all(): List<AgentConfig>
 }
-interface BlackboardRepository {
-  +save(BlackboardSnapshot snapshot): void
-  +find(BoardId boardId): Optional<BlackboardSnapshot>
-}
 interface ConversationRepository {
   +append(ConversationMessage message): void
   +find(Scope scope, HistoryQuery query): List<ConversationMessage>
 }
+}
+package "org.supermas.blackboard.persistence" #EEF2FF {
+interface BlackboardRepository {
+  +save(BlackboardSnapshot snapshot): void
+  +find(BoardId boardId): Optional<BlackboardSnapshot>
+}
+interface BlackboardStore {
+  +clock(): Clock
+  +databaseId(): String
+  +latest(BoardId id): Optional<VersionedSnapshot>
+  +version(BoardId id, long revision): Optional<VersionedSnapshot>
+  +edit(BoardId id, Consumer<BoardState> action): VersionedSnapshot
+  +claim(BoardId id, String taskId, AgentConfig config,\n    Duration duration, RecoveryPolicy policy): TaskLease
+  +resolveLease(TaskLease supplied): TaskLease
+  +heartbeat(TaskLease supplied, Duration duration): TaskLease
+  +contribute(TaskLease lease,\n    BiConsumer<BoardState, AgentConfig> action): void
+  +complete(TaskLease supplied, TaskStatus status,\n    String summary): VersionedSnapshot
+  +recoverExpired(BoardId id): int
+  +abandon(TaskLease supplied): void
+  +projectionStatus(BoardId id): ProjectionStatus
+  +boards(): List<BoardId>
+  +acknowledge(BoardId id, long revision): void
+}
+BlackboardRepository <|-- BlackboardStore
 }
 package "org.supermas.review" #F0F8F6 {
 interface DraftReviewService {
@@ -70,7 +90,7 @@ interface DraftReviewService {
   +approve(BoardId boardId, int expectedVersion): Approval
 }
 }
-note "BlackboardView and Domain.* types are referenced in signatures.\nNo implementation fields or service wiring exist in the current code.\nPositioning does not imply execution order." as ContractNote
+note "BlackboardView and Domain.* types are referenced in signatures.\nThis view omits runtime implementations; see runtime.puml.\nPositioning does not imply execution order." as ContractNote
 coordinator -[hidden]down-> context
 context -[hidden]down-> llm
 llm -[hidden]down-> persistence

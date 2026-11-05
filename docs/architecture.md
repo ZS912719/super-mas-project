@@ -2,7 +2,7 @@
 
 ## Status
 
-The Java module contains interfaces and data contracts only. [The current UML diagrams](uml/README.md) reflect these unchanged Java contracts. Java 17 is the baseline for that module.
+The Java module groups contracts and implementations by responsibility. Blackboard code lives under `org.supermas.blackboard`: `api` defines service contracts, `impl` implements the blackboard, `model` holds shared state types, `persistence` defines storage contracts, `persistence.sqlite` implements SQLite, `persistence.codec` handles serialization, `export` generates Markdown, and `app` wires demo/observer entry points. Java 17 remains the baseline. SQLite is authoritative; Markdown is a generated observation view opened in Obsidian. Task execution is protected by short pessimistic transactions and durable fenced leases. See [runtime design and usage](blackboard-runtime.md), [formal models](../formal/README.md) and [UML](uml/README.md).
 
 The separate [mailbox application](../mailbox/README.md) runs in an Electron desktop window. Its main process owns a Node.js loopback HTTP server serving the bundled UI. Provider authorization opens in the system browser and returns to the initiating desktop session through expiring single-use OAuth state and PKCE. It implements mail transport, session state, draft review and direct local reply generation without implementing `Coordinator`, specialist agents, blackboard storage or `GenerationService`. Its classification adapter accepts externally supplied JSON; automatic agent execution remains deferred. These application modules are intentionally separate from the Java contract UML until an integration protocol is agreed.
 
@@ -51,7 +51,9 @@ The five role interfaces are extension points, not instantiated agents. Trusted 
 - `ConversationRepository`: explicitly typed messages queried by exact scope and kind.
 - `AgentConfigRepository`: trusted role definitions independent of coordinator branches.
 
-No storage format has been selected. Exception semantics, atomic updates, duplicate handling, expected-version checks and recovery remain implementation decisions. Repository interfaces must not be interpreted as guarantees of durability or access control until implemented.
+`blackboard.persistence.BlackboardRepository` defines basic snapshot persistence; `BlackboardStore` extends it with versioned atomic commands and task/export coordination. `blackboard.persistence.sqlite.SqliteBlackboardStore` implements this contract with insert-only legacy save, immutable historical JSON snapshots, transactional export requests, task leases and idempotent completion receipts. `blackboard.impl.DefaultBlackboardFactory` creates or opens coordinator handles. `DefaultBlackboard` implements the coordinator interface and creates restricted, lease-bound specialist views. Both depend on `BlackboardStore`, not the SQLite class. The runtime requires `accessFor(TaskLease)`; the original `accessFor(AgentConfig)` and direct execution-record insertion fail to prevent unfenced mutations. Conversation/configuration repositories remain under the general `persistence` package; human review remains a separate contract.
+
+`blackboard.export.MarkdownProjector` depends on `BlackboardStore` to read committed revisions and acknowledge publication, without importing the SQLite adapter or blackboard implementation. It generates complete version directories and atomically publishes their entry. A vault-level publisher lock coordinates file publication; it is separate from SQLite task locks. Read-back audit checks generated contents against historical database state. Entry points in `blackboard.app` select the concrete SQLite adapter; the observer handles expired leases and retries export. Obsidian and manually edited knowledge never write authoritative state. See [failure windows and current limits](blackboard-runtime.md#projection-and-recovery).
 
 ## Open decisions
 
@@ -61,9 +63,9 @@ No storage format has been selected. Exception semantics, atomic updates, duplic
 4. Configuration format, English role prompts and context authorization rules.
 5. Character/token accounting and cumulative execution/revision budgets.
 6. Local inference protocol, simulator behavior and output schema validation.
-7. Storage format, errors, atomicity, ordering and interrupted-task recovery.
+7. Storage migrations/retention, dependency-specific conflict detection and external-side-effect recovery.
 8. Interactive entry point, user identity and explicit approval actions.
-9. Identifier validation, collection immutability, state transitions and concurrency.
+9. Broader domain validation and context permissions beyond the initial runtime boundaries.
 
 ## Future validation checklist
 
@@ -81,4 +83,4 @@ These are requirements for later behavioral tests, not passing tests in this rev
 - Embedded instructions cannot grant access or authorize sending.
 - Stale versions cannot be approved; no unapproved message can be sent.
 
-The Maven build verifies API compilation and packaging only. The mailbox has separate behavior tests and a runnable demo; it does not validate the proposed multi-agent workflow.
+The Maven build now verifies blackboard storage, concurrency and recovery behavior, but does not validate the complete proposed multi-agent workflow. [Blackboard validation](blackboard-validation.md) records implemented coverage. The mailbox has separate behavior tests and a runnable demo.

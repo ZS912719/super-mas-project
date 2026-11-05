@@ -1,0 +1,95 @@
+@startuml
+!pragma layout smetana
+allowmixing
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam classAttributeIconSize 0
+title SuperMAS - Local Blackboard Runtime
+
+package "blackboard.api" {
+interface Blackboard
+interface BlackboardFactory
+interface AgentBlackboard
+}
+
+package "blackboard.persistence" {
+interface BlackboardRepository
+interface BlackboardStore
+BlackboardRepository <|-- BlackboardStore
+}
+
+package "blackboard.impl" {
+class DefaultBlackboardFactory {
+  +create(Email, Analysis): DefaultBlackboard
+  +create(BoardId, Email, Analysis): DefaultBlackboard
+  +open(BoardId): DefaultBlackboard
+  +restore(BlackboardSnapshot): DefaultBlackboard
+}
+class DefaultBlackboard {
+  +versionedSnapshot(): VersionedSnapshot
+  +claim(String, AgentConfig, Duration, RecoveryPolicy): TaskLease
+  +accessFor(TaskLease): AgentBlackboard
+  +heartbeat(TaskLease, Duration): TaskLease
+  +complete(TaskLease, TaskStatus, String): VersionedSnapshot
+  +abandon(TaskLease): void
+  +recoverExpired(): int
+}
+}
+package "blackboard.persistence.sqlite" {
+class SqliteBlackboardStore {
+  +save(BlackboardSnapshot): void
+  +find(BoardId): Optional<BlackboardSnapshot>
+  +latest(BoardId): Optional<VersionedSnapshot>
+  +version(BoardId, long): Optional<VersionedSnapshot>
+  +claim(BoardId, String, AgentConfig, Duration, RecoveryPolicy): TaskLease
+  +heartbeat(TaskLease, Duration): TaskLease
+  +complete(TaskLease, TaskStatus, String): VersionedSnapshot
+  +abandon(TaskLease): void
+  +recoverExpired(BoardId): int
+  +projectionStatus(BoardId): ProjectionStatus
+  +boards(): List<BoardId>
+}
+}
+package "blackboard.export" {
+class MarkdownProjector {
+  +reconcile(): void
+  +audit(BoardId): Audit
+  +start(Duration): void
+  +lastError(): Optional<String>
+  +boardDirectory(BoardId): Path
+  +close(): void
+}
+}
+package "blackboard.app" {
+class BlackboardObserver
+class BlackboardDemo
+}
+database SQLite
+folder "Obsidian vault" as Vault
+
+BlackboardFactory <|.. DefaultBlackboardFactory
+Blackboard <|.. DefaultBlackboard
+BlackboardStore <|.. SqliteBlackboardStore
+DefaultBlackboardFactory --> BlackboardStore : persists / opens
+DefaultBlackboard --> BlackboardStore : fenced commands
+DefaultBlackboard ..> AgentBlackboard : lease-bound view
+SqliteBlackboardStore --> SQLite : short IMMEDIATE transactions
+MarkdownProjector --> BlackboardStore : reads revisions / acknowledges
+MarkdownProjector --> Vault : immutable generations / atomic entry
+BlackboardObserver --> SqliteBlackboardStore : expires leases
+BlackboardObserver --> MarkdownProjector : retries export
+BlackboardDemo --> DefaultBlackboardFactory
+BlackboardDemo --> MarkdownProjector
+note bottom of DefaultBlackboard
+Legacy accessFor(AgentConfig) fails.
+Specialist mutations require a task lease.
+BlackboardData contains VersionedSnapshot,
+TaskLease, RecoveryPolicy and ProjectionStatus.
+end note
+legend bottom left
+Selected runtime methods; constructors/private helpers and inherited control methods omitted.
+Existing service method signatures and Domain records are preserved; imports follow the new packages.
+No automatic specialist execution, model call or mailbox integration.
+endlegend
+@enduml
