@@ -1,0 +1,91 @@
+-- A bounded Kripke abstraction: two execution workers, one contested task,
+-- one SQLite writer. Projection is modeled separately. No revision wraparound.
+MODULE main
+IVAR
+  event : {begin_a, begin_b, begin_recovery, claim_a, claim_b,
+           complete_a, complete_b, expire, recover, edit, rollback,
+           render, publish, acknowledge, crash, restart, stabilize, idle};
+VAR
+  alive : boolean;
+  stable : boolean;
+  last_event : {begin_a, begin_b, begin_recovery, claim_a, claim_b,
+                complete_a, complete_b, expire, recover, edit, rollback,
+                render, publish, acknowledge, crash, restart, stabilize, idle};
+  write_lock : {free, worker_a, worker_b, recovery};
+  task_status : {pending, running, succeeded};
+  owner : {nobody, worker_a, worker_b};
+  epoch : 0..2;
+  token_a : 0..2;
+  token_b : 0..2;
+  expired : boolean;
+  revision : 0..6;
+  expected_revision : 0..6;
+  accepted_stale : boolean;
+DEFINE
+  can_change := alive & !stable & revision < 6;
+  claim_by_a := can_change & write_lock = worker_a & event = claim_a & task_status = pending & epoch < 2;
+  claim_by_b := can_change & write_lock = worker_b & event = claim_b & task_status = pending & epoch < 2;
+  valid_a := task_status = running & owner = worker_a & token_a = epoch & !expired & expected_revision = revision;
+  valid_b := task_status = running & owner = worker_b & token_b = epoch & !expired & expected_revision = revision;
+  candidate_a := valid_a;
+  candidate_b := valid_b;
+  accept_a := can_change & write_lock = worker_a & event = complete_a & candidate_a;
+  accept_b := can_change & write_lock = worker_b & event = complete_b & candidate_b;
+  recovering := can_change & write_lock = recovery & event = recover & task_status = running & expired;
+  editing := can_change & write_lock = recovery & event = edit;
+  committing := claim_by_a | claim_by_b | accept_a | accept_b | recovering | editing;
+  resulting_status := case
+    claim_by_a | claim_by_b : running;
+    accept_a | accept_b : succeeded;
+    recovering : pending;
+    TRUE : task_status;
+  esac;
+  resulting_owner := case
+    claim_by_a : worker_a;
+    claim_by_b : worker_b;
+    accept_a | accept_b | recovering : nobody;
+    TRUE : owner;
+  esac;
+ASSIGN
+  init(alive) := TRUE;
+  next(alive) := case !stable & event = crash : FALSE; event = restart : TRUE; TRUE : alive; esac;
+  init(stable) := FALSE;
+  next(stable) := stable | (alive & write_lock = free & event = stabilize);
+  init(last_event) := idle;
+  next(last_event) := event;
+  init(write_lock) := free;
+  next(write_lock) := case
+    !alive | event = crash | event = rollback | committing : free;
+    alive & !stable & write_lock = free & event = begin_a : worker_a;
+    alive & !stable & write_lock = free & event = begin_b : worker_b;
+    alive & !stable & write_lock = free & event = begin_recovery : recovery;
+    TRUE : write_lock;
+  esac;
+  init(task_status) := pending;
+  next(task_status) := resulting_status;
+  init(owner) := nobody;
+  next(owner) := resulting_owner;
+  init(epoch) := 0;
+  next(epoch) := case claim_by_a | claim_by_b : epoch + 1; TRUE : epoch; esac;
+  init(token_a) := 0;
+  next(token_a) := case claim_by_a : epoch + 1; TRUE : token_a; esac;
+  init(token_b) := 0;
+  next(token_b) := case claim_by_b : epoch + 1; TRUE : token_b; esac;
+  init(expired) := FALSE;
+  next(expired) := case
+    claim_by_a | claim_by_b | recovering | accept_a | accept_b : FALSE;
+    alive & !stable & event = expire & task_status = running : TRUE;
+    TRUE : expired;
+  esac;
+  init(revision) := 0;
+  next(revision) := case committing : revision + 1; TRUE : revision; esac;
+  init(expected_revision) := 0;
+  next(expected_revision) := case claim_by_a | claim_by_b : revision + 1; TRUE : expected_revision; esac;
+  init(accepted_stale) := FALSE;
+  next(accepted_stale) := accepted_stale | (accept_a & !valid_a) | (accept_b & !valid_b);
+
+INVARSPEC NAME fenced_completion := !accepted_stale;
+INVARSPEC NAME single_owner := (task_status = running) <-> (owner != nobody);
+INVARSPEC NAME claimed_epoch := owner = nobody | epoch > 0;
+CTLSPEC NAME recovery_reachable := EF (epoch = 2 & task_status = running);
+CTLSPEC NAME stale_worker_reachable := EF (task_status = running & token_a > 0 & token_a < epoch);

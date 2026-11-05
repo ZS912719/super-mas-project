@@ -1,0 +1,75 @@
+-- SQLite commits and atomic publication, modeled independently of task scheduling.
+-- Payloads abstract complete snapshot contents into three distinguishable values.
+MODULE main
+IVAR
+  event : {change, render, publish, acknowledge, crash, restart, stabilize, idle};
+  new_payload : 0..2;
+VAR
+  alive : boolean;
+  stable : boolean;
+  last_event : {change, render, publish, acknowledge, crash, restart, stabilize, idle};
+  revision : 0..4;
+  payload : 0..2;
+  history : array 0..4 of 0..2;
+  rendering : boolean;
+  render_revision : 0..4;
+  render_payload : 0..2;
+  document_present : boolean;
+  document_revision : 0..4;
+  previous_document_revision : 0..4;
+  document_payload : 0..2;
+  acknowledged : 0..4;
+DEFINE
+  committing := alive & !stable & event = change & revision < 4;
+  starting_render := alive & !rendering & event = render;
+  publishing := alive & rendering & event = publish & render_revision >= document_revision;
+ASSIGN
+  init(alive) := TRUE;
+  next(alive) := case !stable & event = crash : FALSE; event = restart : TRUE; TRUE : alive; esac;
+  init(stable) := FALSE;
+  next(stable) := stable | (alive & event = stabilize);
+  init(last_event) := idle;
+  next(last_event) := event;
+  init(revision) := 0;
+  next(revision) := case committing : revision + 1; TRUE : revision; esac;
+  init(payload) := 0;
+  next(payload) := case committing : new_payload; TRUE : payload; esac;
+  init(rendering) := FALSE;
+  next(rendering) := case !alive | (!stable & event = crash) | publishing : FALSE; starting_render : TRUE; TRUE : rendering; esac;
+  init(render_revision) := 0;
+  next(render_revision) := case starting_render : revision; TRUE : render_revision; esac;
+  init(render_payload) := 0;
+  next(render_payload) := case starting_render : payload; TRUE : render_payload; esac;
+  init(document_present) := FALSE;
+  next(document_present) := document_present | publishing;
+  init(document_revision) := 0;
+  next(document_revision) := case publishing : render_revision; TRUE : document_revision; esac;
+  init(previous_document_revision) := 0;
+  next(previous_document_revision) := document_revision;
+  init(document_payload) := 0;
+  next(document_payload) := case publishing : render_payload; TRUE : document_payload; esac;
+  init(acknowledged) := 0;
+  next(acknowledged) := case alive & document_present & event = acknowledge : document_revision; TRUE : acknowledged; esac;
+  init(history[0]) := 0;
+  next(history[0]) := history[0];
+  init(history[1]) := 0;
+  next(history[1]) := case committing & revision = 0 : new_payload; TRUE : history[1]; esac;
+  init(history[2]) := 0;
+  next(history[2]) := case committing & revision = 1 : new_payload; TRUE : history[2]; esac;
+  init(history[3]) := 0;
+  next(history[3]) := case committing & revision = 2 : new_payload; TRUE : history[3]; esac;
+  init(history[4]) := 0;
+  next(history[4]) := case committing & revision = 3 : new_payload; TRUE : history[4]; esac;
+
+-- Progress assumes eventual stability and repeated scheduling of all exporter phases.
+-- Safety is checked again with these fairness assumptions removed.
+FAIRNESS stable
+FAIRNESS last_event = render
+FAIRNESS last_event = publish
+FAIRNESS last_event = acknowledge
+INVARSPEC NAME committed_document := document_revision <= revision;
+INVARSPEC NAME monotonic_publication := document_revision >= previous_document_revision;
+INVARSPEC NAME acknowledgement_order := acknowledged <= document_revision;
+INVARSPEC NAME faithful_document := !document_present | document_payload = history[document_revision];
+CTLSPEC NAME publish_before_ack_reachable := EF (document_revision > acknowledged);
+LTLSPEC NAME eventual_projection := F G (document_present & document_revision = revision & acknowledged = revision);
