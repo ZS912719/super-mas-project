@@ -36,3 +36,8 @@ Thumbs.db
 
 # Local development context and Obsidian workspace
 /super-mas-dev-vault/
+
+# Team vault local editor settings and retrieval caches
+/super-mas-team-dev-vault/.obsidian/
+/super-mas-team-dev-vault/.trash/
+/super-mas-team-dev-vault/.rag-cache/
