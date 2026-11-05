@@ -1,6 +1,6 @@
 # Project Instructions
 
-Communicate with the user in Chinese. Use English for project-authored documentation, diagrams, code identifiers, comments, prompts, user interface text, logs, test descriptions and Git commit messages. The explicitly requested local progress log is written in Chinese.
+Use English for project-authored documentation, diagrams, code identifiers, comments, prompts, user interface text, logs, test descriptions and Git commit messages.
 Use Conventional Commits for commit messages. Keep README content limited to dependencies, code structure, deployment, usage and project progress unless explicitly requested otherwise. Use relative paths in README files; never include machine-specific paths.
 Prefer clear, understandable implementations and explain the relevant concepts to the user. Respect discussion-only requests; do not implement a proposal until implementation is authorized.
 
@@ -22,7 +22,7 @@ Keep these three vaults separate:
 
 Do not share credentials, real mail, runtime databases, machine-specific paths, raw private conversations, personal handoffs or local recovery identifiers. Keep `.obsidian/`, local search/vector caches and personal layouts ignored. Do not create a nested Git repository in the team vault.
 
-After a code-generation task completes or is rolled back, update `.project-progress.local.md` in Chinese with progress and relevant structure changes. Create it if absent and keep it ignored. Shared conclusions belong in the team vault; the local log must not become a prerequisite for collaborators.
+After a code-generation task completes or is rolled back, update `.project-progress.local.md` with progress and relevant structure changes, using the developer's preferred language. Create it if absent and keep it ignored. Shared conclusions belong in the team vault; the local log must not become a prerequisite for collaborators.
 
 ## Agent workflows and optional skills
 

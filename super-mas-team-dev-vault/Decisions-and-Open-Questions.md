@@ -14,7 +14,7 @@ status: active
 | --- | --- | --- |
 | Use Obsidian + parent-project Git for team knowledge | User decision, 2026-11-05; notes review alongside code | Team workflow |
 | Preserve personal vault and separate application vault | User decision, 2026-11-05; prevent private/runtime data entering shared development retrieval | All branches adopting this workflow |
-| Keep shared project content in English; explain work to the user in Chinese | User project instructions and `AGENTS.md` | Project conventions |
+| Keep shared project content in English; personal communication and local-note languages follow each developer's preferences | User clarification on 2026-11-05 and `AGENTS.md` | International team conventions |
 | Keep domain implementation in responsibility-named packages | Feature `docs/architecture.md`; avoid a broad runtime source package | Blackboard implementation |
 | SQLite is authoritative; Markdown is rebuildable observation | Feature `docs/blackboard-runtime.md` | Blackboard branch; not yet main implementation |
 | Model/tool calls occur outside short write transactions; use leases and fencing for execution | Same source; separate lock lifetime from task lifetime | Blackboard branch |

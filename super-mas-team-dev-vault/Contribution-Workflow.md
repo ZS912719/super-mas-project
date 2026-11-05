@@ -32,7 +32,7 @@ Prefer edits to separate topic notes. When two contributors edit a shared note, 
 
 ## Completion and maintenance
 
-Update affected notes and dates, validation results and remaining questions. Add a short team handoff only when another contributor needs it; personal scratch work stays private. Update the ignored Chinese local progress log after code generation or rollback. Periodically reconcile [[Project-Status]] and [[Source-Index]] after branch integration, file moves and renamed entry points.
+Update affected notes and dates, validation results and remaining questions. Add a short team handoff only when another contributor needs it; personal scratch work stays private. Update the ignored local progress log after code generation or rollback, using the developer's preferred language. Periodically reconcile [[Project-Status]] and [[Source-Index]] after branch integration, file moves and renamed entry points.
 
 ## Shareability checklist
 
