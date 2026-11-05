@@ -8,7 +8,7 @@ status: active
 
 # Architecture and Contracts
 
-The project targets a blackboard-based multi-agent email reply assistant. The Java baseline defines contracts; the feature implementation described in [[Blackboard-Storage-and-Observation]] adds storage and observation, not the complete execution pipeline.
+The project targets a blackboard-based multi-agent email reply assistant. The Java baseline defines contracts; the feature implementation described in [Blackboard-Storage-and-Observation](Blackboard-Storage-and-Observation.md) adds storage and observation, not the complete execution pipeline.
 
 ## Intended collaboration
 
@@ -35,4 +35,4 @@ The project targets a blackboard-based multi-agent email reply assistant. The Ja
 - `GenerationService.prepare` must account for all input, including current email and feedback. `ModelRequest` separates trusted prompts from untrusted data, but structure alone does not prove injection resistance.
 - `ModelResponse` and `GenerationResult` require an unambiguous success/failure outcome. Contract records alone do not establish validation or defensive copying.
 
-Sources: `main:d62e4fc` — `docs/architecture.md`, `src/main/java/org/supermas/model/Domain.java` and the contract packages indexed in [[Source-Index]]. Implementation status: [[Project-Status]].
+Sources: `main:d62e4fc` — `docs/architecture.md`, `src/main/java/org/supermas/model/Domain.java` and the contract packages indexed in [Source-Index](Source-Index.md). Implementation status: [Project-Status](Project-Status.md).

@@ -25,4 +25,4 @@ Kripke models use states, initial states, transition relations and labels. Task 
 
 Record command, date, exact source revision, relevant working-tree changes, environment class, result and limits. Keep simulated/live, file/UI and abstract-model/implementation evidence distinct. A current build cannot retroactively validate a different branch. Hosted Actions and real integrations require their own evidence.
 
-Do not publish private logs, emails, runtime boards or credentials as validation fixtures. Prefer synthetic data and short attributable summaries. Related: [[Templates]], [[Contribution-Workflow]].
+Do not publish private logs, emails, runtime boards or credentials as validation fixtures. Prefer synthetic data and short attributable summaries. Related: [Templates](Templates.md), [Contribution-Workflow](Contribution-Workflow.md).

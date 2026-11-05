@@ -37,4 +37,4 @@ Classification is an import adapter, not autonomous agent execution. Local gener
 
 Recorded tests simulate provider/model responses. Live OAuth and inference remain separate validation work. Public distribution requires review of native authorization/client-secret handling, signing and deployment. Durable storage, attachments, rich HTML and background synchronization remain deferred.
 
-Build and historical evidence: [[Build-CI-and-Delivery]], [[Validation-and-Limits]].
+Build and historical evidence: [Build-CI-and-Delivery](Build-CI-and-Delivery.md), [Validation-and-Limits](Validation-and-Limits.md).

@@ -10,11 +10,11 @@ status: active
 
 ## Follow-up workflow
 
-`AGENTS.md` is the project entry point. Read [[Home]] and [[Project-Status]], then retrieve task-relevant notes and source. Keep source facts, intended contracts, proposals and historical tests distinct. Do not require the personal vault or local progress log for shared understanding.
+`AGENTS.md` is the project entry point. Read [Home](Home.md) and [Project-Status](Project-Status.md), then retrieve task-relevant notes and source. Keep source facts, intended contracts, proposals and historical tests distinct. Do not require the personal vault or local progress log for shared understanding.
 
-For cross-branch work, use [[Knowledge-Branch-Access]]. Check the knowledge ref before a task and at meaningful checkpoints in long tasks, then read changed relevant notes. A hook notification does not mean an agent has read or understood new content. Code-branch instruction pointers are separate integration work; this branch cannot change files on other branches by itself.
+For cross-branch work, use [Knowledge-Branch-Access](Knowledge-Branch-Access.md). Check the knowledge ref before a task and at meaningful checkpoints in long tasks, then read changed relevant notes. A hook notification does not mean an agent has read or understood new content. Code-branch instruction pointers are separate integration work; this branch cannot change files on other branches by itself.
 
-At completion, update affected knowledge with the actual source scope and evidence. For unfinished work use the handoff format in [[Templates]]: objective, accepted decisions, relevant source, completed work, verification, blockers and next action. Remove private chat/recovery details before sharing.
+At completion, update affected knowledge with the actual source scope and evidence. For unfinished work use the handoff format in [Templates](Templates.md): objective, accepted decisions, relevant source, completed work, verification, blockers and next action. Remove private chat/recovery details before sharing.
 
 ## Should this become a skill?
 
@@ -26,4 +26,4 @@ Keep such a skill thin: define triggers, discover the repository root, read the 
 
 Skill packaging, discovery paths and installation differ by assistant. Confirm the target tool and read its current official skill guidance before creating an implementation. A repository skill file alone must not be described as automatically installed for every agent.
 
-Related: [[Contribution-Workflow]], [[Retrieval-and-RAG]].
+Related: [Contribution-Workflow](Contribution-Workflow.md), [Retrieval-and-RAG](Retrieval-and-RAG.md).

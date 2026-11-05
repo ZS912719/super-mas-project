@@ -14,13 +14,13 @@ Markdown notes, Obsidian links and keyword search provide manual/agent-driven re
 
 ## Task context procedure
 
-1. Read `AGENTS.md`, [[Home]] and [[Project-Status]].
+1. Read `AGENTS.md`, [Home](Home.md) and [Project-Status](Project-Status.md).
 2. Determine the current branch/revision and relevant uncommitted changes.
-3. Search [[Source-Index]] and topic headings. Load the smallest useful set of notes.
+3. Search [Source-Index](Source-Index.md) and topic headings. Load the smallest useful set of notes.
 4. Inspect referenced source and tests at the correct revision. Resolve stale summaries against source and explicit decisions.
 5. Carry forward a compact objective, constraints, relevant symbols, supporting evidence and open questions. Include source citations in reports.
 
-On other branches, follow [[Knowledge-Branch-Access]] to resolve a knowledge commit and read its notes through Git. A vault copy, watcher and semantic index are not prerequisites.
+On other branches, follow [Knowledge-Branch-Access](Knowledge-Branch-Access.md) to resolve a knowledge commit and read its notes through Git. A vault copy, watcher and semantic index are not prerequisites.
 
 Personal notes may provide optional local context but cannot be a team dependency. Referenced feature code is not silently promoted to main behavior.
 
@@ -37,4 +37,4 @@ Personal notes may provide optional local context but cannot be a team dependenc
 
 The embedding/index is a rebuildable derivative of reviewed knowledge. Store local generated indexes outside Git; a future shared service must enforce repository-equivalent access rather than make private team knowledge public.
 
-This contract is a proposal for later implementation. Model selection, chunk sizes, retrieval ranking, operational ownership and freshness checks remain open in [[Decisions-and-Open-Questions]].
+This contract is a proposal for later implementation. Model selection, chunk sizes, retrieval ranking, operational ownership and freshness checks remain open in [Decisions-and-Open-Questions](Decisions-and-Open-Questions.md).

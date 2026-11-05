@@ -45,4 +45,4 @@ rg -n -i 'lease|fencing|recovery' super-mas-team-dev-vault
 git show codex/blackboard-storage:docs/blackboard-runtime.md
 ```
 
-Do not switch branches just to read a source file. Branch tips and symbols may evolve; use the snapshot mapping in [[Project-Status]] when reproducing historical claims.
+Do not switch branches just to read a source file. Branch tips and symbols may evolve; use the snapshot mapping in [Project-Status](Project-Status.md) when reproducing historical claims.

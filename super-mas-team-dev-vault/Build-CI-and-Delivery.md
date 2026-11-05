@@ -8,7 +8,7 @@ status: active
 
 # Build, CI and Delivery
 
-Commands run from the repository root unless a different directory is specified. Select a branch containing the component first; see [[Project-Status]]. Sources: `pom.xml`, `.github/workflows/ci.yml`, `.github/workflows/release.yml`, `docs/ci-cd.md`; feature-branch runtime/mailbox documentation.
+Commands run from the repository root unless a different directory is specified. Select a branch containing the component first; see [Project-Status](Project-Status.md). Sources: `pom.xml`, `.github/workflows/ci.yml`, `.github/workflows/release.yml`, `docs/ci-cd.md`; feature-branch runtime/mailbox documentation.
 
 ## Main baseline
 

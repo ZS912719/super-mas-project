@@ -10,17 +10,19 @@ status: active
 
 ## Onboarding
 
-Clone the project using its normal repository access. Open `super-mas-team-dev-vault/` as an existing vault in Obsidian; its local `.obsidian/` settings remain ignored. Read [[Home]], [[Project-Status]] and `AGENTS.md`. No private vault, paid sync service, community plugin or machine-specific path is required.
+Clone the project using its normal repository access. Open `super-mas-team-dev-vault/` as an existing vault in Obsidian; its local `.obsidian/` settings remain ignored. Read [Home](Home.md), [Project-Status](Project-Status.md) and `AGENTS.md`. No private vault, paid sync service, community plugin or machine-specific path is required.
 
 The parent project's Git history is the shared version source. Use it to exchange notes alongside code; do not run `git init` inside this vault. Avoid using a second synchronization mechanism on the same team folder. Members may use a Markdown editor instead of Obsidian.
 
-Knowledge lives on `team-knowledge-vault`; application code lives on separate branches. Use direct Git reads for agents or a separate knowledge checkout for persistent Obsidian access; see [[Knowledge-Branch-Access]]. Do not merge this knowledge-only tree into application branches.
+Knowledge lives on `team-knowledge-vault`; application code lives on separate branches. Use direct Git reads for agents or a separate knowledge checkout for persistent Obsidian access; see [Knowledge-Branch-Access](Knowledge-Branch-Access.md). Do not merge this knowledge-only tree into application branches.
 
 ## Before editing
 
 Inspect branch, HEAD and working-tree changes. Update from the team's accepted base through the ordinary Git workflow; do not discard others' edits. Prefer task branches such as `codex/<topic>` unless the user specifies otherwise. Read only the relevant knowledge and source files, checking their branch applicability.
 
 ## Editing and review
+
+Use standard Markdown relative links between notes, such as `[Home](Home.md)`, so navigation works on GitHub and in Markdown editors as well as Obsidian.
 
 Keep one topic per note and stable filenames/ids. Shared notes must contain source paths and a date; implementation claims must identify branch/revision. Label proposals, historical evidence and superseded decisions explicitly. Pair each implementation change with a separate knowledge update targeting this branch, citing the code commit or PR. Do not paste complete source files, generated diagrams already in Git or whole conversations into notes.
 
@@ -32,7 +34,7 @@ Prefer edits to separate topic notes. When two contributors edit a shared note, 
 
 ## Completion and maintenance
 
-Update affected notes and dates, validation results and remaining questions. Add a short team handoff only when another contributor needs it; personal scratch work stays private. Update the ignored local progress log after code generation or rollback, using the developer's preferred language. Periodically reconcile [[Project-Status]] and [[Source-Index]] after branch integration, file moves and renamed entry points.
+Update affected notes and dates, validation results and remaining questions. Add a short team handoff only when another contributor needs it; personal scratch work stays private. Update the ignored local progress log after code generation or rollback, using the developer's preferred language. Periodically reconcile [Project-Status](Project-Status.md) and [Source-Index](Source-Index.md) after branch integration, file moves and renamed entry points.
 
 ## Shareability checklist
 

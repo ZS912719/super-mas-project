@@ -32,4 +32,4 @@ Implementation documents cited above remain on their named code branches. This k
 3. Agree orchestration, retrieval, model and human-review integration protocols before implementing a complete agent workflow.
 4. Introduce development semantic RAG only as a separate capability with defined corpus, freshness and access controls.
 
-Sources: local branch tips and tracked trees inspected on 2026-11-05; `docs/ci-cd.md`; branch-specific `docs/architecture.md` and `mailbox/README.md`. Related: [[Validation-and-Limits]].
+Sources: local branch tips and tracked trees inspected on 2026-11-05; `docs/ci-cd.md`; branch-specific `docs/architecture.md` and `mailbox/README.md`. Related: [Validation-and-Limits](Validation-and-Limits.md).

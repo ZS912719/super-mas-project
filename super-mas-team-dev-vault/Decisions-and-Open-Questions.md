@@ -36,4 +36,4 @@ status: active
 
 These are open design topics, not implementation authorization. Main's older architecture document still lists storage as undecided; the feature branch resolves part of that question only within its own scope.
 
-Source snapshots: [[Project-Status]]. Record new substantial decisions using [[Templates]] with context, chosen behavior, alternatives, consequences and evidence.
+Source snapshots: [Project-Status](Project-Status.md). Record new substantial decisions using [Templates](Templates.md) with context, chosen behavior, alternatives, consequences and evidence.

@@ -35,4 +35,4 @@ The application vault is `runtime/super-mas-vault`, with human-authored `knowled
 
 No complete coordinator, specialist runner, Java retrieval/model service, human-review implementation or mailbox connection. No exactly-once external effects, arbitrary power-loss proof, hostile-local-process defense, multi-host database deployment or bounded Obsidian UI freshness. Old generations and snapshot history currently require a future retention policy.
 
-Entry points and validation: [[Source-Index]], [[Build-CI-and-Delivery]], [[Validation-and-Limits]].
+Entry points and validation: [Source-Index](Source-Index.md), [Build-CI-and-Delivery](Build-CI-and-Delivery.md), [Validation-and-Limits](Validation-and-Limits.md).
