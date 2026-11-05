@@ -1,7 +1,8 @@
-package org.supermas.blackboard;
+package org.supermas.blackboard.api;
+
+import java.util.List;
 
 import org.supermas.model.Domain.*;
-import java.util.List;
 
 /** Coordinator-facing control access to one isolated task blackboard. */
 public interface Blackboard extends BlackboardView {

@@ -1,6 +1,6 @@
 package org.supermas.llm;
 
-import org.supermas.blackboard.BlackboardView;
+import org.supermas.blackboard.api.BlackboardView;
 import org.supermas.model.Domain.*;
 
 /** Model input and outward draft output are separate from internal evidence and control records. */
