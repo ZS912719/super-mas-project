@@ -6,6 +6,8 @@ A blackboard-based multi-agent email reply assistant project with Java API contr
 
 ## Project progress
 
+The current `main` baseline contains Java contracts and CI/CD infrastructure. Desktop mailbox and durable blackboard implementations are on feature branches; the older mailbox instructions below apply only to branches containing that module. See the [team knowledge index](super-mas-team-dev-vault/Home.md) and [branch-aware status](super-mas-team-dev-vault/Project-Status.md) before selecting commands. Open `super-mas-team-dev-vault` as an existing Obsidian vault to browse the Git-versioned development notes.
+
 | Component | Current status |
 | --- | --- |
 | Java framework | Interfaces and data contracts are defined; coordinator, blackboard runtime and specialist implementations remain deferred. |
