@@ -118,7 +118,7 @@ Create a demo board and export an observation vault:
 ./scripts/run-blackboard.ps1 -Mode watch
 ```
 
-Open `runtime/vault` as an existing Obsidian vault and follow a board's `generated/<board-key>/current.md` link. `watch` recovers expired leases and refreshes observations; it does not execute agents. Stop it with Ctrl+C. Use `-DataDirectory` to choose another runtime directory. [Runtime documentation](docs/blackboard-runtime.md) describes API usage, structure and recovery behavior.
+Open `runtime/super-mas-vault` as an existing Obsidian vault and follow a board's `generated/<board-key>/current.md` link. `watch` recovers expired leases and refreshes observations; it does not execute agents. Stop it with Ctrl+C. Use `-DataDirectory` to choose another runtime directory. [Runtime documentation](docs/blackboard-runtime.md) describes API usage, structure and recovery behavior.
 
 ### Java package
 

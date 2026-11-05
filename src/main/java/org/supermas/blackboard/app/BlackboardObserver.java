@@ -16,7 +16,7 @@ public final class BlackboardObserver {
         Path root = Path.of(args.length > 0 ? args[0] : "runtime");
         String mode = args.length > 1 ? args[1] : "audit";
         SqliteBlackboardStore store = new SqliteBlackboardStore(root.resolve("blackboard.db"));
-        try (MarkdownProjector projector = new MarkdownProjector(store, root.resolve("vault"))) {
+        try (MarkdownProjector projector = new MarkdownProjector(store, root.resolve("super-mas-vault"))) {
             if (mode.equals("audit")) {
                 boolean valid = true;
                 for (var id : store.boards()) {

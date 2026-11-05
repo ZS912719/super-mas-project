@@ -35,14 +35,14 @@ From the repository root, with Java 17+ and Maven available:
 
 The demo creates a fresh board on each invocation, claims a task, stores a proposed draft, completes the task and exports observations. `audit` exits unsuccessfully for invalid or lagging documents. An empty database has no observations to check. `watch` checks expired leases and regenerates Markdown every second; Ctrl+C stops it. It does not execute pending tasks. All modes accept `-DataDirectory` (default `runtime`). Maven resolves the runtime classpath on first use.
 
-Open `runtime/vault` as an existing vault in Obsidian. Under `generated`, open a board's `current.md`, then follow its snapshot link. `knowledge` is for human-authored material. Editing it has no automatic effect on the runtime; callers provide trusted `AgentConfig` values when claiming work. Generated files must never be used to drive agent execution.
+Open `runtime/super-mas-vault` as an existing vault in Obsidian. Under `generated`, open a board's `current.md`, then follow its snapshot link. `knowledge` is for human-authored material. Editing it has no automatic effect on the runtime; callers provide trusted `AgentConfig` values when claiming work. Generated files must never be used to drive agent execution.
 
 ```text
 runtime/
 |-- blackboard.db
 |-- blackboard.db-wal             # May exist while connections are active
 |-- blackboard.db-shm
-`-- vault/
+`-- super-mas-vault/
     |-- knowledge/
     `-- generated/
         |-- .source-id

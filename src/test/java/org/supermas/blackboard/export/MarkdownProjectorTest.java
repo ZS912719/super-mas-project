@@ -18,9 +18,9 @@ import static org.junit.jupiter.api.Assertions.*;
 class MarkdownProjectorTest extends BlackboardTestSupport {
     @Test void knowledgeEditsDoNotMutateAuthoritativeStateAndTokensAreNotExported() throws Exception {
         TaskLease lease = claim(RecoveryPolicy.RETRY_SAFE);
-        try (MarkdownProjector projector = new MarkdownProjector(store, root.resolve("vault"))) {
+        try (MarkdownProjector projector = new MarkdownProjector(store, root.resolve("super-mas-vault"))) {
             projector.reconcile(); long revision = board.versionedSnapshot().revision();
-            Files.writeString(root.resolve("vault/knowledge/prompt.md"), "Manually edited knowledge");
+            Files.writeString(root.resolve("super-mas-vault/knowledge/prompt.md"), "Manually edited knowledge");
             assertEquals(revision, board.versionedSnapshot().revision());
             try (var entries = Files.list(projector.boardDirectory(id).resolve("generations"))) {
                 String markdown = Files.readString(entries.findFirst().orElseThrow().resolve("overview.md"));
@@ -30,7 +30,7 @@ class MarkdownProjectorTest extends BlackboardTestSupport {
     }
 
     @Test void oldDocumentRemainsValidButReportsItsRevisionLag() throws Exception {
-        try (MarkdownProjector projector = new MarkdownProjector(store, root.resolve("vault"))) {
+        try (MarkdownProjector projector = new MarkdownProjector(store, root.resolve("super-mas-vault"))) {
             projector.reconcile(); long old = board.versionedSnapshot().revision();
             claim(RecoveryPolicy.RETRY_SAFE);
             MarkdownProjector.Audit audit = projector.audit(id);
@@ -40,7 +40,7 @@ class MarkdownProjectorTest extends BlackboardTestSupport {
     }
 
     @Test void crashBeforePublicationPreservesOldEntryAndRetryConverges() throws Exception {
-        Path vault = root.resolve("vault");
+        Path vault = root.resolve("super-mas-vault");
         try (MarkdownProjector projector = new MarkdownProjector(store, vault)) { projector.reconcile(); }
         long old = board.versionedSnapshot().revision(); claim(RecoveryPolicy.RETRY_SAFE);
         try (MarkdownProjector broken = new MarkdownProjector(store, vault, stage -> {
@@ -54,7 +54,7 @@ class MarkdownProjectorTest extends BlackboardTestSupport {
     }
 
     @Test void crashAfterPublicationBeforeAcknowledgementIsIdempotentlyRecovered() throws Exception {
-        Path vault = root.resolve("vault");
+        Path vault = root.resolve("super-mas-vault");
         try (MarkdownProjector broken = new MarkdownProjector(store, vault, stage -> {
             if (stage == MarkdownProjector.Stage.AFTER_PUBLISH) throw new IOException("Injected interruption");
         })) {
@@ -68,7 +68,7 @@ class MarkdownProjectorTest extends BlackboardTestSupport {
     }
 
     @Test void semanticAuditDetectsCorruptionEvenWithRecomputedManifestHash() throws Exception {
-        try (MarkdownProjector projector = new MarkdownProjector(store, root.resolve("vault"))) {
+        try (MarkdownProjector projector = new MarkdownProjector(store, root.resolve("super-mas-vault"))) {
             projector.reconcile();
             Path folder;
             try (var entries = Files.list(projector.boardDirectory(id).resolve("generations"))) { folder = entries.findFirst().orElseThrow(); }
@@ -83,7 +83,7 @@ class MarkdownProjectorTest extends BlackboardTestSupport {
     }
 
     @Test void publisherLockPreventsConcurrentPublication() throws Exception {
-        Path vault = root.resolve("vault"); Files.createDirectories(vault);
+        Path vault = root.resolve("super-mas-vault"); Files.createDirectories(vault);
         try (FileChannel channel = FileChannel.open(vault.resolve(".supermas-projector.lock"), StandardOpenOption.CREATE, StandardOpenOption.WRITE);
              var lock = channel.lock(); MarkdownProjector projector = new MarkdownProjector(store, vault)) {
             assertThrows(IOException.class, projector::reconcile);
@@ -91,7 +91,7 @@ class MarkdownProjectorTest extends BlackboardTestSupport {
     }
 
     @Test void vaultCannotSilentlySwitchAuthorities() throws Exception {
-        Path vault = root.resolve("vault");
+        Path vault = root.resolve("super-mas-vault");
         try (MarkdownProjector first = new MarkdownProjector(store, vault)) { first.reconcile(); }
         SqliteBlackboardStore other = new SqliteBlackboardStore(root.resolve("another.db"));
         try (MarkdownProjector second = new MarkdownProjector(other, vault)) { assertThrows(IOException.class, second::reconcile); }
@@ -99,7 +99,7 @@ class MarkdownProjectorTest extends BlackboardTestSupport {
 
     @Test void automaticWorkerRetriesAfterPublicationFailure() throws Exception {
         java.util.concurrent.atomic.AtomicBoolean fail = new java.util.concurrent.atomic.AtomicBoolean(true);
-        try (MarkdownProjector projector = new MarkdownProjector(store, root.resolve("vault"), stage -> {
+        try (MarkdownProjector projector = new MarkdownProjector(store, root.resolve("super-mas-vault"), stage -> {
             if (fail.getAndSet(false)) throw new IOException("Transient disk failure");
         })) {
             projector.start(Duration.ofMillis(50));
@@ -115,7 +115,7 @@ class MarkdownProjectorTest extends BlackboardTestSupport {
         Process process = probe(MarkdownCrashProbe.class, "crash-publish", "unused");
         assertTrue(process.waitFor(20, TimeUnit.SECONDS)); assertEquals(71, process.exitValue());
         assertEquals(0, store.projectionStatus(id).acknowledgedRevision());
-        try (MarkdownProjector recovered = new MarkdownProjector(store, root.resolve("vault"))) {
+        try (MarkdownProjector recovered = new MarkdownProjector(store, root.resolve("super-mas-vault"))) {
             assertTrue(recovered.audit(id).valid()); recovered.reconcile();
             assertEquals(board.versionedSnapshot().revision(), store.projectionStatus(id).acknowledgedRevision());
         }
