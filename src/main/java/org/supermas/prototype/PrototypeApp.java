@@ -189,12 +189,17 @@ public final class PrototypeApp {
         final InMemoryAgentRegistry registry;
         final SqliteBlackboardStore store;
         final LeasedCoordinator coordinator;
+        final ConversationRecorder recorder;
+        final RoleCatalog roles;
 
         private Wiring(Map<String, ContextSource> sources, TopicCatalog catalog, InMemoryAgentRegistry registry,
-                       SqliteBlackboardStore store, LeasedCoordinator coordinator) {
+                       SqliteBlackboardStore store, LeasedCoordinator coordinator, ConversationRecorder recorder,
+                       RoleCatalog roles) {
             this.sources = sources;
             this.catalog = catalog;
             this.registry = registry;
+            this.recorder = recorder;
+            this.roles = roles;
             this.store = store;
             this.coordinator = coordinator;
         }
@@ -249,7 +254,7 @@ public final class PrototypeApp {
                     new EvidencePromotion(retriever::readers), Optional.of(recorder), Duration.ofMinutes(5));
             // Topics from mail already stored by an earlier run, before the first new email.
             maintainer.refreshNow(project);
-            return new Wiring(sources, catalog, registry, store, coordinator);
+            return new Wiring(sources, catalog, registry, store, coordinator, recorder, roles);
         }
     }
 }
