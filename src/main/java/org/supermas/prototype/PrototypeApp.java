@@ -25,6 +25,9 @@ import org.supermas.blackboard.export.MarkdownProjector;
 import org.supermas.blackboard.impl.DefaultBlackboardFactory;
 import org.supermas.blackboard.persistence.sqlite.SqliteBlackboardStore;
 import org.supermas.context.DiscoveredTopicsAgent;
+import org.supermas.llm.LlmGenerationService;
+import org.supermas.llm.OpenAiCompatibleLlm;
+import org.supermas.model.Domain.ModelConfig;
 import org.supermas.control.AgendaStrategy;
 import org.supermas.coordinator.CoordinationStrategy;
 import org.supermas.context.LuceneContextRetriever;
@@ -94,14 +97,24 @@ public final class PrototypeApp {
             return this == BLACKBOARD ? BLACKBOARD_LIMITS : ROUTER_LIMITS;
         }
     }
+    /** A local model on modest hardware can be slow; the composer makes one call per draft version. */
+    static final Duration LLM_TIMEOUT = Duration.ofMinutes(3);
+    static final int LLM_MAX_OUTPUT = 8_000;
     /** Discovered topics are rebuilt after this many new received or sent messages. */
     static final int REGROUP_EVERY = 25;
 
     private PrototypeApp() { }
 
-    /** @param minContribution the blackboard's lowest specialist estimate for a contribution */
+    /**
+     * @param minContribution the blackboard's lowest specialist estimate for a contribution
+     * @param llmEndpoint     a local OpenAI-compatible engine (e.g. http://127.0.0.1:11434); empty for the template
+     */
     record Options(Path emails, Path knowledge, Path data, String project, Architecture architecture,
-                   double minContribution) {
+                   double minContribution, Optional<URI> llmEndpoint, String llmModel) {
+        Options(Path emails, Path knowledge, Path data, String project, Architecture architecture, double minContribution) {
+            this(emails, knowledge, data, project, architecture, minContribution, Optional.empty(), "");
+        }
+
         Options(Path emails, Path knowledge, Path data, String project) {
             this(emails, knowledge, data, project, Architecture.BLACKBOARD);
         }
@@ -113,10 +126,12 @@ public final class PrototypeApp {
         static Options parse(String[] args) {
             if (args.length == 0) {
                 throw new IllegalArgumentException("Usage: PrototypeApp EMAILS [--knowledge DIR] [--data DIR] [--project ID]"
-                        + " [--architecture blackboard|router] [--min-contribution 0..1]");
+                        + " [--architecture blackboard|router] [--min-contribution 0..1] [--llm-endpoint URL --llm-model NAME]");
             }
             Architecture architecture = Architecture.BLACKBOARD;
             double minContribution = AgendaStrategy.Settings.defaults().minContribution();
+            Optional<URI> llmEndpoint = Optional.empty();
+            String llmModel = "";
             Path emails = Path.of(args[0]);
             Path knowledge = Path.of("src/test/resources/university/knowledge");
             Path data = Path.of("runtime");
@@ -131,10 +146,15 @@ public final class PrototypeApp {
                     case "--project" -> project = args[i + 1];
                     case "--architecture" -> architecture = Architecture.valueOf(args[i + 1].toUpperCase(java.util.Locale.ROOT));
                     case "--min-contribution" -> minContribution = Double.parseDouble(args[i + 1]);
+                    case "--llm-endpoint" -> llmEndpoint = Optional.of(URI.create(args[i + 1]));
+                    case "--llm-model" -> llmModel = args[i + 1];
                     default -> throw new IllegalArgumentException("Unknown option " + args[i]);
                 }
             }
-            return new Options(emails, knowledge, data, project, architecture, minContribution);
+            if (llmEndpoint.isPresent() && llmModel.isBlank()) {
+                throw new IllegalArgumentException("--llm-endpoint needs --llm-model");
+            }
+            return new Options(emails, knowledge, data, project, architecture, minContribution, llmEndpoint, llmModel);
         }
     }
 
@@ -275,8 +295,15 @@ public final class PrototypeApp {
             configs.put(DISCOVERED, discoveredConfig);
             configs.put(check.config().id(), check.config());
 
-            RoleServices services = RoleServices.planOnly().withRetriever(retriever)
-                    .withGeneration(new TemplateGenerationService(), RoleServices.UNCONFIGURED_MODEL);
+            RoleServices services = RoleServices.planOnly().withRetriever(retriever);
+            if (options.llmEndpoint().isPresent()) {
+                // A local engine through the OpenAI-compatible API; replacing the model is configuration only.
+                OpenAiCompatibleLlm.chatEndpoint(options.llmEndpoint().get());
+                services = services.withGeneration(new LlmGenerationService(new OpenAiCompatibleLlm()),
+                        new ModelConfig(options.llmModel(), options.llmEndpoint().get(), LLM_TIMEOUT, LLM_MAX_OUTPUT));
+            } else {
+                services = services.withGeneration(new TemplateGenerationService(), RoleServices.UNCONFIGURED_MODEL);
+            }
             SqliteBlackboardStore store = new SqliteBlackboardStore(options.data().resolve("blackboard.db"));
             InMemoryAgentRegistry registry = new InMemoryAgentRegistry();
             boolean blackboard = options.architecture() == Architecture.BLACKBOARD;

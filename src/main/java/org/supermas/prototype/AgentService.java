@@ -105,6 +105,9 @@ public final class AgentService implements AutoCloseable {
         Path data = Path.of("runtime");
         String project = "uni";
         int port = DEFAULT_PORT;
+        PrototypeApp.Architecture architecture = PrototypeApp.Architecture.BLACKBOARD;
+        java.util.Optional<java.net.URI> llmEndpoint = java.util.Optional.empty();
+        String llmModel = "";
         for (int i = 0; i < args.length; i += 2) {
             if (i + 1 >= args.length) {
                 throw new IllegalArgumentException("Missing value for " + args[i]);
@@ -114,10 +117,14 @@ public final class AgentService implements AutoCloseable {
                 case "--data" -> data = Path.of(args[i + 1]);
                 case "--project" -> project = args[i + 1];
                 case "--port" -> port = Integer.parseInt(args[i + 1]);
+                case "--architecture" -> architecture = PrototypeApp.Architecture.valueOf(args[i + 1].toUpperCase(java.util.Locale.ROOT));
+                case "--llm-endpoint" -> llmEndpoint = java.util.Optional.of(java.net.URI.create(args[i + 1]));
+                case "--llm-model" -> llmModel = args[i + 1];
                 default -> throw new IllegalArgumentException("Unknown option " + args[i]);
             }
         }
-        AgentService service = new AgentService(new PrototypeApp.Options(null, knowledge, data, project), port,
+        AgentService service = new AgentService(new PrototypeApp.Options(null, knowledge, data, project, architecture,
+                org.supermas.control.AgendaStrategy.Settings.defaults().minContribution(), llmEndpoint, llmModel), port,
                 System.getenv("AGENT_SERVICE_TOKEN"));
         Runtime.getRuntime().addShutdownHook(new Thread(service::close));
         service.start();
