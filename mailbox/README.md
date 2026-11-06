@@ -95,6 +95,22 @@ LOCAL_MODEL_NAME=llama3.2
 
 **Generate reply** calls `/api/chat` with the selected conversation. Only literal HTTP loopback origins are accepted; redirects are disabled. Input is capped at 24,000 characters, output at 16,000 characters and generation at 60 seconds. Generated text is an editable draft for human review. The adapter does not implement the Java agent interfaces.
 
+## Agent reply generation (prototype branch)
+
+Optional: the Java agents write the draft instead of Ollama. Start the agent service from the repository root, then the mailbox with the same token:
+
+```bash
+export AGENT_SERVICE_TOKEN="$(head -c 32 /dev/urandom | base64)"
+mvn -q compile exec:java -Dexec.mainClass=org.supermas.prototype.AgentService
+```
+
+```dotenv
+AGENT_SERVICE_URL=http://127.0.0.1:4318
+AGENT_SERVICE_TOKEN=<the same token>
+```
+
+**Generate reply** then sends the selected conversation to `/v1/reply` (loopback only, redirects disabled, 60 seconds, response validated in `lib/agents.js`). The routed specialist's draft fills the editor. On a clear routing match, its role becomes the message's classification, stored like an imported one and shown after **Refresh**. Review, approval and sending are unchanged. Without `AGENT_SERVICE_URL`, Ollama is used as before. The UI text still says "local model". Contract: `docs/plans/agent-service-api.md` (a proposal).
+
 ## Classification API usage
 
 Live mail starts unclassified. Select **Classification** to import an externally supplied result:

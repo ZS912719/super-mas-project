@@ -1,6 +1,6 @@
 # Metadata and Context Agents: Implementation and Benchmark Plan
 
-**Status:** Phases 0-4 and 8-10 are implemented (reports in `docs/reports`). Phases 8-10 were added on 2026-11-03 and Phase 11 on 2026-11-06, both approved by the project owner. Steps 11.0-11.5 are done on the `prototype` branch; 11.6 is open. Decisions still open are listed in section 2.
+**Status:** Phases 0-4 and 8-10 are implemented (reports in `docs/reports`). Phases 8-10 were added on 2026-11-03 and Phase 11 on 2026-11-06, both approved by the project owner. Steps 11.0-11.6 are done on the `prototype` branch. Decisions still open are listed in section 2.
 
 ## 1. Context and scope
 
@@ -286,7 +286,7 @@ Corrections are human labels, which removes the LLM label risks. **Limitation:**
 - **11.3** Private agent contributions and coordinator promotion from trusted configuration and document readers.
 - **11.4** `PrototypeApp`: `.eml` files to drafts awaiting review, with Markdown for Obsidian. Generation stays the template stand-in; a local model is the intended next step.
 - **11.5** Reports, stand-in list, README, architecture and CLAUDE.md.
-- **11.6** Connect the desktop mailbox to the Java prototype (last step; needs Node.js on the development machine).
+- **11.6** Connect the desktop mailbox to the Java prototype: a loopback agent service, and an opt-in branch in the mailbox's generate route. Routing becomes labels on clear matches; the mailbox UI is unchanged (project owner).
 
 ### Phase 7: Finish (day 14)
 - **7.1** Final benchmark, on the frozen data.

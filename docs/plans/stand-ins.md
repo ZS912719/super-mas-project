@@ -6,6 +6,7 @@ These classes exist only because the Metadata and Context agents need something 
 | --- | --- | --- |
 | `LeasedCoordinator` | Coordinator | The `ScriptedCoordinator` behaviour on the teammate's durable `DefaultBlackboard` (SQLite), unchanged: every action and every routing assessment is a task the agent claims under a lease and completes; execution records come from the board; boards reopen from the store after a restart. Used by `PrototypeApp` and `DurableEndToEndTest` (step 11.2) |
 | `EvidencePromotion` | Coordinator | Agents submit evidence private to themselves, as the durable board requires. After a context agent's task succeeds, copies go to agents whose trusted configuration lists the source, narrowed to the document's readers in the index; inferences only from their author; nothing from failed tasks or reply agents (step 11.3) |
+| `AgentService` (wiring, proposal) | Mailbox-to-coordinator integration | Loopback `POST /v1/reply` for the desktop mailbox: draft, routing, plan, and a classification on clear matches. Contract in `docs/plans/agent-service-api.md` (step 11.6) |
 | `PrototypeApp` (wiring, not a stand-in of one part) | Whole team | Runs `.eml` files through every part to drafts awaiting review on SQLite, with Markdown for Obsidian (step 11.4) |
 | `InMemoryBlackboard` | Blackboard | One isolated board per task. Agent snapshots are filtered by evidence permissions. Contributions from another scope or unauthorized source are rejected |
 | `InMemoryBlackboardFactory` | Blackboard | A new board with a unique task identifier for each email |

@@ -14,7 +14,7 @@ A blackboard-based multi-agent email reply assistant project with a local Java b
 | UML | Documents the current Java packages, interfaces and selected records. |
 | Desktop mailbox | Electron opens an independent window and owns its local server; the UI provides demo mail, Gmail/Outlook adapters, history, labels and reviewed drafts. |
 | Local generation | The mailbox calls local Ollama directly; it does not implement the Java generation or agent interfaces. |
-| Integration | The Java agents run on the SQLite blackboard. The mailbox is not yet connected to them. |
+| Integration | The Java agents run on the SQLite blackboard. With `AGENT_SERVICE_URL` set, the mailbox's **Generate reply** asks them through the loopback `AgentService` (a proposal, `docs/plans/agent-service-api.md`); approval and sending stay in the mailbox. |
 | Persistence | Java blackboards use local SQLite with immutable revision history. The independent mailbox still uses session memory. |
 | Observation | Markdown generations provide an Obsidian observation vault; Kripke models check task and projection protocols. |
 
