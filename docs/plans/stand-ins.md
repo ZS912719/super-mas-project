@@ -6,6 +6,8 @@ These classes exist only because the Metadata and Context agents need something 
 | --- | --- | --- |
 | `LeasedCoordinator` | Coordinator | The `ScriptedCoordinator` behaviour on the teammate's durable `DefaultBlackboard` (SQLite), unchanged: every action and every routing assessment is a task the agent claims under a lease and completes; execution records come from the board; boards reopen from the store after a restart. Used by `PrototypeApp` and `DurableEndToEndTest` (step 11.2) |
 | `EvidencePromotion` | Coordinator | Agents submit evidence private to themselves, as the durable board requires. After a context agent's task succeeds, copies go to agents whose trusted configuration lists the source, narrowed to the document's readers in the index; inferences only from their author; nothing from failed tasks or reply agents (step 11.3) |
+| `control.AgendaStrategy` (not a stand-in since Phase 12; this member's design for the personal prototype) | Scheduling and routing | BB1-style controller: estimates through read-only views, To-Do-Set rated within the focus level, relevant-event policy, fallback, control decisions on the board (step 12.4) |
+| `BoardReviewService` | Human review | Reject with feedback on the durable board, so revision runs; edit and approve stay in the mailbox (step 12.6) |
 | `AgentService` (wiring, proposal) | Mailbox-to-coordinator integration | Loopback `POST /v1/reply` for the desktop mailbox: draft, routing, plan, and a classification on clear matches. Contract in `docs/plans/agent-service-api.md` (step 11.6) |
 | `PrototypeApp` (wiring, not a stand-in of one part) | Whole team | Runs `.eml` files through every part to drafts awaiting review on SQLite, with Markdown for Obsidian (step 11.4) |
 | `InMemoryBlackboard` | Blackboard | One isolated board per task. Agent snapshots are filtered by evidence permissions. Contributions from another scope or unauthorized source are rejected |
@@ -22,9 +24,8 @@ The teammate's `DefaultBlackboard`, `DefaultBlackboardFactory` and `SqliteBlackb
 
 ## Known gaps for the real implementation
 
-- `Blackboard` cannot record feedback or approval, so revision after rejection does not run. The durable board refuses `setStatus(APPROVED)` until a review service exists.
-- `BoardState.transition` on the durable board drops a task's `InformationNeed` when it is claimed or completed. `LeasedCoordinator` hands the original task to the agent, so the agent still gets it, but the board's history does not. A one-line fix for the teammate (step 11.2-11.3 report).
-- The durable board does not check the drafting capability (P5): any agent holding a lease could submit a draft.
+- Feedback is recorded since step 12.6 (`Blackboard.recordFeedback`), so revision runs on the blackboard. Approval and edits are still not on the board: the durable board refuses `setStatus(APPROVED)`, and the mailbox does approval.
+- Fixed in step 12.1 (teammate's code, prototype branch): `BoardState.transition` keeps the information need; drafts need `draft-reply` or `compose-reply`.
 - Leases are not renewed by heartbeat; a task longer than the 5-minute prototype lease would be fenced.
 - `ScriptedCoordinator` carries out a pending task of the scheduled action, but only `ContextFirstCoordinationStrategy` schedules them, and only for further retrieval. Other suggested tasks are stored and not run.
 - There is no wall-clock timeout around agents.

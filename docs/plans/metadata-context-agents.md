@@ -288,6 +288,13 @@ Corrections are human labels, which removes the LLM label risks. **Limitation:**
 - **11.5** Reports, stand-in list, README, architecture and CLAUDE.md.
 - **11.6** Connect the desktop mailbox to the Java prototype: a loopback agent service, and an opt-in branch in the mailbox's generate route. Routing becomes labels on clear matches; the mailbox UI is unchanged (project owner).
 
+### Phase 12: A real blackboard (added and approved 2026-11-07)
+- **12.0** Design: five domain levels, a BB1 control blackboard, Corkill's estimates (`docs/plans/blackboard-control.md`).
+- **12.1** Teammate's board: read-only views, feedback, drafting capability, kept needs; `Action.CONTRIBUTE`.
+- **12.2** Request splitter. **12.3** Specialists post contributions. **12.4** Agenda controller. **12.5** Composer.
+- **12.6** Revision after rejection. **12.7** Benchmark router vs blackboard. **12.8** Reports and docs.
+- Plus a local-model adapter for the OpenAI-compatible API (template stays the default). Report: `docs/reports/step-12.md`.
+
 ### Phase 7: Finish (day 14)
 - **7.1** Final benchmark, on the frozen data.
 - **7.2** Final report, with C3 vs C1 and every switch combination run.
