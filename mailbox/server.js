@@ -5,6 +5,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { authorization, exchangeCode, profile, providers, providerConfig, listMail, threadMail, sendMail } from './lib/providers.js';
 import { normalizeClassification } from './lib/classification.js';
 import { generateReply } from './lib/model.js';
+import { requestAgentReply } from './lib/agents.js';
 import { demoMessages } from './lib/demo.js';
 import { saveDraft, approveDraft, beginSend } from './lib/drafts.js';
 
@@ -133,6 +134,16 @@ export function createMailboxServer({ port = Number(process.env.PORT || 4317), s
           if (!message) throw new Error('Select a received message first.');
           if (message.direction === 'sent') throw new Error('Select a received message to generate a reply.');
           const messages = session.demo ? [...session.messages.values()].filter(item => item.threadId === message.threadId) : await threadMail(session.account, message);
+          if (process.env.AGENT_SERVICE_URL) {
+            // Prototype: the Java agents write the draft; their routing becomes the message's classification.
+            const result = await requestAgentReply(messages.sort((a, b) => a.date.localeCompare(b.date)), message.id,
+              process.env.AGENT_SERVICE_URL, process.env.AGENT_SERVICE_TOKEN);
+            if (result.classification) {
+              const classification = normalizeClassification(result.classification);
+              message.classification = classification; message.labels = classification.labels;
+            }
+            return json({ body: result.body, origin: 'model', agent: result.agent });
+          }
           const reply = await generateReply(messages.sort((a, b) => a.date.localeCompare(b.date)), process.env.LOCAL_MODEL_NAME || 'llama3.2', process.env.LOCAL_MODEL_URL || 'http://127.0.0.1:11434');
           return json({ body: reply, origin: 'model' });
         }
