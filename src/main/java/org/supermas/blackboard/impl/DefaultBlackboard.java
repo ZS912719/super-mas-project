@@ -59,18 +59,7 @@ public final class DefaultBlackboard implements Blackboard {
 
             @Override public BlackboardSnapshot snapshot() {
                 store.resolveLease(lease);
-                BlackboardSnapshot all = DefaultBlackboard.this.snapshot();
-                AgentConfig agent = lease.agent();
-                List<Evidence> evidence = all.evidence().stream().filter(e ->
-                        agent.contextSourceIds().contains(e.provenance().sourceId()) &&
-                        e.permittedAgentIds().contains(agent.id())).toList();
-                List<Task> tasks = all.tasks().stream().filter(t -> t.id().equals(lease.taskId())).toList();
-                List<Draft> drafts = all.drafts().stream().filter(d -> d.agentId().equals(agent.id())).toList();
-                Set<Integer> versions = new HashSet<>(); drafts.forEach(d -> versions.add(d.version()));
-                return new BlackboardSnapshot(all.id(), all.email(), all.analysis(), evidence, tasks,
-                        all.executions().stream().filter(e -> e.taskId().equals(lease.taskId())).toList(), drafts,
-                        all.feedback().stream().filter(f -> versions.contains(f.draftVersion())).toList(),
-                        Optional.empty(), all.status(), all.budgetUsage(), Optional.empty());
+                return restricted(DefaultBlackboard.this.snapshot(), lease.agent(), Optional.of(lease.taskId()));
             }
 
             @Override public void submitEvidence(List<Evidence> evidence) {
@@ -79,7 +68,7 @@ public final class DefaultBlackboard implements Blackboard {
 
             @Override public Draft submitDraft(DraftProposal proposal) {
                 AtomicReference<Draft> result = new AtomicReference<>();
-                store.contribute(lease, (state, agent) -> result.set(state.draft(proposal, agent.id(), store.clock().instant())));
+                store.contribute(lease, (state, agent) -> result.set(state.draft(proposal, agent, store.clock().instant())));
                 return result.get();
             }
 
@@ -93,6 +82,33 @@ public final class DefaultBlackboard implements Blackboard {
             }
         };
     }
+
+    /** Read-only and lease-free: the same filtering as {@link #accessFor(TaskLease)}, without the task's records. */
+    @Override public BlackboardView viewFor(AgentConfig agent) {
+        Objects.requireNonNull(agent);
+        return () -> restricted(DefaultBlackboard.this.snapshot(), agent, Optional.empty());
+    }
+
+    /**
+     * What one agent may see. Evidence only from its sources and readable by it; its own drafts; with a lease,
+     * its task and that task's records, without one the pending work it could take. Feedback is shown in full:
+     * it concerns the reply, which several specialists build (prototype branch, step 12.1). Routing and global
+     * failures stay hidden.
+     */
+    private static BlackboardSnapshot restricted(BlackboardSnapshot all, AgentConfig agent, Optional<String> taskId) {
+        List<Evidence> evidence = all.evidence().stream().filter(e ->
+                agent.contextSourceIds().contains(e.provenance().sourceId()) &&
+                e.permittedAgentIds().contains(agent.id())).toList();
+        List<Task> tasks = all.tasks().stream().filter(t -> taskId.isPresent() ? t.id().equals(taskId.get())
+                : t.status() == TaskStatus.PENDING && (t.agentId().isEmpty() || t.agentId().get().equals(agent.id())))
+                .toList();
+        List<Draft> drafts = all.drafts().stream().filter(d -> d.agentId().equals(agent.id())).toList();
+        return new BlackboardSnapshot(all.id(), all.email(), all.analysis(), evidence, tasks,
+                all.executions().stream().filter(e -> taskId.isPresent() && e.taskId().equals(taskId.get())).toList(),
+                drafts, all.feedback(), Optional.empty(), all.status(), all.budgetUsage(), Optional.empty());
+    }
+
+    @Override public void recordFeedback(Feedback feedback) { store.edit(id, s -> s.recordFeedback(feedback)); }
 
     @Override public void recordRouting(RoutingDecision decision) { store.edit(id, s -> s.recordRouting(decision)); }
     @Override public void addEvidence(List<Evidence> evidence) { store.edit(id, s -> s.addEvidence(evidence, null)); }

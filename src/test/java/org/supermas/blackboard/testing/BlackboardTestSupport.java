@@ -33,7 +33,7 @@ public abstract class BlackboardTestSupport {
         agent = agent("agent");
     }
 
-    public static AgentConfig agent(String name) { return new AgentConfig(name, "role", "Trusted system instructions", Set.of(), List.of(), Set.of("source"), false); }
+    public static AgentConfig agent(String name) { return new AgentConfig(name, "role", "Trusted system instructions", Set.of("draft-reply"), List.of(), Set.of("source"), false); }
     protected static Task task(String name, BoardId id) { return new Task(name, id, Action.GENERATE, Optional.empty(), TaskStatus.PENDING, "Task goal"); }
     protected TaskLease claim(RecoveryPolicy policy) { return board.claim("work", agent, Duration.ofSeconds(10), policy); }
 

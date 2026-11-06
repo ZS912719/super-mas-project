@@ -33,7 +33,8 @@ public final class Domain {
     public record RoutingDecision(Match match, Optional<String> selectedAgentId,
                                   List<AgentAssessment> candidates, String reason) { }
 
-    public enum Action { ROUTE, RETRIEVE_CONTEXT, RECLASSIFY, GENERATE, REVISE, PRESENT_DRAFT, STOP }
+    // Prototype branch, step 12.1: CONTRIBUTE is a specialist posting a partial reply plan for some requests.
+    public enum Action { ROUTE, RETRIEVE_CONTEXT, RECLASSIFY, GENERATE, REVISE, PRESENT_DRAFT, STOP, CONTRIBUTE }
     public enum TaskStatus { PENDING, RUNNING, SUCCEEDED, FAILED, CANCELLED }
     // ASSUMED-TEAM-DECISION(P2): a task can carry a structured information need. Pending team validation.
     // If rejected: revert this commit and carry the need in a Context package task object.

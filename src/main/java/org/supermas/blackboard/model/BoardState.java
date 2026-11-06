@@ -12,6 +12,7 @@ public final class BoardState {
     private final List<Task> tasks;
     private final List<ExecutionRecord> executions;
     private final List<Draft> drafts;
+    private final List<Feedback> feedback;
     private Optional<RoutingDecision> routing;
     private BoardStatus status;
     private BudgetUsage budget;
@@ -23,6 +24,7 @@ public final class BoardState {
         tasks = new ArrayList<>(source.tasks());
         executions = new ArrayList<>(source.executions());
         drafts = new ArrayList<>(source.drafts());
+        feedback = new ArrayList<>(source.feedback());
         routing = source.routing(); status = source.status(); budget = source.budgetUsage();
         failure = source.failure();
     }
@@ -62,8 +64,14 @@ public final class BoardState {
         }
     }
 
-    public Draft draft(DraftProposal proposal, String agentId, java.time.Instant now) {
+    /** Capabilities that allow submitting a draft (proposal P5): a drafting specialist or the composer. */
+    public static final Set<String> DRAFTING_CAPABILITIES = Set.of("draft-reply", "compose-reply");
+
+    public Draft draft(DraftProposal proposal, AgentConfig agent, java.time.Instant now) {
+        String agentId = agent.id();
         require(agentId.equals(proposal.agentId()), "Draft author does not match the lease");
+        require(agent.capabilities().stream().anyMatch(DRAFTING_CAPABILITIES::contains),
+                "Only an agent with a drafting capability may submit a draft");
         require(drafts.stream().noneMatch(d -> d.review() == ReviewStatus.APPROVED),
                 "Review invalidation is not implemented; approved drafts cannot be changed");
         Draft draft = new Draft(drafts.size() + 1, proposal.subject(), proposal.body(), agentId,
@@ -72,14 +80,26 @@ public final class BoardState {
         return draft;
     }
 
+    /** Feedback on an existing, unapproved version; that version is marked rejected, its content unchanged. */
+    public void recordFeedback(Feedback item) {
+        require(item.text() != null && !item.text().isBlank(), "Feedback text is required");
+        Draft target = drafts.stream().filter(d -> d.version() == item.draftVersion()).findFirst()
+                .orElseThrow(() -> new StateConflict("Unknown draft version " + item.draftVersion()));
+        require(target.review() != ReviewStatus.APPROVED, "An approved draft cannot be rejected");
+        drafts.set(drafts.indexOf(target), new Draft(target.version(), target.subject(), target.body(), target.agentId(),
+                target.explanation(), target.origin(), ReviewStatus.REJECTED, target.createdAt()));
+        feedback.add(item);
+    }
+
     public BlackboardSnapshot snapshot() {
         return new BlackboardSnapshot(source.id(), source.email(), source.analysis(), List.copyOf(evidence),
-                List.copyOf(tasks), List.copyOf(executions), List.copyOf(drafts), source.feedback(),
+                List.copyOf(tasks), List.copyOf(executions), List.copyOf(drafts), List.copyOf(feedback),
                 routing, status, budget, failure);
     }
 
     public static Task transition(Task task, TaskStatus status, Optional<String> agentId) {
-        return new Task(task.id(), task.boardId(), task.action(), agentId, status, task.reason());
+        // Prototype branch, step 12.1: the information need is kept (it was dropped before).
+        return new Task(task.id(), task.boardId(), task.action(), agentId, status, task.reason(), task.need());
     }
 
     public static void require(boolean condition, String message) { if (!condition) throw new StateConflict(message); }

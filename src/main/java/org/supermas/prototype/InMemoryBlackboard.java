@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.Set;
 import org.supermas.blackboard.api.AgentBlackboard;
 import org.supermas.blackboard.api.Blackboard;
+import org.supermas.blackboard.api.BlackboardView;
 import org.supermas.model.Domain.AgentConfig;
 import org.supermas.model.Domain.Analysis;
 import org.supermas.model.Domain.BlackboardSnapshot;
@@ -96,6 +97,36 @@ public final class InMemoryBlackboard implements Blackboard {
     @Override
     public AgentBlackboard accessFor(AgentConfig agent) {
         return new AgentAccess(agent);
+    }
+
+    /** The agent's filtered snapshot, read-only, without a task (step 12.1). */
+    @Override
+    public BlackboardView viewFor(AgentConfig agent) {
+        Objects.requireNonNull(agent);
+        return () -> {
+            synchronized (lock) {
+                return snapshotWith(evidence.stream()
+                        .filter(item -> item.permittedAgentIds().contains(agent.id())).toList());
+            }
+        };
+    }
+
+    /** Feedback on an existing, unapproved version; that version is marked rejected, its content unchanged. */
+    @Override
+    public void recordFeedback(Feedback item) {
+        synchronized (lock) {
+            if (item.text() == null || item.text().isBlank()) {
+                throw new IllegalArgumentException("Feedback text is required");
+            }
+            Draft target = drafts.stream().filter(draft -> draft.version() == item.draftVersion()).findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Unknown draft version " + item.draftVersion()));
+            if (target.review() == ReviewStatus.APPROVED) {
+                throw new IllegalStateException("An approved draft cannot be rejected");
+            }
+            drafts.set(drafts.indexOf(target), new Draft(target.version(), target.subject(), target.body(),
+                    target.agentId(), target.explanation(), target.origin(), ReviewStatus.REJECTED, target.createdAt()));
+            feedback.add(item);
+        }
     }
 
     @Override
