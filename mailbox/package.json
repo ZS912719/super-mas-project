@@ -1,0 +1,26 @@
+{
+  "name": "supermas-mailbox",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A local desktop mailbox with reviewed replies and extensible classification.",
+  "author": "SuperMAS contributors",
+  "main": "desktop/main.js",
+  "engines": { "node": ">=22.12.0" },
+  "scripts": {
+    "build": "esbuild web/app.js --bundle --format=esm --outfile=public/app.js && node scripts/copy-assets.js",
+    "start": "npm run build && electron .",
+    "start:web": "node --env-file-if-exists=.env server.js",
+    "package:win": "npm run build && electron-builder --win portable --x64",
+    "test": "node --test"
+  },
+  "devDependencies": { "esbuild": "0.25.12", "electron": "45.2.1", "electron-builder": "26.18.0" },
+  "build": {
+    "appId": "org.supermas.mail",
+    "productName": "SuperMAS Mail",
+    "asar": true,
+    "directories": { "output": "dist" },
+    "files": ["desktop/**", "lib/**", "public/**", "server.js", "package.json", "vendor/ascii-sharks/LICENSE"],
+    "win": { "target": "portable", "artifactName": "SuperMAS-Mail-${version}-win-${arch}.${ext}" }
+  }
+}

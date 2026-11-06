@@ -43,13 +43,13 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
-      <version>5.11.4</version>
+      <version>5.12.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
-      <version>2.18.2</version>
+      <version>2.21.4</version>
     </dependency>
     <!-- Independent mail parser for gold facts, deliberately different from the MetadataAgent's
          own parser (step 1.2) so gold labels are not produced by the code they later grade. -->
@@ -59,6 +59,10 @@
       <version>2.0.3</version>
       <scope>test</scope>
     </dependency>
+    <!-- Durable blackboard storage (codex/blackboard-storage): SQLite state and JSON snapshots. -->
+    <dependency><groupId>org.xerial</groupId><artifactId>sqlite-jdbc</artifactId><version>3.54.1.0</version></dependency>
+    <dependency><groupId>com.fasterxml.jackson.datatype</groupId><artifactId>jackson-datatype-jdk8</artifactId><version>2.21.4</version></dependency>
+    <dependency><groupId>com.fasterxml.jackson.datatype</groupId><artifactId>jackson-datatype-jsr310</artifactId><version>2.21.4</version></dependency>
   </dependencies>
   <build><plugins>
     <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.13.0</version></plugin>

@@ -40,7 +40,15 @@ Thumbs.db
 /mailbox/node_modules/
 /mailbox/public/
 /mailbox/dist/
-/runtime/
 
 # Private project progress notes
 /.project-progress.local.md
+/runtime/
+
+# Local development context and Obsidian workspace
+/super-mas-dev-vault/
+
+# Team vault local editor settings and retrieval caches
+/super-mas-team-dev-vault/.obsidian/
+/super-mas-team-dev-vault/.trash/
+/super-mas-team-dev-vault/.rag-cache/

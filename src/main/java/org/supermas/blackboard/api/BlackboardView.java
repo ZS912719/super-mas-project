@@ -1,4 +1,4 @@
-package org.supermas.blackboard;
+package org.supermas.blackboard.api;
 
 import org.supermas.model.Domain.BlackboardSnapshot;
 

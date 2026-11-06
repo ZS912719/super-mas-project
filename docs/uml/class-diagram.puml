@@ -15,7 +15,7 @@ title SuperMAS - Blackboard and Specialist Interfaces
 
 top to bottom direction
 
-package "org.supermas.blackboard" #EEF2FF {
+package "org.supermas.blackboard.api" #EEF2FF {
 interface AgentBlackboard {
   +agentId(): String
   +submitEvidence(List<Evidence> evidence): void

@@ -2,56 +2,97 @@
 !pragma layout smetana
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
-skinparam roundcorner 6
 skinparam defaultFontName Arial
-skinparam defaultFontSize 13
-skinparam classAttributeIconSize 0
+skinparam defaultFontSize 12
 skinparam packageStyle rectangle
-skinparam nodesep 35
-skinparam ranksep 45
-hide empty members
-
-title SuperMAS - Current Java Package Dependencies
-left to right direction
 hide members
-package "org.supermas.agent" as agent {
-class "AdministrationAgent\nAgentRegistry\nGenericAgent\nResearchProjectAgent\nSpecializedAgent\nStudentAgent\nTeacherAgent" as agent_contents <<source files>>
+left to right direction
+title SuperMAS - Java Packages by Responsibility
+package "org.supermas.agent" as pkg0 {
+class "AdministrationAgent\nAgentRegistry\nGenericAgent\nResearchProjectAgent\nSpecializedAgent\nStudentAgent\nTeacherAgent" as pkg0_contents <<source files>>
 }
-package "org.supermas.blackboard" as blackboard {
-class "AgentBlackboard\nBlackboard\nBlackboardFactory\nBlackboardView\nPreprocessor" as blackboard_contents <<source files>>
+package "org.supermas.blackboard.api" as pkg1 {
+class "AgentBlackboard\nBlackboard\nBlackboardFactory\nBlackboardView\nPreprocessor\nStateConflict" as pkg1_contents <<source files>>
 }
-package "org.supermas.context" as context {
-class "ContextRetriever\nContextSelector" as context_contents <<source files>>
+package "org.supermas.blackboard.app" as pkg2 {
+class "BlackboardDemo\nBlackboardObserver" as pkg2_contents <<source files>>
 }
-package "org.supermas.coordinator" as coordinator {
-class "CoordinationStrategy\nCoordinator\nRoutingStrategy" as coordinator_contents <<source files>>
+package "org.supermas.blackboard.export" as pkg3 {
+class "MarkdownProjector" as pkg3_contents <<source files>>
 }
-package "org.supermas.llm" as llm {
-class "GenerationService\nLocalLlm" as llm_contents <<source files>>
+package "org.supermas.blackboard.impl" as pkg4 {
+class "DefaultBlackboard\nDefaultBlackboardFactory" as pkg4_contents <<source files>>
 }
-package "org.supermas.model" as model {
-class "Domain" as model_contents <<source files>>
+package "org.supermas.blackboard.model" as pkg5 {
+class "BlackboardData\nBoardState" as pkg5_contents <<source files>>
 }
-package "org.supermas.persistence" as persistence {
-class "AgentConfigRepository\nBlackboardRepository\nConversationRepository" as persistence_contents <<source files>>
+package "org.supermas.blackboard.persistence" as pkg6 {
+class "BlackboardKeys\nBlackboardRepository\nBlackboardStore\nStorageException" as pkg6_contents <<source files>>
 }
-package "org.supermas.review" as review {
-class "DraftReviewService" as review_contents <<source files>>
+package "org.supermas.blackboard.persistence.codec" as pkg7 {
+class "JsonCodec" as pkg7_contents <<source files>>
 }
-agent ..> blackboard : imports
-agent ..> model : imports
-blackboard ..> model : imports
-context ..> blackboard : imports
-context ..> model : imports
-coordinator ..> blackboard : imports
-coordinator ..> model : imports
-llm ..> blackboard : imports
-llm ..> model : imports
-persistence ..> model : imports
-review ..> model : imports
+package "org.supermas.blackboard.persistence.sqlite" as pkg8 {
+class "SqliteBlackboardStore" as pkg8_contents <<source files>>
+}
+package "org.supermas.context" as pkg9 {
+class "ContextRetriever\nContextSelector" as pkg9_contents <<source files>>
+}
+package "org.supermas.coordinator" as pkg10 {
+class "CoordinationStrategy\nCoordinator\nRoutingStrategy" as pkg10_contents <<source files>>
+}
+package "org.supermas.llm" as pkg11 {
+class "GenerationService\nLocalLlm" as pkg11_contents <<source files>>
+}
+package "org.supermas.model" as pkg12 {
+class "Domain" as pkg12_contents <<source files>>
+}
+package "org.supermas.persistence" as pkg13 {
+class "AgentConfigRepository\nConversationRepository" as pkg13_contents <<source files>>
+}
+package "org.supermas.review" as pkg14 {
+class "DraftReviewService" as pkg14_contents <<source files>>
+}
+pkg0 ..> pkg1 : imports
+pkg0 ..> pkg12 : imports
+pkg1 ..> pkg12 : imports
+pkg10 ..> pkg1 : imports
+pkg10 ..> pkg12 : imports
+pkg11 ..> pkg1 : imports
+pkg11 ..> pkg12 : imports
+pkg13 ..> pkg12 : imports
+pkg14 ..> pkg12 : imports
+pkg2 ..> pkg1 : imports
+pkg2 ..> pkg12 : imports
+pkg2 ..> pkg3 : imports
+pkg2 ..> pkg4 : imports
+pkg2 ..> pkg5 : imports
+pkg2 ..> pkg6 : imports
+pkg2 ..> pkg8 : imports
+pkg3 ..> pkg12 : imports
+pkg3 ..> pkg5 : imports
+pkg3 ..> pkg6 : imports
+pkg3 ..> pkg7 : imports
+pkg4 ..> pkg1 : imports
+pkg4 ..> pkg12 : imports
+pkg4 ..> pkg5 : imports
+pkg4 ..> pkg6 : imports
+pkg5 ..> pkg1 : imports
+pkg5 ..> pkg12 : imports
+pkg6 ..> pkg12 : imports
+pkg6 ..> pkg5 : imports
+pkg6 ..> pkg7 : imports
+pkg7 ..> pkg6 : imports
+pkg8 ..> pkg1 : imports
+pkg8 ..> pkg12 : imports
+pkg8 ..> pkg5 : imports
+pkg8 ..> pkg6 : imports
+pkg8 ..> pkg7 : imports
+pkg9 ..> pkg1 : imports
+pkg9 ..> pkg12 : imports
 legend bottom left
-Arrows reflect imports present in Java source files.
-Each source-file list is a package inventory, not a Java class.
-Domain contains nested records and enums. No runtime wiring is implied.
+Each box lists source types in one package. Arrows represent Java imports.
+Blackboard API, implementation, persistence, export and application wiring are separate.
+Runtime data stays in the ignored runtime directory; there is no Java runtime package.
 endlegend
 @enduml

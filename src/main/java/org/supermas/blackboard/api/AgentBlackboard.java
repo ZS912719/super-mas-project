@@ -1,7 +1,8 @@
-package org.supermas.blackboard;
+package org.supermas.blackboard.api;
+
+import java.util.List;
 
 import org.supermas.model.Domain.*;
-import java.util.List;
 
 /** Scoped specialist access. No approval, sending, repository access or peer-agent invocation. */
 public interface AgentBlackboard extends BlackboardView {

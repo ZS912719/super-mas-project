@@ -1,7 +1,7 @@
 package org.supermas.agent;
 
-import org.supermas.blackboard.AgentBlackboard;
-import org.supermas.blackboard.BlackboardView;
+import org.supermas.blackboard.api.AgentBlackboard;
+import org.supermas.blackboard.api.BlackboardView;
 import org.supermas.model.Domain.*;
 
 /** Agents declare suitability; they do not select peers or grant their own permissions. */
