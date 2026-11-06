@@ -31,6 +31,7 @@ import org.supermas.model.Domain.ExecutionLimits;
 import org.supermas.model.Domain.MessageKind;
 import org.supermas.model.Domain.Task;
 import org.supermas.model.Domain.TaskStatus;
+import org.supermas.prototype.EvidencePromotion;
 import org.supermas.prototype.Capabilities;
 import org.supermas.prototype.ContextFirstCoordinationStrategy;
 import org.supermas.prototype.DraftFirstCoordinationStrategy;
@@ -49,8 +50,9 @@ class ContextPipelineTest {
     private final TopicTestSupport support = new TopicTestSupport(Set.of(SUBJECT, DISCUSSION, REPLY));
 
     private final SpecializedAgent reply = new SpecializedAgent() {
+        // Lists the check as a source: that is what lets the coordinator promote the check's inference to it.
         private final AgentConfig config = new AgentConfig(REPLY, "reply", "", Set.of(Capabilities.DRAFT_REPLY), List.of(),
-                Set.of(), false);
+                Set.of(CHECK), false);
 
         @Override
         public AgentConfig config() {
@@ -77,7 +79,7 @@ class ContextPipelineTest {
         TopicContextAgent subject = new TopicContextAgent(support.subject(SUBJECT, "topic", List.of("budget")), support.retriever);
         TopicContextAgent discussion = new TopicContextAgent(new TopicDefinition(TopicType.DISCUSSION, DISCUSSION,
                 TopicTestSupport.PROJECT, "", List.of(), Set.of(TopicTestSupport.MAIL), 10_000), support.retriever);
-        MissingInformationAgent check = new MissingInformationAgent(CHECK, new RuleMissingInformationCheck(), Set.of(REPLY));
+        MissingInformationAgent check = new MissingInformationAgent(CHECK, new RuleMissingInformationCheck());
         InMemoryAgentRegistry registry = new InMemoryAgentRegistry();
         registry.register(subject);
         registry.register(discussion);
@@ -153,8 +155,13 @@ class ContextPipelineTest {
     void aReplyAgentCanReadTheInference() {
         seedDocuments();
         BlackboardSnapshot state = run("Could you meet about this?", 20);
-        assertTrue(state.evidence().stream().filter(item -> item.kind() == EvidenceKind.MODEL_INFERENCE)
-                .allMatch(item -> item.permittedAgentIds().contains(REPLY)));
+        List<Evidence> inferences = state.evidence().stream()
+                .filter(item -> item.kind() == EvidenceKind.MODEL_INFERENCE).toList();
+        // The check submits privately; the coordinator adds a copy for the reply agent, never for anyone else.
+        assertTrue(inferences.stream().anyMatch(item -> item.permittedAgentIds().equals(Set.of(REPLY))
+                && item.id().endsWith(EvidencePromotion.SUFFIX)), inferences.toString());
+        assertTrue(inferences.stream().filter(item -> !item.id().endsWith(EvidencePromotion.SUFFIX))
+                .allMatch(item -> item.permittedAgentIds().equals(Set.of(CHECK))), inferences.toString());
     }
 
     @Test

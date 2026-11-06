@@ -23,6 +23,8 @@ import org.supermas.benchmark.C1Benchmark.Scores;
 import org.supermas.context.CorrespondentSettings;
 import org.supermas.context.IndexedDocument;
 import org.supermas.context.LuceneContextRetriever;
+import org.supermas.agent.SpecializedAgent;
+import org.supermas.prototype.EvidencePromotion;
 import org.supermas.context.ProjectIndexes;
 import org.supermas.context.SenderVerifier;
 import org.supermas.context.TopicCandidateFilter;
@@ -151,6 +153,8 @@ public final class C3Benchmark {
             }
             LuceneContextRetriever retriever = new LuceneContextRetriever(indexes, sources,
                     id -> Optional.ofNullable(agents.get(id)));
+            promotion = new EvidencePromotion(retriever::readers);
+            configs = agents;
             Map<String, Project> projects = new LinkedHashMap<>();
             for (Map.Entry<String, List<Message>> entry : loaded.entrySet()) {
                 String project = entry.getKey();
@@ -230,6 +234,26 @@ public final class C3Benchmark {
                 discovered, discovery);
     }
 
+    // Set once in main. Agents submit privately; the benchmark promotes as the coordinator stand-ins do.
+    private static EvidencePromotion promotion;
+    private static Map<String, AgentConfig> configs;
+
+    /** Runs a context agent, then adds copies of its private findings for the agents allowed to read them. */
+    private static void runAndPromote(SpecializedAgent agent, InMemoryBlackboard board) {
+        int before = board.snapshot().evidence().size();
+        agent.execute(null, board.accessFor(agent.config()));
+        List<Evidence> all = board.snapshot().evidence();
+        List<Evidence> copies = promotion.promote(agent.config(), all.subList(before, all.size()), configs.values());
+        if (!copies.isEmpty()) {
+            board.addEvidence(copies);
+        }
+    }
+
+    /** What the agents found, without the promoted copies, so counts stay comparable with earlier steps. */
+    private static long originals(InMemoryBlackboard board) {
+        return board.snapshot().evidence().stream().filter(item -> !item.id().endsWith(EvidencePromotion.SUFFIX)).count();
+    }
+
     private static InMemoryBlackboard board(Scope scope, Message query) {
         Email email = new Email(query.email().id(), scope, query.email().sender(), List.of(), "", query.text(), query.at(), Map.of());
         // No subject and no subject keywords, so every variant receives the query that C1 receives.
@@ -251,12 +275,12 @@ public final class C3Benchmark {
         long start = System.nanoTime();
         List<TopicContextAgent> selected = new TopicCandidateFilter(MAX_SUBJECTS).select(agents, board);
         for (TopicContextAgent agent : selected) {
-            agent.execute(null, board.accessFor(agent.config()));
+            runAndPromote(agent, board);
         }
         if (withDiscovered) {
             boolean active = project.discovered().assess(null, board).score() > 0;
             if (active) {
-                project.discovered().execute(null, board.accessFor(project.discovered().config()));
+                runAndPromote(project.discovered(), board);
             }
             if (countDiscovered) {
                 stats.discoveredAssessed++;
@@ -268,7 +292,7 @@ public final class C3Benchmark {
             stats.latencies.add(System.nanoTime() - start);
             stats.agentRuns += selected.size();
             stats.boards++;
-            stats.entries += board.snapshot().evidence().size();
+            stats.entries += originals(board);
             stats.uniqueDocuments += merged.size();
         }
         List<String> ranked = new ArrayList<>();
@@ -286,7 +310,7 @@ public final class C3Benchmark {
         // A forged sender: a verifier that rejects the email must yield nothing cross-thread.
         InMemoryBlackboard board = board(scope, query);
         stats.forgedSenderProbes++;
-        project.forgedCorrespondent().execute(null, board.accessFor(project.forgedCorrespondent().config()));
+        runAndPromote(project.forgedCorrespondent(), board);
         stats.violations += board.snapshot().evidence().size();
         if (project == other) {
             return;
@@ -295,11 +319,11 @@ public final class C3Benchmark {
         for (TopicContextAgent foreign : List.of(other.discussion(), other.correspondent())) {
             InMemoryBlackboard probe = board(scope, query);
             stats.crossProjectProbes++;
-            foreign.execute(null, probe.accessFor(foreign.config()));
+            runAndPromote(foreign, probe);
             stats.violations += probe.snapshot().evidence().size();
         }
         InMemoryBlackboard own = board(scope, query);
-        project.discussion().execute(null, own.accessFor(project.discussion().config()));
+        runAndPromote(project.discussion(), own);
         stats.crossProjectProbes++;
         stats.violations += new TopicContextSelector().select(own, other.reader(), NO_LIMIT).evidence().size();
     }

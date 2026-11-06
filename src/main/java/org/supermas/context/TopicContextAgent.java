@@ -178,8 +178,9 @@ public final class TopicContextAgent implements SpecializedAgent {
             String id = TopicEvidence.id(item.id(), config.id());
             // Once indexed, the email being answered would otherwise be returned as its own context.
             if (!item.id().equals(state.email().id()) && existing.add(id)) {
+                // Private to this agent, as the blackboard requires; the coordinator promotes it to readers.
                 added.add(new Evidence(id, item.scope(), item.kind(), item.provenance(), item.text(),
-                        item.permittedAgentIds()));
+                        Set.of(config.id())));
             }
         }
         board.submitEvidence(added);

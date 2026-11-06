@@ -19,6 +19,7 @@ import org.supermas.coordinator.RoutingStrategy;
 import org.supermas.memory.ConversationRecorder;
 import org.supermas.model.Domain.Action;
 import org.supermas.model.Domain.AgentAssessment;
+import org.supermas.model.Domain.AgentConfig;
 import org.supermas.model.Domain.AgentOutcome;
 import org.supermas.model.Domain.Analysis;
 import org.supermas.model.Domain.BlackboardSnapshot;
@@ -27,6 +28,7 @@ import org.supermas.model.Domain.BoardStatus;
 import org.supermas.model.Domain.BudgetUsage;
 import org.supermas.model.Domain.Draft;
 import org.supermas.model.Domain.Email;
+import org.supermas.model.Domain.Evidence;
 import org.supermas.model.Domain.ExecutionLimits;
 import org.supermas.model.Domain.ExecutionRecord;
 import org.supermas.model.Domain.Failure;
@@ -52,6 +54,7 @@ public final class ScriptedCoordinator implements Coordinator {
     private final Clock clock;
     private final Map<BoardId, Blackboard> boards = new ConcurrentHashMap<>();
     private final Optional<ConversationRecorder> recorder;
+    private final EvidencePromotion promotion;
 
     public ScriptedCoordinator(Preprocessor preprocessor, BlackboardFactory factory, InMemoryAgentRegistry registry,
                                RoutingStrategy routing, CoordinationStrategy strategy, Clock clock) {
@@ -62,6 +65,14 @@ public final class ScriptedCoordinator implements Coordinator {
     public ScriptedCoordinator(Preprocessor preprocessor, BlackboardFactory factory, InMemoryAgentRegistry registry,
                                RoutingStrategy routing, CoordinationStrategy strategy, Clock clock,
                                Optional<ConversationRecorder> recorder) {
+        this(preprocessor, factory, registry, routing, strategy, clock, recorder, EvidencePromotion.inferencesOnly());
+    }
+
+    /** @param promotion who may read copies of what context agents find, which they submit privately */
+    public ScriptedCoordinator(Preprocessor preprocessor, BlackboardFactory factory, InMemoryAgentRegistry registry,
+                               RoutingStrategy routing, CoordinationStrategy strategy, Clock clock,
+                               Optional<ConversationRecorder> recorder, EvidencePromotion promotion) {
+        this.promotion = promotion;
         this.recorder = recorder;
         this.preprocessor = preprocessor;
         this.factory = factory;
@@ -191,6 +202,9 @@ public final class ScriptedCoordinator implements Coordinator {
         }
         finish(board, task, next.reason(), failure == null ? TaskStatus.SUCCEEDED : TaskStatus.FAILED, summary,
                 Optional.ofNullable(failure));
+        if (failure == null && agent.isPresent() && !registry.replyCandidates().contains(agent.get())) {
+            promote(board, agent.get().config(), state);
+        }
         // ASSUMED-TEAM-DECISION(P10): new drafts are recorded as history. Pending team validation.
         List<Draft> drafts = board.snapshot().drafts();
         if (recorder.isPresent() && drafts.size() > state.drafts().size()) {
@@ -206,6 +220,18 @@ public final class ScriptedCoordinator implements Coordinator {
             board.recordBudgetUsage(new BudgetUsage(used.rounds(), used.retries() + 1, used.generationAttempts()));
         } else {
             fail(board, failure);
+        }
+    }
+
+    /** Copies of a context agent's private findings for the agents allowed to read them. */
+    private void promote(Blackboard board, AgentConfig author, BlackboardSnapshot before) {
+        java.util.Set<String> earlier = new java.util.HashSet<>();
+        before.evidence().forEach(item -> earlier.add(item.id()));
+        List<Evidence> added = board.snapshot().evidence().stream().filter(item -> !earlier.contains(item.id())).toList();
+        List<Evidence> copies = promotion.promote(author, added,
+                registry.all().stream().map(SpecializedAgent::config).toList());
+        if (!copies.isEmpty()) {
+            board.addEvidence(copies);
         }
     }
 

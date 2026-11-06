@@ -28,7 +28,8 @@
   "contextSources": [
     "mail",
     "admin-procedures",
-    "general-info"
+    "general-info",
+    "missing-information"
   ],
   "requiredFields": [
     "ID"

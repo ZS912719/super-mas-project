@@ -33,7 +33,8 @@
   "contextSources": [
     "mail",
     "student-faq",
-    "general-info"
+    "general-info",
+    "missing-information"
   ],
   "requiredFields": [
     "COURSE"

@@ -123,6 +123,25 @@ public final class LuceneContextRetriever implements ContextRetriever {
                 + " over budget, denied sources: " + denied);
     }
 
+    /**
+     * Who may read an indexed document, by the rule retrieval applies: the readers stored with the document,
+     * narrowed to its source's current readers. Empty when the document, its source or their pairing is
+     * unknown, so that a caller widening access fails closed.
+     */
+    public Optional<Set<String>> readers(String projectId, String documentId, String sourceId) {
+        ContextSource source = sources.get(sourceId);
+        if (source == null || !projectId.equals(source.projectId())) {
+            return Optional.empty();
+        }
+        return indexes.forProject(projectId).find(documentId)
+                .filter(document -> document.sourceId().equals(sourceId))
+                .map(document -> {
+                    Set<String> permitted = new HashSet<>(document.permittedAgentIds());
+                    permitted.retainAll(source.permittedAgentIds());
+                    return Set.copyOf(permitted);
+                });
+    }
+
     private boolean isAuthorized(String sourceId, String project, String agentId) {
         ContextSource source = sources.get(sourceId);
         return source != null

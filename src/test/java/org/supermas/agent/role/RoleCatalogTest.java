@@ -62,7 +62,8 @@ class RoleCatalogTest {
         AgentConfig config = catalog.find("lab").orElseThrow();
 
         assertEquals(List.of("lab"), config.keywords());
-        assertEquals(Set.of("mail"), config.contextSourceIds());
+        // The role's own identifier is added: it is the source of its reply plans on the board.
+        assertEquals(Set.of("mail", "lab"), config.contextSourceIds());
         assertEquals("Common rules.\n\nLab role.\n\nRules for this role:\n- Be brief.\n", config.systemPrompt());
     }
 

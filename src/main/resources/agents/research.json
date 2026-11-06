@@ -30,7 +30,8 @@
   "contextSources": [
     "mail",
     "research-office",
-    "general-info"
+    "general-info",
+    "missing-information"
   ],
   "requiredFields": [],
   "rules": [

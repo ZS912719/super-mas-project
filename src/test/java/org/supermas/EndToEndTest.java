@@ -56,6 +56,9 @@ import org.supermas.model.Domain.Scope;
 import org.supermas.prototype.ContextFirstCoordinationStrategy;
 import org.supermas.prototype.DraftFirstCoordinationStrategy;
 import org.supermas.prototype.InMemoryAgentRegistry;
+import org.supermas.coordinator.CoordinationStrategy;
+import org.supermas.coordinator.Coordinator;
+import org.supermas.prototype.EvidencePromotion;
 import org.supermas.prototype.InMemoryBlackboardFactory;
 import org.supermas.prototype.ScoreRoutingStrategy;
 import org.supermas.prototype.ScriptedCoordinator;
@@ -71,11 +74,11 @@ class EndToEndTest {
     private static final Instant AT = Instant.parse("2026-11-03T08:00:00Z");
     private static final String DISCUSSION = "context-discussion";
     private static final String DISCOVERED = "context-discovered";
-    private static final String CHECK = "context-check";
+    private static final String CHECK = MissingInformationAgent.DEFAULT_ID;
 
     private ProjectIndexes indexes;
     private ConversationRecorder recorder;
-    private ScriptedCoordinator coordinator;
+    private Coordinator coordinator;
     private IndexConversationRepository repository;
     private int minute;
 
@@ -110,7 +113,7 @@ class EndToEndTest {
         configs.put(DISCOVERED, discoveredConfig);
         DiscoveredTopicsAgent discovered = new DiscoveredTopicsAgent(discoveredConfig, PROJECT, catalog, retriever, 2, 4000);
         Set<String> roleIds = new HashSet<>(configs.keySet());
-        MissingInformationAgent check = new MissingInformationAgent(CHECK, new RuleMissingInformationCheck(), roleIds);
+        MissingInformationAgent check = new MissingInformationAgent(CHECK, new RuleMissingInformationCheck());
 
         RoleServices services = RoleServices.planOnly().withRetriever(retriever)
                 .withGeneration(new TemplateGenerationService(), RoleServices.UNCONFIGURED_MODEL);
@@ -122,10 +125,9 @@ class EndToEndTest {
             registry.register(agent);
         }
         Clock clock = Clock.fixed(AT, ZoneOffset.UTC);
-        coordinator = new ScriptedCoordinator(MetadataAgent.rulesOnly(), new InMemoryBlackboardFactory(clock), registry,
-                new ScoreRoutingStrategy(0.4, 0.1), new ContextFirstCoordinationStrategy(List.of(discussion),
-                List.of(discovered), new TopicCandidateFilter(3), Optional.of(CHECK), new DraftFirstCoordinationStrategy(), 2),
-                clock, Optional.of(recorder));
+        coordinator = coordinator(registry, new ContextFirstCoordinationStrategy(List.of(discussion), List.of(discovered),
+                new TopicCandidateFilter(3), Optional.of(CHECK), new DraftFirstCoordinationStrategy(), 2), clock,
+                recorder, new EvidencePromotion(retriever::readers));
 
         // Earlier mail, recorded as it would have been: twelve threads on four subjects. Topics form by themselves.
         // With only three subjects, every subject word is in a third of all threads, above the 30% cut-off of
@@ -152,12 +154,19 @@ class EndToEndTest {
         assertTrue(catalog.topics(PROJECT).size() >= 2, "topics were discovered with nothing declared");
     }
 
+    /** The team's coordinator part. A subclass runs the same scenarios on the durable blackboard. */
+    Coordinator coordinator(InMemoryAgentRegistry registry, CoordinationStrategy strategy, Clock clock,
+                            ConversationRecorder recorder, EvidencePromotion promotion) {
+        return new ScriptedCoordinator(MetadataAgent.rulesOnly(), new InMemoryBlackboardFactory(clock), registry,
+                new ScoreRoutingStrategy(0.4, 0.1), strategy, clock, Optional.of(recorder), promotion);
+    }
+
     @AfterEach
     void close() throws Exception {
         indexes.close();
     }
 
-    private BlackboardSnapshot handle(String thread, String subject, String body) {
+    BlackboardSnapshot handle(String thread, String subject, String body) {
         BoardId board = coordinator.receive(new Email("<new-" + minute + "@uni>", new Scope(PROJECT, thread),
                 "sarah@students.uni", List.of("me@uni"), subject, body, AT.plusSeconds(60L * minute++), Map.of()));
         return coordinator.run(board, new ExecutionLimits(12, 1, 1, 50_000, 20_000));

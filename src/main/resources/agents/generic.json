@@ -10,7 +10,8 @@
   ],
   "contextSources": [
     "mail",
-    "general-info"
+    "general-info",
+    "missing-information"
   ],
   "requiredFields": [],
   "rules": [],

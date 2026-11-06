@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -135,8 +136,12 @@ public final class RoleCatalog implements AgentConfigRepository {
 
     public AgentConfig config(String id) {
         RoleDefinition role = role(id).orElseThrow(() -> new IllegalArgumentException("Unknown role " + id));
+        // The role's own identifier is the source of its reply plans. The blackboard accepts a contribution only
+        // from a source the author may use, and shows an agent only evidence from its sources.
+        Set<String> sources = new java.util.LinkedHashSet<>(role.contextSources());
+        sources.add(role.id());
         return new AgentConfig(role.id(), role.kind(), systemPrompt(id), role.capabilities(), role.keywords(),
-                role.contextSources(), role.fallback());
+                Set.copyOf(sources), role.fallback());
     }
 
     @Override

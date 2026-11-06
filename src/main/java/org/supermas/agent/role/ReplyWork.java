@@ -103,21 +103,24 @@ final class ReplyWork {
         try {
             List<String> terms = new ArrayList<>(state.analysis().keywords());
             terms.add(RoleText.currentText(state));
-            addList(added, existing, access.thread(state.id(), THREAD), agent.config.id() + ".thread", state);
+            addList(added, existing, access.thread(state.id(), THREAD), agent.config.id(), ".thread", state);
             addList(added, existing, access.domain(state.id(), terms, Set.of(), false, agent.role.maxContextCharacters()),
-                    agent.config.id() + ".search", state);
+                    agent.config.id(), ".search", state);
             board.submitEvidence(added);
         } catch (UncheckedIOException e) {
             notes.add("The agent's own search failed; only context already on the board was used");
         }
     }
 
-    private static void addList(List<Evidence> added, Set<String> existing, RetrievalResult result, String list,
-                                BlackboardSnapshot state) {
+    private static void addList(List<Evidence> added, Set<String> existing, RetrievalResult result, String author,
+                                String suffix, BlackboardSnapshot state) {
+        String list = author + suffix;
         for (Evidence item : result.evidence()) {
             String id = TopicEvidence.id(item.id(), list);
             if (!item.id().equals(state.email().id()) && existing.add(id)) {
-                added.add(new Evidence(id, item.scope(), item.kind(), item.provenance(), item.text(), item.permittedAgentIds()));
+                // A reply agent's own search stays private to it; only context agents' findings are promoted.
+                added.add(new Evidence(id, item.scope(), item.kind(), item.provenance(), item.text(),
+                        Set.of(author)));
             }
         }
     }

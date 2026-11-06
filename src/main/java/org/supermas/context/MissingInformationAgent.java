@@ -39,15 +39,22 @@ public final class MissingInformationAgent implements SpecializedAgent {
             InformationField.COURSE, List.of("course", "class"),
             InformationField.ID, List.of("reference", "number")));
 
+    /** The identifier the bundled roles list as a source, so that they may read this agent's inference. */
+    public static final String DEFAULT_ID = "missing-information";
+
     private final AgentConfig config;
     private final MissingInformationCheck check;
-    private final Set<String> visibleTo;
 
-    /** @param visibleTo the agents that may read the inference, usually those able to reply */
-    public MissingInformationAgent(String agentId, MissingInformationCheck check, Set<String> visibleTo) {
-        this.config = new AgentConfig(agentId, "context-check", "", Set.of(CAPABILITY), List.of(), Set.of(), false);
+    /**
+     * The inference's source is this agent's own identifier, so its configuration lists that identifier: the
+     * blackboard accepts a contribution only from a source the author may use. The inference is private to
+     * the author when submitted. The coordinator promotes it to the agents whose trusted configuration lists
+     * this identifier as a source, which is how reply agents come to read it.
+     */
+    public MissingInformationAgent(String agentId, MissingInformationCheck check) {
+        this.config = new AgentConfig(agentId, "context-check", "", Set.of(CAPABILITY), List.of(), Set.of(agentId),
+                false);
         this.check = check;
-        this.visibleTo = visibleTo;
     }
 
     @Override
@@ -78,11 +85,9 @@ public final class MissingInformationAgent implements SpecializedAgent {
         }
         Set<String> fields = new TreeSet<>();
         result.fields().forEach(field -> fields.add(field.name()));
-        Set<String> readers = new TreeSet<>(visibleTo);
-        readers.add(config.id());
         board.submitEvidence(List.of(new Evidence(EVIDENCE_ID, state.id().scope(), EvidenceKind.MODEL_INFERENCE,
                 new Provenance(config.id(), "Missing-information check, from " + result.source(), state.email().receivedAt()),
-                TEXT_PREFIX + String.join(", ", fields), readers)));
+                TEXT_PREFIX + String.join(", ", fields), Set.of(config.id()))));
         List<String> terms = new ArrayList<>();
         result.fields().stream().sorted().forEach(field -> terms.addAll(SEARCH_TERMS.get(field)));
         Task further = new Task(state.id().taskId() + "-further-retrieval", state.id(), Action.RETRIEVE_CONTEXT,

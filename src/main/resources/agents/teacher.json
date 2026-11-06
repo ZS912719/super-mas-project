@@ -29,7 +29,8 @@
   "contextSources": [
     "mail",
     "teaching-guide",
-    "general-info"
+    "general-info",
+    "missing-information"
   ],
   "requiredFields": [
     "COURSE"

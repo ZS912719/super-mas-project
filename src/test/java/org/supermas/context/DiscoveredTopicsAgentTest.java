@@ -32,6 +32,7 @@ import org.supermas.model.Domain.MessageKind;
 import org.supermas.model.Domain.Scope;
 import org.supermas.model.Domain.Task;
 import org.supermas.model.Domain.TaskStatus;
+import org.supermas.prototype.EvidencePromotion;
 import org.supermas.prototype.Capabilities;
 import org.supermas.prototype.ContextFirstCoordinationStrategy;
 import org.supermas.prototype.DraftFirstCoordinationStrategy;
@@ -145,7 +146,8 @@ class DiscoveredTopicsAgentTest {
         ScriptedCoordinator coordinator = new ScriptedCoordinator(MetadataAgent.rulesOnly(),
                 new InMemoryBlackboardFactory(clock), registry, new ScoreRoutingStrategy(0.5, 0.1),
                 new ContextFirstCoordinationStrategy(List.of(), List.of(agent), new TopicCandidateFilter(3),
-                        Optional.empty(), new DraftFirstCoordinationStrategy(), 2), clock);
+                        Optional.empty(), new DraftFirstCoordinationStrategy(), 2), clock, Optional.empty(),
+                new EvidencePromotion(support.retriever::readers));
         BoardId id = coordinator.receive(new Email("incoming", TopicTestSupport.HERE, "a@b.c", List.of(), "Grant",
                 "Is the grant proposal budget ready for the reviewers?", TopicTestSupport.AT, Map.of()));
 
