@@ -8,11 +8,13 @@ A blackboard-based multi-agent email reply assistant project with a local Java b
 
 | Component | Current status |
 | --- | --- |
-| Java framework | SQLite blackboard storage, fenced task leases/recovery and Markdown observations are implemented; coordinator and specialist execution remain deferred. |
+| Java framework | SQLite blackboard storage, fenced task leases/recovery and Markdown observations are implemented. The real coordinator, routing and scheduling remain deferred. |
+| Java agents | Metadata analysis, conversation memory, knowledge loading, discovered topics, context agents, a missing-information check and five configurable specialized agents (student, teacher, research, administration, generic) are implemented. |
+| Prototype | `PrototypeApp` takes `.eml` files through all agents to drafts awaiting review on the SQLite blackboard, using marked stand-ins for coordinator, routing, scheduling and generation (`docs/plans/stand-ins.md`). Drafts come from a fixed template; no language model is called. |
 | UML | Documents the current Java packages, interfaces and selected records. |
 | Desktop mailbox | Electron opens an independent window and owns its local server; the UI provides demo mail, Gmail/Outlook adapters, history, labels and reviewed drafts. |
 | Local generation | The mailbox calls local Ollama directly; it does not implement the Java generation or agent interfaces. |
-| Integration | The mailbox and Java contracts are not connected. Automatic multi-agent classification and scheduling remain deferred. |
+| Integration | The Java agents run on the SQLite blackboard. The mailbox is not yet connected to them. |
 | Persistence | Java blackboards use local SQLite with immutable revision history. The independent mailbox still uses session memory. |
 | Observation | Markdown generations provide an Obsidian observation vault; Kripke models check task and projection protocols. |
 
@@ -20,7 +22,8 @@ A blackboard-based multi-agent email reply assistant project with a local Java b
 
 | Module | Requirements | Dependency configuration |
 | --- | --- | --- |
-| Java runtime | JDK 17 and Maven 3.9 or later | [pom.xml](pom.xml); SQLite JDBC 3.54.1.0, Jackson 2.21.4; JUnit 5.12.2 for tests |
+| Java runtime | JDK 17 and Maven 3.9 or later | [pom.xml](pom.xml); SQLite JDBC 3.54.1.0, Jackson 2.21.4, Lucene 9.12.3, Apache James Mime4j 0.8.11, ONNX Runtime 1.31.1, DJL tokenizers 0.40.0; JUnit 5.12.2 and Angus Mail 2.0.3 for tests |
+| Optional metadata models | GLiNER and speech-act ONNX models, not in Git | Tests that need them skip when absent; the prototype uses rules only |
 | Blackboard observation | Obsidian for viewing generated Markdown; nuXmv for formal checks | [Runtime usage](docs/blackboard-runtime.md), [model-checking setup](formal/README.md) |
 | Desktop mailbox development | Node.js 22.12 or later and npm | [mailbox/package.json](mailbox/package.json) and [lockfile](mailbox/package-lock.json); Electron runs the window, esbuild bundles assets and electron-builder packages Windows builds |
 | Reply generation | A running local Ollama service and an installed model | [mailbox/.env.example](mailbox/.env.example) |
@@ -44,12 +47,20 @@ A blackboard-based multi-agent email reply assistant project with a local Java b
 |   |   |-- export/
 |   |   `-- app/
 |   |-- agent/
+|   |   `-- role/
 |   |-- coordinator/
 |   |-- context/
 |   |-- llm/
+|   |-- memory/
+|   |-- metadata/
 |   |-- persistence/
+|   |-- prototype/
 |   `-- review/
-|-- src/test/java/org/supermas/blackboard/
+|-- src/main/resources/
+|   |-- agents/
+|   `-- prompts/
+|-- src/test/java/org/supermas/
+|-- benchmark/
 |-- formal/
 |-- scripts/
 |-- mailbox/
@@ -77,11 +88,15 @@ A blackboard-based multi-agent email reply assistant project with a local Java b
 | `blackboard.export` | Markdown generations, publication, read-back audit and retry worker |
 | `blackboard.app` | Demo and observation-process entry points; selects concrete adapters |
 | `agent` | Specialist interface, registry and student, teacher, administration, research-project and generic role interfaces |
+| `agent.role` | Specialized agents defined by configuration: one JSON file in `resources/agents` and one prompt in `resources/prompts` per role; assessment, reply plan, budgeted prompt and draft request |
+| `metadata` | `MetadataAgent`: MIME parsing, quote and signature removal, language, entities, speech acts and role hint, by rules with optional ONNX models |
+| `memory` | Conversation history per project and thread, knowledge loading, automatic topic regrouping |
 | `coordinator` | Orchestration, routing and next-action selection contracts |
-| `context` | Thread/domain retrieval and budgeted evidence-selection contracts |
+| `context` | Retrieval and selection contracts; Lucene retrieval, topic discovery, topic and discovered-topics context agents, missing-information check |
 | `llm` | Local inference and generation contracts |
 | `persistence` | Conversation and agent-configuration storage contracts |
 | `review` | Versioned editing, rejection feedback and explicit approval contracts |
+| `prototype` | Marked stand-ins for parts not built yet (coordinator, routing, scheduling, generation, in-memory board) and the `PrototypeApp` entry point |
 
 The desktop entry in `mailbox/desktop/main.js` starts `mailbox/server.js` and opens the UI from `mailbox/web` in an isolated application window. Its `lib` modules handle provider calls, local generation, draft review, classification imports and demo data. This application operates independently of the Java interfaces.
 
@@ -122,6 +137,17 @@ Create a demo board and export an observation vault:
 
 Open `runtime/super-mas-vault` as an existing Obsidian vault and follow a board's `generated/<board-key>/current.md` link. `watch` recovers expired leases and refreshes observations; it does not execute agents. Stop it with Ctrl+C. Use `-DataDirectory` to choose another runtime directory. [Runtime documentation](docs/blackboard-runtime.md) describes API usage, structure and recovery behavior.
 
+### Java prototype
+
+Process emails from `.eml` files to drafts awaiting review:
+
+```bash
+mvn -q compile exec:java -Dexec.mainClass=org.supermas.prototype.PrototypeApp \
+  -Dexec.args="benchmark/data/synthetic-dev"
+```
+
+The argument is one `.eml` file or a folder. Options: `--knowledge <dir>` (default: the sample university knowledge in `src/test/resources/university/knowledge`), `--data <dir>` (default `runtime`), `--project <id>` (default `uni`). State persists in the data folder: `blackboard.db`, the Obsidian vault `super-mas-vault`, the search index `index` and discovered topics `topics`. Nothing is approved or sent. See [the prototype report](docs/reports/step-11.4.md).
+
 ### Java package
 
 Run from the repository root with JDK 17 selected in the environment:
@@ -130,7 +156,7 @@ Run from the repository root with JDK 17 selected in the environment:
 mvn package
 ```
 
-The output is `target/supermas-1.0.0-SNAPSHOT.jar`, a library with demo/observer entry classes invoked by the script above, without an executable JAR manifest or complete email-processing workflow. Maven may download dependencies and build plugins on first use.
+The output is `target/supermas-1.0.0-SNAPSHOT.jar`, a library with demo/observer entry classes invoked by the script above and the `PrototypeApp` entry class, without an executable JAR manifest. Maven may download dependencies and build plugins on first use.
 
 ### Validation commands
 

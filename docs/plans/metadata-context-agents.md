@@ -1,6 +1,6 @@
 # Metadata and Context Agents: Implementation and Benchmark Plan
 
-**Status:** Phases 0-4 are implemented (reports in `docs/reports`). Phases 8-10 were added on 2026-11-03 and approved by the project owner. Decisions still open are listed in section 2.
+**Status:** Phases 0-4 and 8-10 are implemented (reports in `docs/reports`). Phases 8-10 were added on 2026-11-03 and Phase 11 on 2026-11-06, both approved by the project owner. Steps 11.0-11.5 are done on the `prototype` branch; 11.6 is open. Decisions still open are listed in section 2.
 
 ## 1. Context and scope
 
@@ -278,6 +278,15 @@ Corrections are human labels, which removes the LLM label risks. **Limitation:**
 - **10.2** Regroup automatically: stable topic identifiers across runs, index tags updated, and a refresh after enough new mail.
 - **10.3** One discovered-topics context agent with a fixed configured identity, so discovery never grants rights.
 - **10.4** Benchmark discovered topics against declared topics and C1 on the folder proxy of step 4.10.
+
+### Phase 11: First working prototype (branch `prototype`, added 2026-11-06, approved by the project owner)
+- **11.0** Branch `prototype` from `origin/main`; merge `docs/metadata-context-plan`, then `origin/codex/blackboard-storage` (which contains the desktop mailbox). `team-knowledge-vault` is read, never merged.
+- **11.1** Move our imports to the teammate's `blackboard.api` and `blackboard.persistence` packages.
+- **11.2** A coordinator stand-in on the durable SQLite board, using the teammate's code unchanged: leased tasks, board-made execution records, restarts.
+- **11.3** Private agent contributions and coordinator promotion from trusted configuration and document readers.
+- **11.4** `PrototypeApp`: `.eml` files to drafts awaiting review, with Markdown for Obsidian. Generation stays the template stand-in; a local model is the intended next step.
+- **11.5** Reports, stand-in list, README, architecture and CLAUDE.md.
+- **11.6** Connect the desktop mailbox to the Java prototype (last step; needs Node.js on the development machine).
 
 ### Phase 7: Finish (day 14)
 - **7.1** Final benchmark, on the frozen data.

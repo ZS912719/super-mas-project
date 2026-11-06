@@ -8,7 +8,9 @@ Use English for all project-authored content (documentation, diagrams, identifie
 
 ## Project status
 
-SuperMAS is a Java API for a blackboard-based multi-agent email reply assistant using local language models. The shared contracts are interfaces and records in `org.supermas.model`, `agent`, `blackboard`, `coordinator`, `llm`, `persistence` and `review`. On the `docs/metadata-context-plan` branch, this member's part is implemented: `metadata` (MetadataAgent), `context` (retrieval, topic agents, discovered topics, missing information), `memory` (conversation history and knowledge loading) and `agent.role` (configurable specialized agents and their prompts). Parts owned by teammates exist only as marked stand-ins in `org.supermas.prototype` (search `PROTOTYPE-STAND-IN`). There is no email transport, UI or real LLM adapter. `docs/architecture.md` lists the open design decisions; shared ones require the team, so do not settle them silently. `docs/plans/metadata-context-agents.md` is the plan, and `docs/reports/` has one report per step.
+SuperMAS is a Java API for a blackboard-based multi-agent email reply assistant using local language models. The shared contracts are interfaces and records in `org.supermas.model`, `agent`, `blackboard.api`, `coordinator`, `llm`, `persistence` and `review`. This member's part is implemented: `metadata` (MetadataAgent), `context` (retrieval, topic agents, discovered topics, missing information), `memory` (conversation history and knowledge loading) and `agent.role` (configurable specialized agents and their prompts).
+
+The `prototype` branch (from 2026-11-06) merges this work (`docs/metadata-context-plan`) with the teammate's `codex/blackboard-storage`: the durable SQLite blackboard (`blackboard.impl`, `.model`, `.persistence`, `.export`, `.app`, docs in `docs/blackboard-runtime.md`), formal models in `formal/`, CI in `.github/`, and the Electron/Node desktop mailbox in `mailbox/` (unreviewed by its author's own tag; not yet connected to Java). The teammate's code is used unchanged. Parts nobody has built yet exist as marked stand-ins in `org.supermas.prototype` (search `PROTOTYPE-STAND-IN`); `LeasedCoordinator` runs the agents on the SQLite board, and `PrototypeApp` runs `.eml` files end to end. There is no email transport from Java and no real LLM adapter. `team-knowledge-vault` holds the team's notes and must never be merged into a code branch; read it with `git show` as `AGENTS.md` describes. `docs/architecture.md` lists the open design decisions; shared ones require the team, so do not settle them silently. `docs/plans/metadata-context-agents.md` is the plan, and `docs/reports/` has one report per step.
 
 ## Commands
 
@@ -19,7 +21,7 @@ mvn package    # compile and build target/supermas-1.0.0-SNAPSHOT.jar (library, 
 mvn compile    # compile only
 ```
 
-`mvn test` runs the JUnit 5 suite. Benchmarks are test-scope main classes run with `mvn exec:java` (see the step reports). No linter is configured. The future behavioral requirements are in the validation checklist in `docs/architecture.md`.
+`mvn test` runs the JUnit 5 suite. Run the prototype with `mvn -q compile exec:java -Dexec.mainClass=org.supermas.prototype.PrototypeApp -Dexec.args="benchmark/data/synthetic-dev"` (options in `docs/reports/step-11.4.md`). The mailbox needs Node.js 22.12+ (`cd mailbox && npm ci && npm test`). Commits use Conventional Commits (`AGENTS.md`). Benchmarks are test-scope main classes run with `mvn exec:java` (see the step reports). No linter is configured. The future behavioral requirements are in the validation checklist in `docs/architecture.md`.
 
 Render UML (needs PowerShell, a JDK, and a PlantUML JAR, by default the Git-ignored `tmp/tools/plantuml.jar`):
 
@@ -48,7 +50,7 @@ Access control is modeled by the interface a caller receives:
 
 - `BlackboardView`: read-only authorized snapshot.
 - `AgentBlackboard`: adds evidence, draft, and task-suggestion submission for specialists. It deliberately has no approval, sending, or repository operations.
-- `Blackboard`: coordinator control operations, including `accessFor(AgentConfig)`, which hands out the restricted access.
+- `Blackboard`: coordinator control operations, including `accessFor(AgentConfig)`, which hands out the restricted access. The durable `DefaultBlackboard` refuses it: restricted access comes only from `claim` then `accessFor(TaskLease)`, and execution records only from `complete`.
 
 Agents never call peers directly, and they do not select peers or grant their own permissions. Roles are added by implementing `SpecializedAgent` and registering through `AgentRegistry`, not by adding branches to the coordinator. The five role interfaces (`StudentAgent`, etc.) declare no extra methods.
 
@@ -62,6 +64,7 @@ The interfaces declare these but do not enforce them, so any implementation must
 - **Trust boundary:** `ModelRequest` separates the trusted `systemPrompt` from `untrustedData`. Emails, references, history, prior drafts, and feedback are all untrusted and must not override permissions or approval rules.
 - **Local-only inference:** model adapters enforce local endpoints and handle connection failure, timeout, and invalid output explicitly.
 - **Budgets:** enforce round, retry, generation, total-input, and context limits. Current email text and feedback are not exempt from the input budget.
+- **Private contributions:** on the durable board an agent's evidence must have only its author as reader; only the coordinator widens access (`prototype.EvidencePromotion`). An agent's own id must be among its `contextSourceIds` for it to submit inferences.
 - **Draft lifecycle:** drafts are versioned and never replaced in place. An edit creates a new unapproved version, and approval covers exactly one version.
 - **No implied sending:** approval is not a send. `GENERATED_DRAFT`, `USER_EDITED_DRAFT`, `RECEIVED`, and `SENT` are separate history kinds, and `SENT` is recorded only after an externally confirmed send. Future transport must require version-specific user approval.
 - **Exactly-one results:** `ModelResponse` and `GenerationResult` must hold exactly one of success or failure.

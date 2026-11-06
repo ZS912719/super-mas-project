@@ -6,6 +6,8 @@ The Java module groups contracts and implementations by responsibility. Blackboa
 
 The separate [mailbox application](../mailbox/README.md) runs in an Electron desktop window. Its main process owns a Node.js loopback HTTP server serving the bundled UI. Provider authorization opens in the system browser and returns to the initiating desktop session through expiring single-use OAuth state and PKCE. It implements mail transport, session state, draft review and direct local reply generation without implementing `Coordinator`, specialist agents, blackboard storage or `GenerationService`. Its classification adapter accepts externally supplied JSON; automatic agent execution remains deferred. These application modules are intentionally separate from the Java contract UML until an integration protocol is agreed.
 
+On the `prototype` branch, the metadata, memory, context and specialized agents run on this SQLite blackboard through `prototype.LeasedCoordinator`, a marked stand-in for the coordinator. Every agent action is a leased task. Agent contributions stay private to their author, as the blackboard requires, and `prototype.EvidencePromotion` copies a context agent's findings to the agents whose trusted configuration lists the source, narrowed to each document's readers in the index. Both are proposals for the real coordinator, not decisions (open decision 10). `prototype.PrototypeApp` runs the whole flow from `.eml` files; see [step 11.4](reports/step-11.4.md).
+
 ## Collaboration boundaries
 
 `Coordinator` receives emails and advances tasks. `Preprocessor` produces initial analysis; `BlackboardFactory` creates or restores a blackboard. `BoardId` combines a project/thread `Scope` with a task identifier so multiple tasks can belong to one conversation.
@@ -66,6 +68,7 @@ The five role interfaces are extension points, not instantiated agents. Trusted 
 7. Storage migrations/retention, dependency-specific conflict detection and external-side-effect recovery.
 8. Interactive entry point, user identity and explicit approval actions.
 9. Broader domain validation and context permissions beyond the initial runtime boundaries.
+10. The coordinator's promotion rule: who may read a copy of an agent's private contribution. The prototype proposes trusted configuration plus document readers ([step 11.2-11.3](reports/step-11.2-11.3.md)).
 
 ## Future validation checklist
 
@@ -83,4 +86,4 @@ These are requirements for later behavioral tests, not passing tests in this rev
 - Embedded instructions cannot grant access or authorize sending.
 - Stale versions cannot be approved; no unapproved message can be sent.
 
-The Maven build now verifies blackboard storage, concurrency and recovery behavior, but does not validate the complete proposed multi-agent workflow. [Blackboard validation](blackboard-validation.md) records implemented coverage. The mailbox has separate behavior tests and a runnable demo.
+The Maven build now verifies blackboard storage, concurrency and recovery behavior, and on the `prototype` branch an end-to-end run of the agents on that storage with stand-ins (`DurableEndToEndTest`). It does not validate the complete proposed multi-agent workflow: revision after rejection, approval and sending are not connected. [Blackboard validation](blackboard-validation.md) records implemented coverage. The mailbox has separate behavior tests and a runnable demo.
