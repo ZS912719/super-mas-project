@@ -75,6 +75,8 @@ class AgentServiceTest {
         assertEquals("Student requests", classification.get("labels").get(0).asText());
         assertTrue(classification.get("confidence").asDouble() > 0 && classification.get("confidence").asDouble() <= 1);
         assertEquals("supermas-agents", classification.get("source").asText());
+        // Read from the board after the work: the specialists that contributed a reply plan.
+        assertEquals("[\"student\"]", classification.get("contributors").toString());
     }
 
     @Test
@@ -86,7 +88,7 @@ class AgentServiceTest {
 
         assertEquals("NONE", body.get("routing").get("match").asText(), body.toString());
         assertEquals("generic", body.get("draft").get("agentId").asText());
-        // The mailbox keeps its own labels: "no role fits" is not a class.
+        // Only the fallback contributed: the mailbox keeps its own labels.
         assertTrue(body.get("classification").isNull(), body.toString());
     }
 

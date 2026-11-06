@@ -67,3 +67,7 @@ From the second decision it followed that the planned `generator` field in `sess
 - **Approvals and sends do not reach the agents:** no `SENT` history and no revision after rejection from the mailbox. That needs the team's review service and a second endpoint.
 - **`npm audit` reports vulnerabilities** in the teammate's dependency tree. Not changed: their versions are their call.
 - **The contract is a proposal** for the open mailbox-to-coordinator question, versioned `/v1/` so it can change without breaking.
+
+## Addendum (same day): labels from contributions, not from routing
+
+Project owner's decision, after discussing whether labels equal to the routing result would reduce the blackboard to a router: labels are now **derived from the board after the work**: one per non-fallback specialist that contributed a reply plan (`contributors` in the response). Today exactly one specialist contributes per email, so the output is the same as before; the change makes labels measure collaboration, so several labels appear once several specialists contribute (Phase 12). No specialist contribution gives `null`, as before. `AgentServiceTest` checks the `contributors` field. Commit: see the session protocol.

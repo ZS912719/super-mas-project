@@ -43,12 +43,13 @@
               "candidates": [{"agentId": "student", "score": 0.87, "reason": "…"}]},
   "plan": {"requests": ["Could I have an extension …?"], "missing": []},
   "classification": {"schemaVersion": "1", "source": "supermas-agents", "labels": ["Student requests"],
-                     "confidence": 0.87, "reason": "CLEAR: …", "agentId": "student"},
+                     "contributors": ["student"], "confidence": 0.87,
+                     "reason": "Contributed a reply plan on the board: [student]"},
   "notes": []
 }
 ```
 
-- `classification` is in the shape the mailbox's `normalizeClassification` reads. **It is present only for a `CLEAR` routing match**: the label is the chosen role's `displayName` from its JSON file, the confidence its routing score. For `AMBIGUOUS` or `NONE` (answered by the Generic fallback) it is `null`, so the mailbox keeps its own labels: "no role fits" is not a class.
+- `classification` is in the shape the mailbox's `normalizeClassification` reads. **Its labels say which specialists contributed on the board**, read from the board after the work, not from the routing decision before it: one label per non-fallback role with a reply plan on the board (the role's `displayName` from its JSON file), listed in `contributors`. `confidence` is the contributor's routing score when exactly one specialist contributed, otherwise `null`. If no specialist contributed (only the Generic fallback), `classification` is `null`, so the mailbox keeps its own labels. Labels only flow from the board to the user, never back into control.
 - `failure` (`kind`, `message`) is present when the board recorded one, for example a history record that could not be stored. A draft may still be present.
 - Nothing is approved or sent. `draft` is a proposal for human review in the mailbox.
 

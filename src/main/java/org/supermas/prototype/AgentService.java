@@ -32,7 +32,6 @@ import org.supermas.model.Domain.BlackboardSnapshot;
 import org.supermas.model.Domain.BoardId;
 import org.supermas.model.Domain.Draft;
 import org.supermas.model.Domain.Email;
-import org.supermas.model.Domain.Match;
 import org.supermas.model.Domain.RoutingDecision;
 import org.supermas.model.Domain.Scope;
 
@@ -326,29 +325,38 @@ public final class AgentService implements AutoCloseable {
     }
 
     /**
-     * In the shape the mailbox's {@code normalizeClassification} reads, and only for a clear routing match: the
-     * label is the display name of the chosen role, from its configuration file, and the confidence its routing
-     * score. An ambiguous or absent match, answered by the fallback, means no role fits, which is not a class;
-     * JSON null then leaves the mailbox's own labels as they are.
+     * In the shape the mailbox's {@code normalizeClassification} reads. The labels say which specialists
+     * <em>contributed</em> on the board, read from the board after the work, never from the routing decision
+     * before it: one label per non-fallback role with a reply plan on the board, its display name from the role's
+     * configuration file. Labels only flow from the board to the user, never back into control.
+     *
+     * <p>No specialist contribution (only the Generic fallback, or none) gives JSON null, so the mailbox keeps its
+     * own labels: "no agent has anything to contribute" is not a class. Confidence is the contributor's routing
+     * score when exactly one specialist contributed, and empty otherwise.
      */
     private JsonNode classification(BlackboardSnapshot state, Optional<Draft> draft) {
-        if (state.routing().map(found -> found.match() != Match.CLEAR).orElse(true)) {
+        List<RoleDefinition> contributors = state.evidence().stream()
+                .map(ReplyPlan::from).flatMap(Optional::stream)
+                .map(ReplyPlan::agentId).distinct()
+                .map(wiring.roles::role).flatMap(Optional::stream)
+                .filter(role -> !role.fallback())
+                .toList();
+        if (contributors.isEmpty()) {
             return com.fasterxml.jackson.databind.node.NullNode.getInstance();
         }
         ObjectNode node = JSON.createObjectNode();
         node.put("schemaVersion", "1");
         node.put("source", "supermas-agents");
         ArrayNode labels = node.putArray("labels");
-        Optional<RoleDefinition> role = draft.flatMap(found -> wiring.roles.role(found.agentId()));
-        role.ifPresent(found -> labels.add(found.displayName()));
-        Optional<RoutingDecision> routing = state.routing();
-        Optional<Double> score = routing.filter(found -> found.match() == Match.CLEAR)
-                .flatMap(found -> found.candidates().stream()
-                        .filter(candidate -> found.selectedAgentId().equals(Optional.of(candidate.agentId())))
+        contributors.forEach(role -> labels.add(role.displayName()));
+        ArrayNode ids = node.putArray("contributors");
+        contributors.forEach(role -> ids.add(role.id()));
+        Optional<Double> score = contributors.size() != 1 ? Optional.empty() : state.routing()
+                .flatMap(routing -> routing.candidates().stream()
+                        .filter(candidate -> candidate.agentId().equals(contributors.get(0).id()))
                         .map(AgentAssessment::score).findFirst());
         score.ifPresentOrElse(value -> node.put("confidence", Math.max(0, Math.min(1, value))), () -> node.putNull("confidence"));
-        node.put("reason", routing.map(found -> found.match() + ": " + found.reason()).orElse("No routing decision"));
-        role.ifPresent(found -> node.put("agentId", found.id()));
+        node.put("reason", "Contributed a reply plan on the board: " + contributors.stream().map(RoleDefinition::id).toList());
         return node;
     }
 
