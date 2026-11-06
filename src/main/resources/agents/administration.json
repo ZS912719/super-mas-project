@@ -29,7 +29,8 @@
     "mail",
     "admin-procedures",
     "general-info",
-    "missing-information"
+    "missing-information",
+    "request-splitter"
   ],
   "requiredFields": [
     "ID"

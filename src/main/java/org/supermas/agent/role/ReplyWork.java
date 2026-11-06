@@ -10,11 +10,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import org.supermas.agent.collaboration.RequestEntry;
 import org.supermas.blackboard.api.AgentBlackboard;
 import org.supermas.context.AgentContextAccess;
 import org.supermas.context.InformationField;
 import org.supermas.context.TopicEvidence;
 import org.supermas.metadata.MetadataAgent;
+import org.supermas.model.Domain.AgentAssessment;
 import org.supermas.model.Domain.AgentOutcome;
 import org.supermas.model.Domain.BlackboardSnapshot;
 import org.supermas.model.Domain.ContextSelection;
@@ -91,6 +93,53 @@ final class ReplyWork {
         return new AgentOutcome(TaskStatus.SUCCEEDED, "Draft written from plan " + plan.planId(), List.of(), Optional.empty());
     }
 
+    /** Excerpts longer than this are cut, so that one document cannot fill the composer's prompt. */
+    static final int MAX_EXCERPT = 800;
+
+    /**
+     * The blackboard way (step 12.3): the same search and plan as {@link #run}, but only for the requests on the
+     * board that this role answers, posted as a {@link Contribution}. No draft: the composer writes one reply from
+     * every contribution.
+     */
+    static AgentOutcome contribute(RoleAgent agent, Task task, AgentBlackboard board) {
+        List<String> notes = new ArrayList<>();
+        searchOwnSources(agent, board, notes);
+        BlackboardSnapshot state = board.snapshot();
+        List<RequestEntry> requests = RequestEntry.all(state.evidence());
+        AgentAssessment estimate = agent.contributionEstimate(state);
+        List<Integer> covers = agent.covers(state, requests, estimate.score());
+        if (requests.isEmpty() || covers.isEmpty()) {
+            if (!agent.role.fallback() || requests.isEmpty()) {
+                return new AgentOutcome(TaskStatus.SUCCEEDED, "Nothing to contribute: " + estimate.reason(), List.of(),
+                        Optional.empty());
+            }
+            covers = requests.stream().map(RequestEntry::index).toList();
+        }
+        ContextSelection selection = agent.services.selector().select(board, agent.config, agent.role.maxContextCharacters());
+        if (!selection.omittedSourceIds().isEmpty()) {
+            notes.add("Context over budget was left out from sources " + selection.omittedSourceIds());
+        }
+        List<String> quotes = new ArrayList<>();
+        for (RequestEntry entry : requests) {
+            if (covers.contains(entry.index()) && !entry.general()) {
+                quotes.add(entry.quote());
+            }
+        }
+        long earlier = state.evidence().stream().map(Contribution::from).flatMap(Optional::stream)
+                .filter(found -> found.agentId().equals(agent.config.id())).map(Contribution::id).distinct().count();
+        String id = Contribution.ID_PREFIX + agent.config.id() + ":" + (earlier + 1);
+        ReplyPlan plan = plan(agent, state, selection, notes, Optional.of(new RequestExtractor.Requests(quotes, "board")), id);
+        List<Contribution.Excerpt> excerpts = selection.evidence().stream()
+                .map(item -> new Contribution.Excerpt(item.id(), item.provenance().sourceId(),
+                        item.text().length() > MAX_EXCERPT ? item.text().substring(0, MAX_EXCERPT) : item.text()))
+                .toList();
+        Contribution contribution = new Contribution(Contribution.SCHEMA, id, agent.config.id(), agent.role.id(),
+                estimate.score(), covers, state.feedback().size(), plan, excerpts);
+        board.submitEvidence(List.of(contribution.toEvidence(state.id().scope(), state.email().receivedAt())));
+        return new AgentOutcome(TaskStatus.SUCCEEDED, "Contribution " + id + " to requests " + covers + ", "
+                + excerpts.size() + " excerpts", List.of(), Optional.empty());
+    }
+
     /** The agent's own search: the thread's history, then a search of its sources, as C1 plus thread history. */
     private static void searchOwnSources(RoleAgent agent, AgentBlackboard board, List<String> notes) {
         if (agent.services.retriever().isEmpty()) {
@@ -127,8 +176,18 @@ final class ReplyWork {
 
     private static ReplyPlan plan(RoleAgent agent, BlackboardSnapshot state, ContextSelection selection,
                                   List<String> notes) {
+        long earlier = state.evidence().stream()
+                .filter(item -> item.id().startsWith(ReplyPlan.ID_PREFIX + agent.config.id() + ":")).count();
+        return plan(agent, state, selection, notes, Optional.empty(),
+                ReplyPlan.ID_PREFIX + agent.config.id() + ":" + (earlier + 1));
+    }
+
+    /** @param given requests already on the board; empty to extract them from the email */
+    private static ReplyPlan plan(RoleAgent agent, BlackboardSnapshot state, ContextSelection selection,
+                                  List<String> notes, Optional<RequestExtractor.Requests> given, String planId) {
         String language = Optional.ofNullable(state.analysis().metadata().get(MetadataAgent.KEY_LANGUAGE)).orElse("en");
-        RequestExtractor.Requests requests = agent.services.requests().extract(RoleText.currentText(state), language);
+        RequestExtractor.Requests requests = given.orElseGet(
+                () -> agent.services.requests().extract(RoleText.currentText(state), language));
         List<ReplyPlan.Fact> facts = new ArrayList<>();
         Set<String> present = new TreeSet<>();
         for (Map<String, Object> entity : entities(state)) {
@@ -146,9 +205,7 @@ final class ReplyWork {
         List<ReplyPlan.Reference> context = selection.evidence().stream()
                 .map(item -> new ReplyPlan.Reference(item.id(), item.provenance().sourceId(), item.kind().name()))
                 .toList();
-        long earlier = state.evidence().stream()
-                .filter(item -> item.id().startsWith(ReplyPlan.ID_PREFIX + agent.config.id() + ":")).count();
-        return new ReplyPlan(ReplyPlan.ID_PREFIX + agent.config.id() + ":" + (earlier + 1), agent.config.id(),
+        return new ReplyPlan(planId, agent.config.id(),
                 agent.role.id(), agent.promptVersion, language, requests.requests(), requests.source(), facts, context,
                 List.copyOf(missing), agent.role.rules(), notes);
     }

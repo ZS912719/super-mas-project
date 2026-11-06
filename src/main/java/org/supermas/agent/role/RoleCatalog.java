@@ -41,10 +41,13 @@ public final class RoleCatalog implements AgentConfigRepository {
     private static final Pattern IDENTIFIER = Pattern.compile("[a-z0-9][a-z0-9-]{0,63}");
     private static final Pattern FILE_NAME = Pattern.compile("[a-z0-9][a-z0-9-]{0,63}\\.txt");
     private static final String COMMON_PROMPT = "common.txt";
+    private static final String COMPOSER_PROMPT = "composer.txt";
 
     private final Map<String, RoleDefinition> roles = new LinkedHashMap<>();
     private final Map<String, String> prompts = new LinkedHashMap<>();
     private final Optional<Path> folder;
+    private final String commonPrompt;
+    private final String composerPrompt;
     private final ObjectMapper json = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
     private RoleCatalog(List<RoleDefinition> definitions, Function<String, Optional<String>> promptFiles,
@@ -52,6 +55,10 @@ public final class RoleCatalog implements AgentConfigRepository {
         this.folder = folder;
         String common = promptFiles.apply(COMMON_PROMPT)
                 .orElseThrow(() -> new IllegalArgumentException("The prompt folder needs " + COMMON_PROMPT));
+        this.commonPrompt = common;
+        // A folder catalogue without its own composer prompt uses the bundled one.
+        this.composerPrompt = promptFiles.apply(COMPOSER_PROMPT).or(() -> resource("prompts/" + COMPOSER_PROMPT))
+                .orElseThrow(() -> new IllegalStateException("The bundled " + COMPOSER_PROMPT + " is missing"));
         int fallbacks = 0;
         for (RoleDefinition role : definitions) {
             validate(role);
@@ -196,6 +203,28 @@ public final class RoleCatalog implements AgentConfigRepository {
         if (role.keywords().stream().anyMatch(String::isBlank)) {
             throw new IllegalArgumentException("Role " + role.id() + " has an empty keyword");
         }
+    }
+
+    /**
+     * The composer's trusted system prompt (step 12.5): the common rules, the composer's prompt, then the rules of
+     * every contributing role, read from this catalogue and never from the board, so a contribution cannot
+     * smuggle instructions into the trusted part.
+     */
+    public String composerSystemPrompt(List<String> contributorIds) {
+        StringBuilder prompt = new StringBuilder(commonPrompt.strip()).append("\n\n").append(composerPrompt.strip());
+        boolean any = false;
+        for (String id : contributorIds) {
+            RoleDefinition role = roles.get(id);
+            if (role == null) {
+                continue;
+            }
+            for (String rule : role.rules()) {
+                prompt.append(any ? "" : "\n\nRules of the contributing roles:").append("\n- [").append(role.id())
+                        .append("] ").append(rule.strip());
+                any = true;
+            }
+        }
+        return prompt.append('\n').toString();
     }
 
     private static String compose(String common, String rolePrompt, List<String> rules) {

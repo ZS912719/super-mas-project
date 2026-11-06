@@ -11,7 +11,8 @@
   "contextSources": [
     "mail",
     "general-info",
-    "missing-information"
+    "missing-information",
+    "request-splitter"
   ],
   "requiredFields": [],
   "rules": [],

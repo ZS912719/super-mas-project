@@ -14,6 +14,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
+import org.supermas.agent.collaboration.RequestSplitter;
+import org.supermas.agent.role.ComposerAgent;
 import org.supermas.agent.role.ReplyPlan;
 import org.supermas.agent.role.RoleAgent;
 import org.supermas.agent.role.RoleAgents;
@@ -23,6 +25,8 @@ import org.supermas.blackboard.export.MarkdownProjector;
 import org.supermas.blackboard.impl.DefaultBlackboardFactory;
 import org.supermas.blackboard.persistence.sqlite.SqliteBlackboardStore;
 import org.supermas.context.DiscoveredTopicsAgent;
+import org.supermas.control.AgendaStrategy;
+import org.supermas.coordinator.CoordinationStrategy;
 import org.supermas.context.LuceneContextRetriever;
 import org.supermas.context.MissingInformationAgent;
 import org.supermas.context.ProjectIndexes;
@@ -77,18 +81,35 @@ public final class PrototypeApp {
     static final String DISCUSSION = "context-discussion";
     static final String DISCOVERED = "context-discovered";
     static final String MAIL = "mail";
-    static final ExecutionLimits LIMITS = new ExecutionLimits(12, 1, 1, 50_000, 20_000);
+    /** Router baseline: route, generate, present. */
+    static final ExecutionLimits ROUTER_LIMITS = new ExecutionLimits(12, 1, 1, 50_000, 20_000);
+    /** Blackboard: more cycles (requests, context, several contributions, compose) and room for two revisions. */
+    static final ExecutionLimits BLACKBOARD_LIMITS = new ExecutionLimits(24, 1, 3, 50_000, 20_000);
+
+    /** Which organization runs: the Phase 12 blackboard (default) or the step 11 router, kept as a baseline. */
+    public enum Architecture {
+        BLACKBOARD, ROUTER;
+
+        ExecutionLimits limits() {
+            return this == BLACKBOARD ? BLACKBOARD_LIMITS : ROUTER_LIMITS;
+        }
+    }
     /** Discovered topics are rebuilt after this many new received or sent messages. */
     static final int REGROUP_EVERY = 25;
 
     private PrototypeApp() { }
 
-    record Options(Path emails, Path knowledge, Path data, String project) {
+    record Options(Path emails, Path knowledge, Path data, String project, Architecture architecture) {
+        Options(Path emails, Path knowledge, Path data, String project) {
+            this(emails, knowledge, data, project, Architecture.BLACKBOARD);
+        }
+
         static Options parse(String[] args) {
             if (args.length == 0) {
-                throw new IllegalArgumentException(
-                        "Usage: PrototypeApp EMAILS [--knowledge DIR] [--data DIR] [--project ID]");
+                throw new IllegalArgumentException("Usage: PrototypeApp EMAILS [--knowledge DIR] [--data DIR] [--project ID]"
+                        + " [--architecture blackboard|router]");
             }
+            Architecture architecture = Architecture.BLACKBOARD;
             Path emails = Path.of(args[0]);
             Path knowledge = Path.of("src/test/resources/university/knowledge");
             Path data = Path.of("runtime");
@@ -101,10 +122,11 @@ public final class PrototypeApp {
                     case "--knowledge" -> knowledge = Path.of(args[i + 1]);
                     case "--data" -> data = Path.of(args[i + 1]);
                     case "--project" -> project = args[i + 1];
+                    case "--architecture" -> architecture = Architecture.valueOf(args[i + 1].toUpperCase(java.util.Locale.ROOT));
                     default -> throw new IllegalArgumentException("Unknown option " + args[i]);
                 }
             }
-            return new Options(emails, knowledge, data, project);
+            return new Options(emails, knowledge, data, project, architecture);
         }
     }
 
@@ -134,7 +156,7 @@ public final class PrototypeApp {
                     continue;
                 }
                 BoardId board = wiring.coordinator.receive(email);
-                BlackboardSnapshot state = wiring.coordinator.run(board, LIMITS);
+                BlackboardSnapshot state = wiring.coordinator.run(board, options.architecture().limits());
                 outcomes.add(new Outcome(file, board, state));
                 print(out, file, state);
             }
@@ -168,6 +190,14 @@ public final class PrototypeApp {
         state.evidence().stream().map(ReplyPlan::from).flatMap(Optional::stream).reduce((first, second) -> second)
                 .ifPresent(plan -> out.println("Plan: requests " + plan.requests() + ", missing " + plan.missing()
                         + ", " + plan.context().size() + " context items"));
+        out.println("Steps:");
+        for (org.supermas.model.Domain.ExecutionRecord step : state.executions()) {
+            String agent = state.tasks().stream().filter(task -> task.id().equals(step.taskId())).findFirst()
+                    .flatMap(org.supermas.model.Domain.Task::agentId).orElse("-");
+            String why = step.selectionReason().length() > 150 ? step.selectionReason().substring(0, 150) + "…"
+                    : step.selectionReason();
+            out.println("  " + agent + ": " + step.summary() + "  [" + why + "]");
+        }
         if (!state.drafts().isEmpty()) {
             Draft draft = state.drafts().get(state.drafts().size() - 1);
             out.println("Draft v" + draft.version() + " by " + draft.agentId() + " (" + draft.review() + "):");
@@ -241,16 +271,26 @@ public final class PrototypeApp {
                     .withGeneration(new TemplateGenerationService(), RoleServices.UNCONFIGURED_MODEL);
             SqliteBlackboardStore store = new SqliteBlackboardStore(options.data().resolve("blackboard.db"));
             InMemoryAgentRegistry registry = new InMemoryAgentRegistry();
+            boolean blackboard = options.architecture() == Architecture.BLACKBOARD;
+            if (blackboard) {
+                registry.register(RequestSplitter.withRules());
+            }
             registry.register(discussion);
             registry.register(discovered);
             registry.register(check);
             for (RoleAgent agent : RoleAgents.create(roles, services)) {
                 registry.register(agent);
             }
+            CoordinationStrategy strategy;
+            if (blackboard) {
+                registry.register(new ComposerAgent(ComposerAgent.DEFAULT_ID, roles, services, RequestSplitter.DEFAULT_ID));
+                strategy = new AgendaStrategy(registry, AgendaStrategy.Settings.defaults());
+            } else {
+                strategy = new ContextFirstCoordinationStrategy(List.of(discussion), List.of(discovered),
+                        new TopicCandidateFilter(3), Optional.of(check.config().id()), new DraftFirstCoordinationStrategy(), 2);
+            }
             LeasedCoordinator coordinator = new LeasedCoordinator(MetadataAgent.rulesOnly(),
-                    new DefaultBlackboardFactory(store), registry, new ScoreRoutingStrategy(0.4, 0.1),
-                    new ContextFirstCoordinationStrategy(List.of(discussion), List.of(discovered), new TopicCandidateFilter(3),
-                            Optional.of(check.config().id()), new DraftFirstCoordinationStrategy(), 2),
+                    new DefaultBlackboardFactory(store), registry, new ScoreRoutingStrategy(0.4, 0.1), strategy,
                     new EvidencePromotion(retriever::readers), Optional.of(recorder), Duration.ofMinutes(5));
             // Topics from mail already stored by an earlier run, before the first new email.
             maintainer.refreshNow(project);

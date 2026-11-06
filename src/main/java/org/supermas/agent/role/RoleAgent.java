@@ -3,11 +3,14 @@ package org.supermas.agent.role;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.List;
 import org.supermas.agent.SpecializedAgent;
+import org.supermas.agent.collaboration.RequestEntry;
 import org.supermas.blackboard.api.AgentBlackboard;
 import org.supermas.blackboard.api.BlackboardView;
 import org.supermas.context.InformationField;
 import org.supermas.metadata.MetadataAgent;
+import org.supermas.model.Domain.Action;
 import org.supermas.model.Domain.AgentAssessment;
 import org.supermas.model.Domain.AgentConfig;
 import org.supermas.model.Domain.AgentOutcome;
@@ -52,7 +55,14 @@ public class RoleAgent implements SpecializedAgent {
 
     @Override
     public AgentAssessment assess(Task task, BlackboardView board) {
-        BlackboardSnapshot state = board.snapshot();
+        if (task != null && (task.action() == Action.CONTRIBUTE || task.action() == Action.REVISE)) {
+            return contributionEstimate(board.snapshot());
+        }
+        return fit(board.snapshot());
+    }
+
+    /** The role's fit to the whole email: role hint and keywords (docs/plans/reply-agent-assess.md). */
+    private AgentAssessment fit(BlackboardSnapshot state) {
         Set<InformationField> missing = missingRequired(state);
         boolean sufficient = missing.isEmpty();
         if (role.fallback()) {
@@ -73,7 +83,54 @@ public class RoleAgent implements SpecializedAgent {
 
     @Override
     public AgentOutcome execute(Task task, AgentBlackboard board) {
+        if (task != null && (task.action() == Action.CONTRIBUTE || task.action() == Action.REVISE)) {
+            return ReplyWork.contribute(this, task, board);
+        }
         return ReplyWork.run(this, task, board);
+    }
+
+    /**
+     * The estimate the blackboard controller asks for before choosing a contribution (Corkill's split of control
+     * knowledge): the role's fit, if there are requests it would answer and it has not answered them since the
+     * last feedback. It reads only what the board shows this role; it never learns what other specialists did.
+     */
+    AgentAssessment contributionEstimate(BlackboardSnapshot state) {
+        List<RequestEntry> requests = RequestEntry.all(state.evidence());
+        if (requests.isEmpty()) {
+            return new AgentAssessment(config.id(), 0, true, "No request entries on the board yet");
+        }
+        if (role.fallback()) {
+            return new AgentAssessment(config.id(), 0, true, "Fallback role, asked only when no specialist fits");
+        }
+        Optional<Contribution> own = Contribution.latest(state.evidence()).stream()
+                .filter(found -> found.agentId().equals(config.id())).findFirst();
+        if (own.isPresent() && own.get().feedbackSeen() >= state.feedback().size()) {
+            return new AgentAssessment(config.id(), 0, true, "Already contributed to requests " + own.get().covers());
+        }
+        AgentAssessment fit = fit(state);
+        List<Integer> covers = covers(state, requests, fit.score());
+        if (covers.isEmpty()) {
+            return new AgentAssessment(config.id(), 0, fit.sufficientContext(), "No request for this role; " + fit.reason());
+        }
+        return new AgentAssessment(config.id(), fit.score(), fit.sufficientContext(), (own.isPresent()
+                ? "Revision after feedback, " : "") + "would answer requests " + covers + "; " + fit.reason());
+    }
+
+    /**
+     * Requests this role would answer: those quoting one of its keywords, or every request when the sender's
+     * role hint matches the role, or when it fits the email only through the subject. A general entry (no
+     * request sentence) is answered by any role that fits at all.
+     */
+    List<Integer> covers(BlackboardSnapshot state, List<RequestEntry> requests, double fit) {
+        if (fit <= 0) {
+            return List.of();
+        }
+        boolean hinted = Optional.ofNullable(state.analysis().metadata().get(MetadataAgent.KEY_ROLE_HINT))
+                .filter(role.roleHints()::contains).isPresent();
+        List<Integer> byKeyword = requests.stream()
+                .filter(entry -> entry.general() || RoleText.anyKeyword(role.keywords(), entry.quote()))
+                .map(RequestEntry::index).toList();
+        return hinted || byKeyword.isEmpty() ? requests.stream().map(RequestEntry::index).toList() : byKeyword;
     }
 
     /** Required fields of this role that the missing-information check, as this agent may read it, reports. */

@@ -31,7 +31,8 @@
     "mail",
     "research-office",
     "general-info",
-    "missing-information"
+    "missing-information",
+    "request-splitter"
   ],
   "requiredFields": [],
   "rules": [

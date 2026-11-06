@@ -34,7 +34,8 @@
     "mail",
     "student-faq",
     "general-info",
-    "missing-information"
+    "missing-information",
+    "request-splitter"
   ],
   "requiredFields": [
     "COURSE"

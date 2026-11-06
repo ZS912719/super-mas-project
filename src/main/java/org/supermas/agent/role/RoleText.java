@@ -23,6 +23,15 @@ final class RoleText {
                 .split("[^\\p{L}\\p{N}]+")).trim() + " ";
     }
 
+    /** Whether any keyword appears as whole words in the text. */
+    static boolean anyKeyword(List<String> keywords, String text) {
+        String haystack = normalize(text);
+        return keywords.stream().anyMatch(keyword -> {
+            String needle = normalize(keyword);
+            return needle.length() > 2 && haystack.contains(needle);
+        });
+    }
+
     static long matchedKeywords(List<String> keywords, BlackboardSnapshot state) {
         String text = normalize((state.email().subject() == null ? "" : state.email().subject()) + " "
                 + currentText(state));

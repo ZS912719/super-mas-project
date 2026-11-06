@@ -122,7 +122,7 @@ class LeasedCoordinatorTest {
     private static final AgentOutcome DONE = new AgentOutcome(TaskStatus.SUCCEEDED, "done", List.of(), Optional.empty());
 
     @Test
-    void aFullLoopLeasesEveryAssessmentAndTheDraft() {
+    void aFullLoopAssessesThroughViewsAndLeasesTheDraft() {
         registry.register(writer("student", Set.of()));
         registry.register(writer("teacher", Set.of()));
         LeasedCoordinator coordinator = coordinator(new DraftFirstCoordinationStrategy());
@@ -133,8 +133,9 @@ class LeasedCoordinatorTest {
         assertEquals(Match.CLEAR, done.routing().orElseThrow().match());
         assertEquals("student", done.drafts().get(0).agentId());
         assertEquals(2, done.budgetUsage().rounds(), "routing is one round however many agents assess");
-        // Two assessments and one generation, each a leased task with its own execution record from the board.
-        assertEquals(3, done.executions().size());
+        // Assessments read through lease-free views (step 12.1); only the generation is a leased task.
+        assertEquals(1, done.executions().size());
+        assertEquals(2, done.routing().orElseThrow().candidates().size());
         assertTrue(done.tasks().stream().allMatch(task -> task.status() == TaskStatus.SUCCEEDED), done.tasks().toString());
     }
 

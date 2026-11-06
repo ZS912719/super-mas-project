@@ -68,7 +68,8 @@ class AgentServiceTest {
         assertEquals(200, response.statusCode(), response.body());
         JsonNode body = JSON.readTree(response.body());
         assertEquals("AWAITING_REVIEW", body.get("status").asText());
-        assertEquals("student", body.get("draft").get("agentId").asText());
+        // The blackboard: the student contributed, the composer wrote the one draft.
+        assertEquals("composer", body.get("draft").get("agentId").asText());
         assertTrue(body.get("draft").get("body").asText().contains("extension"), body.toString());
         assertEquals("CLEAR", body.get("routing").get("match").asText());
         JsonNode classification = body.get("classification");
@@ -87,7 +88,8 @@ class AgentServiceTest {
         JsonNode body = JSON.readTree(post(request("m1", lunch), TOKEN).body());
 
         assertEquals("NONE", body.get("routing").get("match").asText(), body.toString());
-        assertEquals("generic", body.get("draft").get("agentId").asText());
+        assertEquals("composer", body.get("draft").get("agentId").asText());
+        assertTrue(body.get("draft").get("explanation").asText().contains("generic"), body.toString());
         // Only the fallback contributed: the mailbox keeps its own labels.
         assertTrue(body.get("classification").isNull(), body.toString());
     }

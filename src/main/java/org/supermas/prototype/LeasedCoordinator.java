@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 import org.supermas.agent.SpecializedAgent;
+import org.supermas.agent.role.Contribution;
 import org.supermas.blackboard.api.AgentBlackboard;
 import org.supermas.blackboard.api.Preprocessor;
 import org.supermas.blackboard.impl.DefaultBlackboard;
@@ -15,6 +16,7 @@ import org.supermas.blackboard.impl.DefaultBlackboardFactory;
 import org.supermas.blackboard.model.BlackboardData.RecoveryPolicy;
 import org.supermas.blackboard.model.BlackboardData.TaskLease;
 import org.supermas.coordinator.CoordinationStrategy;
+import org.supermas.control.ControlRecording;
 import org.supermas.coordinator.Coordinator;
 import org.supermas.coordinator.RoutingStrategy;
 import org.supermas.memory.ConversationRecorder;
@@ -131,6 +133,12 @@ public final class LeasedCoordinator implements Coordinator {
         // ASSUMED-TEAM-DECISION(P8): each action, including each context agent execution, counts as one round.
         board.recordBudgetUsage(new BudgetUsage(used.rounds() + 1, used.retries(),
                 used.generationAttempts() + (generates ? 1 : 0)));
+        // A strategy that explains itself gets its decision written on the board's control part (step 12.4).
+        if (strategy instanceof ControlRecording recording) {
+            BlackboardSnapshot now = board.snapshot();
+            recording.decision(now.id()).ifPresent(entry ->
+                    board.addEvidence(List.of(entry.toEvidence(now.id().scope(), now.email().receivedAt()))));
+        }
         if (next.action() == Action.ROUTE || next.action() == Action.RECLASSIFY) {
             route(board);
         } else {
@@ -138,29 +146,21 @@ public final class LeasedCoordinator implements Coordinator {
         }
     }
 
-    /** Every reply candidate assesses the email in its own leased task, through its own restricted view. */
+    /**
+     * Every reply candidate assesses the email through its own read-only view (step 12.1: no lease is needed to
+     * read, so an assessment no longer costs a task and a database write).
+     */
     private void route(DefaultBlackboard board) {
-        String round = roundId(board.snapshot());
+        Task task = new Task(roundId(board.snapshot()) + "-route", board.snapshot().id(), Action.ROUTE, Optional.empty(),
+                TaskStatus.PENDING, "Assess fit for routing");
         List<AgentAssessment> candidates = new ArrayList<>();
         for (SpecializedAgent agent : registry.replyCandidates()) {
             String id = agent.config().id();
-            Task task = new Task(round + "-assess-" + id, board.snapshot().id(), Action.ROUTE, Optional.of(id),
-                    TaskStatus.PENDING, "Assess fit for routing");
-            AgentAssessment assessment;
             try {
-                board.enqueue(task);
-                TaskLease claimed = board.claim(task.id(), agent.config(), lease, RecoveryPolicy.RETRY_SAFE);
-                try {
-                    assessment = agent.assess(task, board.accessFor(claimed));
-                    board.complete(claimed, TaskStatus.SUCCEEDED, "Score " + assessment.score());
-                } catch (RuntimeException e) {
-                    assessment = new AgentAssessment(id, 0, false, "Assessment failed: " + e.getMessage());
-                    board.complete(claimed, TaskStatus.FAILED, assessment.reason());
-                }
+                candidates.add(agent.assess(task, board.viewFor(agent.config())));
             } catch (RuntimeException e) {
-                assessment = new AgentAssessment(id, 0, false, "Assessment failed: " + e.getMessage());
+                candidates.add(new AgentAssessment(id, 0, false, "Assessment failed: " + e.getMessage()));
             }
-            candidates.add(assessment);
         }
         board.recordRouting(routing.select(board, candidates));
     }
@@ -209,8 +209,9 @@ public final class LeasedCoordinator implements Coordinator {
         } catch (RuntimeException e) {
             failure = new Failure(FailureKind.AGENT, "The task could not run: " + e.getMessage(), false);
         }
-        if (failure == null && isContextAgent(config)) {
-            promote(board, config, before);
+        if (failure == null) {
+            // Context findings go to their readers; of a specialist's work only its contributions, to the composer.
+            promote(board, config, before, isContextAgent(config) ? item -> true : Contribution::isContribution);
         }
         // ASSUMED-TEAM-DECISION(P10): new drafts are recorded as history. Pending team validation.
         List<Draft> drafts = board.snapshot().drafts();
@@ -231,10 +232,12 @@ public final class LeasedCoordinator implements Coordinator {
         }
     }
 
-    private void promote(DefaultBlackboard board, AgentConfig author, BlackboardSnapshot before) {
+    private void promote(DefaultBlackboard board, AgentConfig author, BlackboardSnapshot before,
+                         java.util.function.Predicate<Evidence> which) {
         Set<String> earlier = new HashSet<>();
         before.evidence().forEach(item -> earlier.add(item.id()));
-        List<Evidence> added = board.snapshot().evidence().stream().filter(item -> !earlier.contains(item.id())).toList();
+        List<Evidence> added = board.snapshot().evidence().stream()
+                .filter(item -> !earlier.contains(item.id()) && which.test(item)).toList();
         List<AgentConfig> agents = registry.all().stream().map(SpecializedAgent::config).toList();
         List<Evidence> copies = promotion.promote(author, added, agents);
         if (!copies.isEmpty()) {

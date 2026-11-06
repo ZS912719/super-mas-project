@@ -30,7 +30,8 @@
     "mail",
     "teaching-guide",
     "general-info",
-    "missing-information"
+    "missing-information",
+    "request-splitter"
   ],
   "requiredFields": [
     "COURSE"

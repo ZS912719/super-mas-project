@@ -73,8 +73,9 @@ class DurableEndToEndTest extends EndToEndTest {
         long ended = tasks.stream().filter(task -> task.status() == TaskStatus.SUCCEEDED
                 || task.status() == TaskStatus.FAILED).count();
         assertEquals(ended, state.executions().size());
-        // Each of the five bundled roles assessed the email in its own leased task.
-        assertEquals(5, tasks.stream().filter(task -> task.action() == Action.ROUTE).count());
+        // Routing assessments read through lease-free views (step 12.1): they are no longer tasks.
+        assertEquals(0, tasks.stream().filter(task -> task.action() == Action.ROUTE).count());
+        assertTrue(state.routing().isPresent(), "the assessments are still recorded");
         assertTrue(tasks.stream().filter(task -> task.status() != TaskStatus.PENDING).allMatch(task -> task.agentId().isPresent()));
     }
 

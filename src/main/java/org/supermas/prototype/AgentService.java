@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import org.supermas.agent.role.Contribution;
 import org.supermas.agent.role.ReplyPlan;
 import org.supermas.agent.role.RoleDefinition;
 import org.supermas.context.ProjectIndexes;
@@ -68,6 +69,7 @@ public final class AgentService implements AutoCloseable {
     private final PrototypeApp.Wiring wiring;
     private final String project;
     private final MetadataAgent metadata = MetadataAgent.rulesOnly();
+    private final PrototypeApp.Architecture architecture;
 
     /** A request the service refuses, with the HTTP status and a message safe to show. */
     static final class Refused extends RuntimeException {
@@ -88,6 +90,7 @@ public final class AgentService implements AutoCloseable {
         }
         this.token = token.getBytes(StandardCharsets.UTF_8);
         this.project = options.project();
+        this.architecture = options.architecture();
         Files.createDirectories(options.data());
         this.indexes = ProjectIndexes.onDisk(options.data().resolve("index"));
         this.wiring = PrototypeApp.Wiring.create(indexes, options);
@@ -245,7 +248,7 @@ public final class AgentService implements AutoCloseable {
             notes.add("Sent messages are not stored as history until approvals reach the agents");
         }
         BoardId board = wiring.coordinator.receive(selected.email(project));
-        BlackboardSnapshot state = wiring.coordinator.run(board, PrototypeApp.LIMITS);
+        BlackboardSnapshot state = wiring.coordinator.run(board, architecture.limits());
         return response(state, notes);
     }
 
@@ -335,9 +338,11 @@ public final class AgentService implements AutoCloseable {
      * score when exactly one specialist contributed, and empty otherwise.
      */
     private JsonNode classification(BlackboardSnapshot state, Optional<Draft> draft) {
-        List<RoleDefinition> contributors = state.evidence().stream()
-                .map(ReplyPlan::from).flatMap(Optional::stream)
-                .map(ReplyPlan::agentId).distinct()
+        // Blackboard: the specialists with a contribution; router baseline: the specialist with a reply plan.
+        java.util.stream.Stream<String> authors = java.util.stream.Stream.concat(
+                Contribution.latest(state.evidence()).stream().map(Contribution::agentId),
+                state.evidence().stream().map(ReplyPlan::from).flatMap(Optional::stream).map(ReplyPlan::agentId));
+        List<RoleDefinition> contributors = authors.distinct()
                 .map(wiring.roles::role).flatMap(Optional::stream)
                 .filter(role -> !role.fallback())
                 .toList();
@@ -356,7 +361,7 @@ public final class AgentService implements AutoCloseable {
                         .filter(candidate -> candidate.agentId().equals(contributors.get(0).id()))
                         .map(AgentAssessment::score).findFirst());
         score.ifPresentOrElse(value -> node.put("confidence", Math.max(0, Math.min(1, value))), () -> node.putNull("confidence"));
-        node.put("reason", "Contributed a reply plan on the board: " + contributors.stream().map(RoleDefinition::id).toList());
+        node.put("reason", "Contributed on the board: " + contributors.stream().map(RoleDefinition::id).toList());
         return node;
     }
 
