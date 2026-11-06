@@ -95,8 +95,12 @@ public final class ComposerAgent implements SpecializedAgent {
         Optional<Set<String>> used = lastComposition(state);
         Optional<Draft> latest = state.drafts().isEmpty() ? Optional.empty()
                 : Optional.of(state.drafts().get(state.drafts().size() - 1));
-        if (used.isEmpty() || !used.get().equals(current) || latest.isEmpty()) {
+        if (used.isEmpty() || !used.get().equals(current)) {
             return new AgentAssessment(config.id(), 1, true, "Contributions " + current + " are not composed yet");
+        }
+        if (latest.isEmpty()) {
+            // Composed, but no draft: no generation service is configured. Composing again would change nothing.
+            return new AgentAssessment(config.id(), 0, true, "Composed; no generation service wrote a draft");
         }
         if (latest.get().review() == ReviewStatus.REJECTED) {
             return new AgentAssessment(config.id(), 0.5, true, "The draft was rejected; recompose if nobody revises");

@@ -70,7 +70,10 @@ public final class TopicContextAgent implements SpecializedAgent {
             return new AgentAssessment(config.id(), 0, false, "Topic belongs to another project");
         }
         if (topic.type() == TopicType.DISCUSSION) {
-            return new AgentAssessment(config.id(), 1, ranAlready(state), "Every email has a thread");
+            // A further-retrieval need asks for a wider search; a thread has nothing further to find.
+            return needOf(task).isPresent()
+                    ? new AgentAssessment(config.id(), 0, ranAlready(state), "A thread has nothing further to find")
+                    : new AgentAssessment(config.id(), 1, ranAlready(state), "Every email has a thread");
         }
         if (topic.type() == TopicType.CORRESPONDENT) {
             boolean active = correspondentActive(state);

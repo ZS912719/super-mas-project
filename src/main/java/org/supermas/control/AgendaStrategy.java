@@ -105,8 +105,9 @@ public final class AgendaStrategy implements CoordinationStrategy, ControlRecord
             return new NextAction(Action.PRESENT_DRAFT, Optional.empty(), "Problem solved: draft v"
                     + latest.get().version() + " is newer than every contribution and feedback");
         }
-        boolean pendingNeed = state.tasks().stream().anyMatch(task -> task.status() == TaskStatus.PENDING
-                && task.action() == Action.RETRIEVE_CONTEXT && task.agentId().isEmpty() && task.need().isPresent());
+        Optional<Task> pendingNeed = state.tasks().stream().filter(task -> task.status() == TaskStatus.PENDING
+                && task.action() == Action.RETRIEVE_CONTEXT && task.agentId().isEmpty() && task.need().isPresent())
+                .findFirst();
         List<Candidate> candidates = new ArrayList<>();
         for (SpecializedAgent agent : registry.all()) {
             if (agent.config().fallback()) {
@@ -160,19 +161,23 @@ public final class AgendaStrategy implements CoordinationStrategy, ControlRecord
     }
 
     private Candidate estimate(Blackboard control, BlackboardSnapshot state, SpecializedAgent agent, Level level,
-                               boolean pendingNeed) {
+                               Optional<Task> pendingNeed) {
         String id = agent.config().id();
         Candidate candidate = new Candidate(id, level);
         Optional<ControlEntry> last = ControlEntry.lastChoice(state, id);
         // Relevant events for request and context sources: new feedback, or a pending further-retrieval need.
         // Other changes (contributions, other context) do not re-trigger them, so they never loop on each other.
         if ((level == Level.REQUESTS || level == Level.CONTEXT) && last.isPresent()
-                && last.get().feedback() == state.feedback().size() && !(level == Level.CONTEXT && pendingNeed)) {
+                && last.get().feedback() == state.feedback().size() && !(level == Level.CONTEXT && pendingNeed.isPresent())) {
             candidate.why = "No relevant event since it last ran";
             return candidate;
         }
         try {
-            Task probe = new Task("estimate", state.id(), action(level), Optional.of(id), TaskStatus.PENDING, "Estimate");
+            // A source estimates the task it would actually take (Corkill): a context source that already ran
+            // would take the pending further-retrieval task, so it is asked about that task and its need.
+            boolean takesNeed = level == Level.CONTEXT && pendingNeed.isPresent() && last.isPresent();
+            Task probe = takesNeed ? pendingNeed.get()
+                    : new Task("estimate", state.id(), action(level), Optional.of(id), TaskStatus.PENDING, "Estimate");
             AgentAssessment assessment = agent.assess(probe, control.viewFor(agent.config()));
             candidate.estimate = Math.max(0, Math.min(1, assessment.score()));
             candidate.why = assessment.reason();

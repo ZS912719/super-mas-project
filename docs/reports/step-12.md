@@ -96,7 +96,7 @@ The prototype is no longer a router. An email is split into its requests; every 
 | Multi-request, answering agents = gold set (12) | 4 | 5 |
 | Multi-request role precision / recall | 0.83 / 0.48 | 0.92 / 0.57 |
 | Request count right / every request answered (12) | — | 11 / 11 |
-| Mean rounds, SQLite revisions, median ms per email (multi) | 4.0, 22, 66 | 6.8, 45, 148 |
+| Mean rounds, SQLite revisions, median ms per email (multi) | 4.0, 22, 67 | 6.1, 41, 149 |
 
 Threshold sweep (blackboard): 0.2 gives single-intent 16 of 24 and multi-request 10 of 12 (precision 1.00, recall 0.90); 0.1 reaches recall 1.00 but single-intent falls to 10; 0.5 falls to 3 of 12. The single-intent mismatches are the same for both architectures: 7 French emails (French deferred) and 2 English ones with no keyword support.
 
@@ -116,3 +116,13 @@ Threshold sweep (blackboard): 0.2 gives single-intent 16 of 24 and multi-request
 - **Gold labels were written by the assistant** and are frozen but not yet reviewed by a person.
 - **The real local model is untested**: only the fake engine. Quality, latency and output validation must be measured on the chosen engine and model.
 - **The teammate's code was changed** (listed in 12.1): the teammate must review it before anything goes to `main`.
+
+## Addendum: code-review fixes (same night)
+
+The night's code analysis (`docs/code-analysis.md`) found three defects in this phase's code, fixed with a test each (each test fails without its fix):
+
+1. **A further-retrieval need was taken by the discussion agent**, which cannot serve it ("A thread has nothing further to find"). The controller now asks a context source that already ran about the pending task it would take, and the discussion agent rates a need at 0. The need now stays for a source that can serve it.
+2. **Without a generation service the composer re-composed until the round budget ran out.** It now rates 0 once the current contributions are composed.
+3. **A budget failure left a control decision in the controller's map.** The coordinator now takes the decision right after `next`.
+
+Benchmark rerun after the fixes: every quality figure unchanged; multi-request mean rounds 6.83 → 6.08 and SQLite revisions 44.7 → 40.9 (the wasted round is gone). The tables above show the rerun.

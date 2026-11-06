@@ -108,6 +108,9 @@ public final class LeasedCoordinator implements Coordinator {
             fail(board, new Failure(FailureKind.AGENT, "The strategy failed: " + e.getMessage(), false));
             return;
         }
+        // Taken at once, so that no decision is left behind when a budget check below ends the board.
+        Optional<org.supermas.control.ControlEntry> decision = strategy instanceof ControlRecording recording
+                ? recording.decision(board.snapshot().id()) : Optional.empty();
         if (next.action() == Action.STOP) {
             board.setStatus(BoardStatus.STOPPED);
             return;
@@ -134,10 +137,9 @@ public final class LeasedCoordinator implements Coordinator {
         board.recordBudgetUsage(new BudgetUsage(used.rounds() + 1, used.retries(),
                 used.generationAttempts() + (generates ? 1 : 0)));
         // A strategy that explains itself gets its decision written on the board's control part (step 12.4).
-        if (strategy instanceof ControlRecording recording) {
+        if (decision.isPresent()) {
             BlackboardSnapshot now = board.snapshot();
-            recording.decision(now.id()).ifPresent(entry ->
-                    board.addEvidence(List.of(entry.toEvidence(now.id().scope(), now.email().receivedAt()))));
+            board.addEvidence(List.of(decision.get().toEvidence(now.id().scope(), now.email().receivedAt())));
         }
         if (next.action() == Action.ROUTE || next.action() == Action.RECLASSIFY) {
             route(board);
