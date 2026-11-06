@@ -19,7 +19,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.supermas.agent.StudentAgent;
 import org.supermas.agent.TeacherAgent;
-import org.supermas.blackboard.BlackboardView;
+import org.supermas.blackboard.api.BlackboardView;
 import org.supermas.context.IndexedDocument;
 import org.supermas.context.LuceneContextRetriever;
 import org.supermas.context.MissingInformationAgent;

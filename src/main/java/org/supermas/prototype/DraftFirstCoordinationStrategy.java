@@ -1,7 +1,7 @@
 package org.supermas.prototype;
 
 import java.util.Optional;
-import org.supermas.blackboard.BlackboardView;
+import org.supermas.blackboard.api.BlackboardView;
 import org.supermas.coordinator.CoordinationStrategy;
 import org.supermas.model.Domain.Action;
 import org.supermas.model.Domain.BlackboardSnapshot;

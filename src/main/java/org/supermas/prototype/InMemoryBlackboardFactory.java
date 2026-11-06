@@ -2,8 +2,8 @@ package org.supermas.prototype;
 
 import java.time.Clock;
 import java.util.UUID;
-import org.supermas.blackboard.Blackboard;
-import org.supermas.blackboard.BlackboardFactory;
+import org.supermas.blackboard.api.Blackboard;
+import org.supermas.blackboard.api.BlackboardFactory;
 import org.supermas.model.Domain.Analysis;
 import org.supermas.model.Domain.BlackboardSnapshot;
 import org.supermas.model.Domain.BoardId;

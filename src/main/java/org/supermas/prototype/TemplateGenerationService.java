@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 import java.util.Optional;
-import org.supermas.blackboard.BlackboardView;
+import org.supermas.blackboard.api.BlackboardView;
 import org.supermas.llm.GenerationService;
 import org.supermas.model.Domain.AgentConfig;
 import org.supermas.model.Domain.ContextSelection;

@@ -3,7 +3,7 @@ package org.supermas.prototype;
 import java.util.List;
 import java.util.Optional;
 import org.supermas.agent.SpecializedAgent;
-import org.supermas.blackboard.BlackboardView;
+import org.supermas.blackboard.api.BlackboardView;
 import org.supermas.context.TopicCandidateFilter;
 import org.supermas.context.TopicContextAgent;
 import org.supermas.context.TopicType;

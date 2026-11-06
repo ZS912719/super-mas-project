@@ -10,7 +10,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import org.supermas.blackboard.Preprocessor;
+import org.supermas.blackboard.api.Preprocessor;
 import org.supermas.model.Domain.Analysis;
 import org.supermas.model.Domain.Email;
 

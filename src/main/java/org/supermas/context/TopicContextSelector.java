@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
-import org.supermas.blackboard.BlackboardView;
+import org.supermas.blackboard.api.BlackboardView;
 import org.supermas.model.Domain.AgentConfig;
 import org.supermas.model.Domain.ContextSelection;
 import org.supermas.model.Domain.Evidence;

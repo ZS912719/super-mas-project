@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
-import org.supermas.blackboard.AgentBlackboard;
+import org.supermas.blackboard.api.AgentBlackboard;
 import org.supermas.context.AgentContextAccess;
 import org.supermas.context.InformationField;
 import org.supermas.context.TopicEvidence;

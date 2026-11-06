@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import org.supermas.blackboard.BlackboardView;
+import org.supermas.blackboard.api.BlackboardView;
 import org.supermas.model.Domain.Action;
 import org.supermas.model.Domain.AgentAssessment;
 import org.supermas.model.Domain.Task;

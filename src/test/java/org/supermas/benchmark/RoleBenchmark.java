@@ -19,7 +19,7 @@ import org.supermas.agent.role.RoleAgent;
 import org.supermas.agent.role.RoleAgents;
 import org.supermas.agent.role.RoleCatalog;
 import org.supermas.agent.role.RoleServices;
-import org.supermas.blackboard.BlackboardView;
+import org.supermas.blackboard.api.BlackboardView;
 import org.supermas.context.LuceneContextRetriever;
 import org.supermas.context.ProjectIndexes;
 import org.supermas.llm.GenerationService;
