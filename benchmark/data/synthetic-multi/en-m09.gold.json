@@ -1,0 +1,9 @@
+{
+  "schema": "multi-gold/v1",
+  "requests": 2,
+  "contributors": [
+    "research",
+    "administration"
+  ],
+  "note": "Industry partner: research collaboration and a contract"
+}

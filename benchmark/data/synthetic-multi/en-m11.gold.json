@@ -1,0 +1,10 @@
+{
+  "schema": "multi-gold/v1",
+  "requests": 3,
+  "contributors": [
+    "administration",
+    "student",
+    "research"
+  ],
+  "note": "Three requests, three roles"
+}

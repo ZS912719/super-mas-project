@@ -1,0 +1,9 @@
+{
+  "schema": "multi-gold/v1",
+  "requests": 2,
+  "contributors": [
+    "teacher",
+    "research"
+  ],
+  "note": "Colleague: teaching logistics and a research grant"
+}

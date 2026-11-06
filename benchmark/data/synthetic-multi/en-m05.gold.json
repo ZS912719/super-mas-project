@@ -1,0 +1,9 @@
+{
+  "schema": "multi-gold/v1",
+  "requests": 2,
+  "contributors": [
+    "administration",
+    "teacher"
+  ],
+  "note": "Administration about a contract and teaching duties"
+}

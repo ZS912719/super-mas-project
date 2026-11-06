@@ -1,0 +1,9 @@
+{
+  "schema": "multi-gold/v1",
+  "requests": 2,
+  "contributors": [
+    "student",
+    "research"
+  ],
+  "note": "Student grade issue and a research internship"
+}
