@@ -99,17 +99,24 @@ public final class PrototypeApp {
 
     private PrototypeApp() { }
 
-    record Options(Path emails, Path knowledge, Path data, String project, Architecture architecture) {
+    /** @param minContribution the blackboard's lowest specialist estimate for a contribution */
+    record Options(Path emails, Path knowledge, Path data, String project, Architecture architecture,
+                   double minContribution) {
         Options(Path emails, Path knowledge, Path data, String project) {
             this(emails, knowledge, data, project, Architecture.BLACKBOARD);
+        }
+
+        Options(Path emails, Path knowledge, Path data, String project, Architecture architecture) {
+            this(emails, knowledge, data, project, architecture, AgendaStrategy.Settings.defaults().minContribution());
         }
 
         static Options parse(String[] args) {
             if (args.length == 0) {
                 throw new IllegalArgumentException("Usage: PrototypeApp EMAILS [--knowledge DIR] [--data DIR] [--project ID]"
-                        + " [--architecture blackboard|router]");
+                        + " [--architecture blackboard|router] [--min-contribution 0..1]");
             }
             Architecture architecture = Architecture.BLACKBOARD;
+            double minContribution = AgendaStrategy.Settings.defaults().minContribution();
             Path emails = Path.of(args[0]);
             Path knowledge = Path.of("src/test/resources/university/knowledge");
             Path data = Path.of("runtime");
@@ -123,10 +130,11 @@ public final class PrototypeApp {
                     case "--data" -> data = Path.of(args[i + 1]);
                     case "--project" -> project = args[i + 1];
                     case "--architecture" -> architecture = Architecture.valueOf(args[i + 1].toUpperCase(java.util.Locale.ROOT));
+                    case "--min-contribution" -> minContribution = Double.parseDouble(args[i + 1]);
                     default -> throw new IllegalArgumentException("Unknown option " + args[i]);
                 }
             }
-            return new Options(emails, knowledge, data, project, architecture);
+            return new Options(emails, knowledge, data, project, architecture, minContribution);
         }
     }
 
@@ -284,7 +292,9 @@ public final class PrototypeApp {
             CoordinationStrategy strategy;
             if (blackboard) {
                 registry.register(new ComposerAgent(ComposerAgent.DEFAULT_ID, roles, services, RequestSplitter.DEFAULT_ID));
-                strategy = new AgendaStrategy(registry, AgendaStrategy.Settings.defaults());
+                AgendaStrategy.Settings defaults = AgendaStrategy.Settings.defaults();
+                strategy = new AgendaStrategy(registry, new AgendaStrategy.Settings(options.minContribution(),
+                        defaults.lowerLevelWeight(), defaults.reservedRounds()));
             } else {
                 strategy = new ContextFirstCoordinationStrategy(List.of(discussion), List.of(discovered),
                         new TopicCandidateFilter(3), Optional.of(check.config().id()), new DraftFirstCoordinationStrategy(), 2);
