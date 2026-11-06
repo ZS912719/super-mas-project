@@ -35,7 +35,7 @@ What was done to build the first working prototype, why, and what needs a decisi
 | `3fb59ef` | 11.6 | Mailbox: `lib/agents.js`, opt-in branch in `/api/generate`, tests |
 | (docs commit) | 11.6 | Contract proposal, mailbox README section, step report |
 
-Reports: [11.0-11.1](step-11.0-11.1.md), [11.2-11.3](step-11.2-11.3.md), [11.4](step-11.4.md), [11.6](step-11.6.md).
+Reports: [11.0-11.1](../step-11.0-11.1.md), [11.2-11.3](../step-11.2-11.3.md), [11.4](../step-11.4.md), [11.6](../step-11.6.md).
 
 ## 3. Decisions taken and by whom
 

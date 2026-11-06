@@ -1,6 +1,6 @@
 # Compliance Check
 
-**What this is:** the project, as on the `prototype` branch on 2026-11-07, checked against (1) the project statement *Design of a multi-agent system for automatic email responses using local LLMs* (`docs/references/multi_agent_project_en.pdf`), section by section, and (2) the targeted architecture in the bibliography: Hayes-Roth (1985), *A Blackboard Architecture for Control* (BB1), and Corkill (2003), *Collaborating Software: Blackboard and Multi-Agent Systems & the Future*. The PDFs of the two papers are kept locally in `src/Bibliography/` and ignored by Git for copyright reasons.
+**What this is:** the project, as on the `prototype` branch on 2026-11-07, checked against (1) the project statement *Design of a multi-agent system for automatic email responses using local LLMs* (`docs/references/multi_agent_project_en.pdf`), section by section, and (2) the targeted architecture in the bibliography: Hayes-Roth (1985), *A Blackboard Architecture for Control* (BB1), and Corkill (2003), *Collaborating Software: Blackboard and Multi-Agent Systems & the Future*. The PDFs of the two papers are kept locally in `docs/references/bibliography/` and ignored by Git for copyright reasons; see [`docs/references/README.md`](references/README.md).
 
 **Status values:** **Met** (implemented and tested), **Partly** (implemented with a stated limit, or implemented but not measured), **Not met** (missing). Every claim names its evidence. What is missing is in [`docs/todo.md`](todo.md).
 

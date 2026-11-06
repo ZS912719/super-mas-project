@@ -52,3 +52,6 @@ Thumbs.db
 /super-mas-team-dev-vault/.obsidian/
 /super-mas-team-dev-vault/.trash/
 /super-mas-team-dev-vault/.rag-cache/
+
+# Copyrighted papers of the bibliography: kept locally, cited in docs/references/README.md
+/docs/references/bibliography/*.pdf

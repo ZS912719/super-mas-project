@@ -20,12 +20,12 @@ Cross-cutting documents: [compliance check](../compliance.md), [to-do for a full
 | Date | What happened | Where |
 | --- | --- | --- |
 | 2026-10-05 → 10-24 | Team contracts: Java interfaces and records, UML, English-only rule | `main`, `docs/architecture.md` |
-| 10-31 | This member's plan; Phase 0 (benchmark, data schema), Phase 1 (metadata: parsing, threading, stripping, language, entities, speech acts) | Reports 0.x, 1.x, `autonomous-session-2026-10-31.md` |
+| 10-31 | This member's plan; Phase 0 (benchmark, data schema), Phase 1 (metadata: parsing, threading, stripping, language, entities, speech acts) | Reports 0.x, 1.x, `sessions/autonomous-session-2026-10-31.md` |
 | 10-31 → 11-03 | Phase 2 (stand-ins), 3 (Lucene retrieval, C1 baseline), 4 (topic agents C3, missing information) | Reports 2.x-4.x |
-| 11-03 | Phase 8 (memory), 10 (discovered topics), 9 (specialized agents, prompts, plans) | `autonomous-session-2026-11-03.md` |
+| 11-03 | Phase 8 (memory), 10 (discovered topics), 9 (specialized agents, prompts, plans) | `sessions/autonomous-session-2026-11-03.md` |
 | 11-02 → 11-05 | Teammate: CI, desktop mailbox, durable SQLite blackboard, Markdown projection, formal models, team knowledge vault | Teammate's branches |
-| 11-06 | Phase 11: branch `prototype` merges both; agents run on the SQLite board; runnable prototype; mailbox asks the agents | Reports 11.x, `prototype-session-2026-11-06.md` |
-| 11-07 | Phase 12: real blackboard (several specialists, composer, BB1 controller, revision); local-LLM adapter; compliance, summaries, code analysis, cleanup | `step-12.md`, `night-session-2026-11-07.md` |
+| 11-06 | Phase 11: branch `prototype` merges both; agents run on the SQLite board; runnable prototype; mailbox asks the agents | Reports 11.x, `sessions/prototype-session-2026-11-06.md` |
+| 11-07 | Phase 12: real blackboard (several specialists, composer, BB1 controller, revision); local-LLM adapter; compliance, summaries, code analysis, cleanup | `step-12.md`, `sessions/night-session-2026-11-07.md` |
 
 ## Who did what
 
