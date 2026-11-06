@@ -1,0 +1,20 @@
+{
+  "sender": "o.haddad@students.example.edu",
+  "recipients": [
+    "thesis-office@example.edu"
+  ],
+  "date": "2026-11-06T13:15:00Z",
+  "threadId": "<en-g1@students.example.edu>",
+  "currentText": "Hello,\n\nMy thesis supervisor, Laura Fischer, signed the registration form. How do I submit it? I am a master's student.",
+  "entities": [
+    {
+      "type": "PERSON",
+      "text": "Laura Fischer"
+    }
+  ],
+  "speechActs": [
+    "request"
+  ],
+  "roleHint": "student",
+  "language": "en"
+}

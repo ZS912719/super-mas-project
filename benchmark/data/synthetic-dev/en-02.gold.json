@@ -1,0 +1,24 @@
+{
+  "sender": "e.martin@example.edu",
+  "recipients": [
+    "sarah.klein@students.example.edu"
+  ],
+  "date": "2026-11-02T13:30:00Z",
+  "threadId": "<en-a1@students.example.edu>",
+  "currentText": "Hello Sarah,\n\nYes, I teach this course and I can give you until Tuesday 10 November. I will update the submission page tomorrow.",
+  "entities": [
+    {
+      "type": "PERSON",
+      "text": "Sarah"
+    },
+    {
+      "type": "DEADLINE",
+      "text": "Tuesday 10 November"
+    }
+  ],
+  "speechActs": [
+    "commit"
+  ],
+  "roleHint": "teacher",
+  "language": "en"
+}

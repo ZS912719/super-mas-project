@@ -1,0 +1,32 @@
+{
+  "sender": "sarah.klein@students.example.edu",
+  "recipients": [
+    "e.martin@example.edu"
+  ],
+  "date": "2026-11-02T08:14:00Z",
+  "threadId": "<en-a1@students.example.edu>",
+  "currentText": "Dear Prof. Martin,\n\nI have been ill this week. Could I have an extension for the CS204 project? The deadline is Friday 6 November. My student number is 20231187.",
+  "entities": [
+    {
+      "type": "PERSON",
+      "text": "Martin"
+    },
+    {
+      "type": "COURSE",
+      "text": "CS204"
+    },
+    {
+      "type": "DEADLINE",
+      "text": "Friday 6 November"
+    },
+    {
+      "type": "ID",
+      "text": "20231187"
+    }
+  ],
+  "speechActs": [
+    "request"
+  ],
+  "roleHint": "student",
+  "language": "en"
+}

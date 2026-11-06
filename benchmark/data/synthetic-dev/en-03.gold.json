@@ -1,0 +1,18 @@
+{
+  "sender": "sarah.klein@students.example.edu",
+  "recipients": [
+    "e.martin@example.edu"
+  ],
+  "date": "2026-11-03T07:05:00Z",
+  "threadId": "<en-a1@students.example.edu>",
+  "currentText": "Thank you very much, Prof. Martin. That really helps.",
+  "entities": [
+    {
+      "type": "PERSON",
+      "text": "Martin"
+    }
+  ],
+  "speechActs": [],
+  "roleHint": null,
+  "language": "en"
+}

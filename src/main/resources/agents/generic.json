@@ -1,0 +1,21 @@
+{
+  "id": "generic",
+  "kind": "generic",
+  "displayName": "Everything else",
+  "prompt": "generic.txt",
+  "roleHints": [],
+  "keywords": [],
+  "capabilities": [
+    "draft-reply"
+  ],
+  "contextSources": [
+    "mail",
+    "general-info"
+  ],
+  "requiredFields": [],
+  "rules": [],
+  "fallback": true,
+  "requiresVerifiedSender": false,
+  "maxContextCharacters": 6000,
+  "maxInputCharacters": 12000
+}

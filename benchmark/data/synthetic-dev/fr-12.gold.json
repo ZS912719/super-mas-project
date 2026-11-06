@@ -1,0 +1,29 @@
+{
+  "sender": "j.perrin@partenaire.example.org",
+  "recipients": [
+    "n.bernard@example.fr"
+  ],
+  "date": "2026-11-07T14:30:00Z",
+  "threadId": "<fr-i1@partenaire.example.org>",
+  "currentText": "Madame Bernard,\n\nVeuillez trouver ci-joint la facture 2026-0812. Le règlement est attendu avant le 30 novembre 2026.",
+  "entities": [
+    {
+      "type": "PERSON",
+      "text": "Bernard"
+    },
+    {
+      "type": "ID",
+      "text": "2026-0812"
+    },
+    {
+      "type": "DEADLINE",
+      "text": "30 novembre 2026"
+    }
+  ],
+  "speechActs": [
+    "deliver",
+    "request"
+  ],
+  "roleHint": null,
+  "language": "fr"
+}

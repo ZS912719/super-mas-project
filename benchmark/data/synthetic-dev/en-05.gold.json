@@ -1,0 +1,25 @@
+{
+  "sender": "t.weber@lab.example.org",
+  "recipients": [
+    "a.rossi@example.edu"
+  ],
+  "date": "2026-11-04T15:45:00Z",
+  "threadId": "<en-c1@lab.example.org>",
+  "currentText": "Hi Anna,\n\nIn our research group we finished the paper draft for the workshop; it is attached. Shall we meet on Thursday 12 November to discuss it?",
+  "entities": [
+    {
+      "type": "PERSON",
+      "text": "Anna"
+    },
+    {
+      "type": "DATE",
+      "text": "Thursday 12 November"
+    }
+  ],
+  "speechActs": [
+    "deliver",
+    "propose"
+  ],
+  "roleHint": "researcher",
+  "language": "en"
+}

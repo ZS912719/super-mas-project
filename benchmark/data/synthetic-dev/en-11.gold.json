@@ -1,0 +1,13 @@
+{
+  "sender": "library@example.edu",
+  "recipients": [
+    "o.haddad@students.example.edu"
+  ],
+  "date": "2026-11-07T07:30:00Z",
+  "threadId": "<en-h1@example.edu>",
+  "currentText": "The library will be closed for maintenance this weekend. Normal opening hours resume afterwards.",
+  "entities": [],
+  "speechActs": [],
+  "roleHint": null,
+  "language": "en"
+}

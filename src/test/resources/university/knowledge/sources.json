@@ -1,0 +1,7 @@
+[
+  {"id": "student-faq", "project": "uni", "readers": ["student", "generic"]},
+  {"id": "teaching-guide", "project": "uni", "readers": ["teacher"]},
+  {"id": "research-office", "project": "uni", "readers": ["research"]},
+  {"id": "admin-procedures", "project": "uni", "readers": ["administration"]},
+  {"id": "general-info", "project": "uni", "readers": ["student", "teacher", "research", "administration", "generic"]}
+]

@@ -1,0 +1,43 @@
+{
+  "id": "research",
+  "kind": "research",
+  "displayName": "Research and projects",
+  "prompt": "research.txt",
+  "roleHints": [
+    "researcher"
+  ],
+  "keywords": [
+    "paper",
+    "conference",
+    "grant",
+    "funding",
+    "lab",
+    "laboratory",
+    "project",
+    "dataset",
+    "experiment",
+    "publication",
+    "collaboration",
+    "reviewers",
+    "recherche",
+    "article",
+    "financement",
+    "laboratoire"
+  ],
+  "capabilities": [
+    "draft-reply"
+  ],
+  "contextSources": [
+    "mail",
+    "research-office",
+    "general-info"
+  ],
+  "requiredFields": [],
+  "rules": [
+    "Do not accept a collaboration, a review, an authorship or a budget on behalf of the recipient."
+  ],
+  "fallback": false,
+  "requiresVerifiedSender": false,
+  "maxContextCharacters": 6000,
+  "maxInputCharacters": 12000
+}

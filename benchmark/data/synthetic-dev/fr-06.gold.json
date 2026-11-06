@@ -1,0 +1,24 @@
+{
+  "sender": "n.bernard@example.fr",
+  "recipients": [
+    "h.lefevre@labo.example.org"
+  ],
+  "date": "2026-11-04T17:20:00Z",
+  "threadId": "<fr-c1@labo.example.org>",
+  "currentText": "Bonjour Hugo,\n\nJeudi me convient. Je lirai le brouillon avant et je t'enverrai mes remarques.",
+  "entities": [
+    {
+      "type": "PERSON",
+      "text": "Hugo"
+    },
+    {
+      "type": "DATE",
+      "text": "Jeudi"
+    }
+  ],
+  "speechActs": [
+    "commit"
+  ],
+  "roleHint": null,
+  "language": "fr"
+}

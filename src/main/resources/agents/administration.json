@@ -1,0 +1,44 @@
+{
+  "id": "administration",
+  "kind": "administration",
+  "displayName": "Administrative procedures",
+  "prompt": "administration.txt",
+  "roleHints": [
+    "administration"
+  ],
+  "keywords": [
+    "form",
+    "office",
+    "registrar",
+    "certificate",
+    "payment",
+    "fees",
+    "contract",
+    "procedure",
+    "administrative",
+    "signature",
+    "invoice",
+    "attestation",
+    "dossier",
+    "formulaire"
+  ],
+  "capabilities": [
+    "draft-reply"
+  ],
+  "contextSources": [
+    "mail",
+    "admin-procedures",
+    "general-info"
+  ],
+  "requiredFields": [
+    "ID"
+  ],
+  "rules": [
+    "Ask for the reference or file number if it is missing.",
+    "Never confirm a payment or a signature that the data does not show."
+  ],
+  "fallback": false,
+  "requiresVerifiedSender": false,
+  "maxContextCharacters": 6000,
+  "maxInputCharacters": 12000
+}

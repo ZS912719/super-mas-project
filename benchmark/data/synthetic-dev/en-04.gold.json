@@ -1,0 +1,21 @@
+{
+  "sender": "registrar@example.edu",
+  "recipients": [
+    "all-students@example.edu",
+    "deans@example.edu"
+  ],
+  "date": "2026-11-03T10:00:00Z",
+  "threadId": "<en-b1@example.edu>",
+  "currentText": "Dear students,\n\nAs the registrar's office, we remind you that enrollment for the spring semester closes on 20 November 2026. Please complete the form on the portal.",
+  "entities": [
+    {
+      "type": "DEADLINE",
+      "text": "20 November 2026"
+    }
+  ],
+  "speechActs": [
+    "request"
+  ],
+  "roleHint": "administration",
+  "language": "en"
+}

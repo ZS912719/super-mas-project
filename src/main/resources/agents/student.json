@@ -1,0 +1,49 @@
+{
+  "id": "student",
+  "kind": "student",
+  "displayName": "Student requests",
+  "prompt": "student.txt",
+  "roleHints": [
+    "student"
+  ],
+  "keywords": [
+    "extension",
+    "assignment",
+    "exam",
+    "grade",
+    "grades",
+    "enrolment",
+    "enrollment",
+    "registration",
+    "transcript",
+    "thesis",
+    "supervisor",
+    "deadline",
+    "resit",
+    "absence",
+    "examen",
+    "note",
+    "devoir",
+    "mémoire",
+    "inscription"
+  ],
+  "capabilities": [
+    "draft-reply"
+  ],
+  "contextSources": [
+    "mail",
+    "student-faq",
+    "general-info"
+  ],
+  "requiredFields": [
+    "COURSE"
+  ],
+  "rules": [
+    "Do not grant or promise an extension, a grade change or any exception; say who decides and what the student must provide.",
+    "Ask for the course and the student number if they are missing and needed."
+  ],
+  "fallback": false,
+  "requiresVerifiedSender": false,
+  "maxContextCharacters": 6000,
+  "maxInputCharacters": 12000
+}

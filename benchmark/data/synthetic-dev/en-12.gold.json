@@ -1,0 +1,29 @@
+{
+  "sender": "g.bell@partner.example.org",
+  "recipients": [
+    "a.rossi@example.edu"
+  ],
+  "date": "2026-11-07T14:10:00Z",
+  "threadId": "<en-i1@partner.example.org>",
+  "currentText": "Dear Dr. Rossi,\n\nPlease find the invoice 2026-0457 attached. Payment is due by 30 November 2026.",
+  "entities": [
+    {
+      "type": "PERSON",
+      "text": "Rossi"
+    },
+    {
+      "type": "ID",
+      "text": "2026-0457"
+    },
+    {
+      "type": "DEADLINE",
+      "text": "30 November 2026"
+    }
+  ],
+  "speechActs": [
+    "deliver",
+    "request"
+  ],
+  "roleHint": null,
+  "language": "en"
+}

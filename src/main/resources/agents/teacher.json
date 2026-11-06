@@ -1,0 +1,44 @@
+{
+  "id": "teacher",
+  "kind": "teacher",
+  "displayName": "Teaching staff",
+  "prompt": "teacher.txt",
+  "roleHints": [
+    "teacher"
+  ],
+  "keywords": [
+    "lecture",
+    "syllabus",
+    "teaching",
+    "students",
+    "class",
+    "grading",
+    "marking",
+    "timetable",
+    "room",
+    "invigilation",
+    "tutorial",
+    "cours",
+    "enseignement",
+    "salle",
+    "emploi du temps"
+  ],
+  "capabilities": [
+    "draft-reply"
+  ],
+  "contextSources": [
+    "mail",
+    "teaching-guide",
+    "general-info"
+  ],
+  "requiredFields": [
+    "COURSE"
+  ],
+  "rules": [
+    "Do not change a room, a timetable or a grade on behalf of the recipient; propose next steps instead."
+  ],
+  "fallback": false,
+  "requiresVerifiedSender": false,
+  "maxContextCharacters": 6000,
+  "maxInputCharacters": 12000
+}

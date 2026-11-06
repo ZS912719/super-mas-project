@@ -1,0 +1,18 @@
+{
+  "sender": "lucas.moreau@etu.example.fr",
+  "recipients": [
+    "c.dubois@example.fr"
+  ],
+  "date": "2026-11-03T07:10:00Z",
+  "threadId": "<fr-a1@etu.example.fr>",
+  "currentText": "Merci beaucoup, Madame Dubois. Cela m'aide vraiment.",
+  "entities": [
+    {
+      "type": "PERSON",
+      "text": "Dubois"
+    }
+  ],
+  "speechActs": [],
+  "roleHint": null,
+  "language": "fr"
+}

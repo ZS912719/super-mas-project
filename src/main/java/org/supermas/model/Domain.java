@@ -35,8 +35,18 @@ public final class Domain {
 
     public enum Action { ROUTE, RETRIEVE_CONTEXT, RECLASSIFY, GENERATE, REVISE, PRESENT_DRAFT, STOP }
     public enum TaskStatus { PENDING, RUNNING, SUCCEEDED, FAILED, CANCELLED }
+    // ASSUMED-TEAM-DECISION(P2): a task can carry a structured information need. Pending team validation.
+    // If rejected: revert this commit and carry the need in a Context package task object.
+    /** What further retrieval should look for. Values come from fixed lists, never from email text. */
+    public record InformationNeed(Set<String> fields, List<String> searchTerms) { }
     public record Task(String id, BoardId boardId, Action action, Optional<String> agentId,
-                       TaskStatus status, String reason) { }
+                       TaskStatus status, String reason, Optional<InformationNeed> need) {
+        /** A task with no information need, so existing callers keep compiling. */
+        public Task(String id, BoardId boardId, Action action, Optional<String> agentId,
+                    TaskStatus status, String reason) {
+            this(id, boardId, action, agentId, status, reason, Optional.empty());
+        }
+    }
     public record ExecutionRecord(String taskId, String selectionReason, TaskStatus status,
                                   Instant startedAt, Instant finishedAt, String summary,
                                   Optional<Failure> failure) { }

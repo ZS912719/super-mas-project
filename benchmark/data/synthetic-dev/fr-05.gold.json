@@ -1,0 +1,25 @@
+{
+  "sender": "h.lefevre@labo.example.org",
+  "recipients": [
+    "n.bernard@example.fr"
+  ],
+  "date": "2026-11-04T16:00:00Z",
+  "threadId": "<fr-c1@labo.example.org>",
+  "currentText": "Bonjour Nadia,\n\nDans notre équipe de recherche, nous avons terminé le brouillon de l'article pour la conférence ; il est en pièce jointe. Pouvons-nous nous réunir le jeudi 12 novembre pour en discuter ?",
+  "entities": [
+    {
+      "type": "PERSON",
+      "text": "Nadia"
+    },
+    {
+      "type": "DATE",
+      "text": "jeudi 12 novembre"
+    }
+  ],
+  "speechActs": [
+    "deliver",
+    "propose"
+  ],
+  "roleHint": "researcher",
+  "language": "fr"
+}

@@ -1,0 +1,23 @@
+From: Prof. David Lee <d.lee@example.edu>
+To: cs101-students@example.edu
+Subject: Lecture cancelled
+Date: Fri, 06 Nov 2026 08:00:00 -0500
+Message-ID: <en-f1@example.edu>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="b1"
+
+--b1
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Dear class,
+
+I will not be able to teach Introduction to Programming on Monday 9 November, so the lecture is cancelled. The slides for my course are now online.
+
+David Lee
+--b1
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+<html><body><p>Dear class,</p><p>I will not be able to teach Introduction to Programming on Monday 9 November, so the lecture is cancelled. The slides for my course are now online.</p><p>David Lee<br></p></body></html>
+--b1--

@@ -1,0 +1,24 @@
+{
+  "sender": "c.dubois@example.fr",
+  "recipients": [
+    "lucas.moreau@etu.example.fr"
+  ],
+  "date": "2026-11-02T14:05:00Z",
+  "threadId": "<fr-a1@etu.example.fr>",
+  "currentText": "Bonjour Lucas,\n\nJ'enseigne ce cours et je vous accorde un délai jusqu'au mardi 10 novembre. Je mettrai à jour la page de dépôt demain.",
+  "entities": [
+    {
+      "type": "PERSON",
+      "text": "Lucas"
+    },
+    {
+      "type": "DEADLINE",
+      "text": "mardi 10 novembre"
+    }
+  ],
+  "speechActs": [
+    "commit"
+  ],
+  "roleHint": "teacher",
+  "language": "fr"
+}

@@ -1,0 +1,32 @@
+{
+  "sender": "lucas.moreau@etu.example.fr",
+  "recipients": [
+    "c.dubois@example.fr"
+  ],
+  "date": "2026-11-02T08:20:00Z",
+  "threadId": "<fr-a1@etu.example.fr>",
+  "currentText": "Bonjour Madame Dubois,\n\nJ'ai été malade cette semaine. Serait-il possible de reporter le rendu de Bases de données ? La date limite est le vendredi 6 novembre. Mon numéro étudiant est 21904432.",
+  "entities": [
+    {
+      "type": "PERSON",
+      "text": "Dubois"
+    },
+    {
+      "type": "COURSE",
+      "text": "Bases de données"
+    },
+    {
+      "type": "DEADLINE",
+      "text": "vendredi 6 novembre"
+    },
+    {
+      "type": "ID",
+      "text": "21904432"
+    }
+  ],
+  "speechActs": [
+    "request"
+  ],
+  "roleHint": "student",
+  "language": "fr"
+}
