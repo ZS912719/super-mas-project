@@ -25,11 +25,16 @@ final class RolePromptBuilder {
      * @throws IllegalStateException if the system prompt and the plan alone exceed the budget, which is a
      *                               configuration error and not something to fix by cutting the plan
      */
-    static Built build(String agentId, String systemPrompt, String subject, String emailText, String planJson,
-                       List<Evidence> context, Optional<String> feedback, int maxInputCharacters) {
-        String subjectBlock = block("EMAIL SUBJECT", subject);
+    static Built build(String agentId, String systemPrompt, String sender, List<String> recipients, String subject,
+                       String emailText, String planJson, List<Evidence> context, Optional<String> feedback,
+                       int maxInputCharacters) {
+        // Who wrote and who received the email: without it a model tends to greet the person addressed in the
+        // email's own salutation, i.e. write to the recipient instead of as the recipient (step 13).
+        String headerBlock = block("EMAIL ADDRESSES", "From (the sender, who receives the reply): "
+                + oneLine(sender) + "\nTo (the recipient, on whose behalf "
+                + "the reply is written): " + oneLine(recipients == null ? null : String.join(", ", recipients))) + block("EMAIL SUBJECT", subject);
         String planBlock = block("REPLY PLAN (JSON)", planJson);
-        int fixed = systemPrompt.length() + subjectBlock.length() + planBlock.length() + labelLength("EMAIL TEXT")
+        int fixed = systemPrompt.length() + headerBlock.length() + planBlock.length() + labelLength("EMAIL TEXT")
                 + (feedback.isPresent() ? labelLength("FEEDBACK ON THE PREVIOUS DRAFT") : 0);
         int remaining = maxInputCharacters - fixed;
         if (remaining < 0) {
@@ -44,7 +49,7 @@ final class RolePromptBuilder {
             note = cut(note, noteBudget);
             text = cut(text, remaining - note.length());
         }
-        StringBuilder data = new StringBuilder(subjectBlock).append(rawBlock("EMAIL TEXT", text));
+        StringBuilder data = new StringBuilder(headerBlock).append(rawBlock("EMAIL TEXT", text));
         if (feedback.isPresent()) {
             data.append(rawBlock("FEEDBACK ON THE PREVIOUS DRAFT", note));
         }
@@ -68,6 +73,11 @@ final class RolePromptBuilder {
      */
     static String clean(String text) {
         return text == null ? "" : text.replace("<<", "< <").replace(">>", "> >");
+    }
+
+    /** An address line from the email: untrusted, so kept to one line; "unknown" when absent. */
+    private static String oneLine(String text) {
+        return text == null || text.isBlank() ? "unknown" : text.replaceAll("\\R+", " ").strip();
     }
 
     private static String block(String label, String text) {

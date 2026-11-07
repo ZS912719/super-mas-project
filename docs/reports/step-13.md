@@ -39,7 +39,7 @@ The plan's Phase 5 rule said "no real mail goes online". On 2026-11-07 the owner
 
 ## 5. Tests
 
-15 new tests; full build **343 tests, 0 failures, 0 skipped** (328 before); mailbox `npm test` 14 of 14.
+15 new tests; full build **343 tests, 0 failures, 0 skipped** (328 before); 345 after the prompt fix of §5b; mailbox `npm test` 14 of 14.
 
 | Test | Shows |
 | --- | --- |
@@ -51,6 +51,28 @@ The plan's Phase 5 rule said "no real mail goes online". On 2026-11-07 the owner
 | `PrototypeAppTest` (+1) | Model from variables or flags; template by default; `parse(args)` ignores the environment |
 
 **Manual checks.** `PrototypeApp` with `SUPERMAS_LLM_PROVIDER=online` and no key stops with "The online provider needs an API key in the environment variable SUPERMAS_LLM_API_KEY". With a dummy key it sent **one request with the synthetic email `en-01` to OpenRouter**, which answered HTTP 401 ("Missing Authentication header"); the board ended `FAILED (CONNECTION ...)` with the message in the control trail. A successful online reply is **not yet verified**: it needs the owner's real key.
+
+## 5b. First online run and a prompt fix
+
+**Run 1** (owner's key, `meta-llama/llama-3.2-3b-instruct` on OpenRouter, `synthetic-dev/en-01.eml`): the connection works (so the "Missing Authentication header" of the dummy key was only the dummy key); the board ended `AWAITING_REVIEW` with the composer's draft from the model. Steps: request splitter (1 request), thread context, missing information (nothing missing), student contribution (0.87, 3 excerpts), composer.
+
+| Check | Result |
+| --- | --- |
+| Invented facts | **None.** Medical certificate and course leader from `student-faq/extensions.md`, deadline from the email, office hours from `general-info/contacts.md` |
+| Addressee | **Wrong.** "Dear Prof. Martin": the model wrote *to* the recipient instead of *as* the recipient to Sarah Klein |
+| Content | **Muddled.** "contact the student office ... to book a meeting with you" combines two documents; it omits that the course leader decides and that extensions are at most seven days |
+
+**Cause, partly ours.** The prompt never said who sent the email or on whose behalf the reply is written: the data had the subject, the text (which opens "Dear Prof. Martin,"), the plan and the excerpts only, and the common rules did not state the perspective. A 3 B model copied the email's own salutation.
+
+**Fix** (approved by the owner the same day):
+
+1. `RolePromptBuilder` opens the data with an `EMAIL ADDRESSES` block: the sender ("who receives the reply") and the recipients ("on whose behalf the reply is written"). Addresses are untrusted like the rest of the email: block markers are broken as everywhere, line breaks are collapsed so an address cannot add a line, and a missing one is "unknown". Both callers (`ReplyWork`, `ComposerAgent`) pass `Email.sender()` and `recipients()`. Only addresses exist (`MimeEmailParser` keeps no display names), so the model takes the sender's name from the signature.
+2. `prompts/common.txt` (all roles): write as the recipient to the sender; greet the sender by the name they sign with, otherwise neutrally; never greet the recipient or the person the email is addressed to; close without a name, because the person who sends the reply signs it.
+3. `prompts/composer.txt`: keep each fact as its source states it, including who decides and any limit; never combine statements from different sources into a new one.
+
+The prompt versions (hashes recorded with every plan and draft) change accordingly, and recordings made before the fix no longer replay, by design. Tests: `RoleAgentTest` +2 (the block and the rules reach the model; an address cannot open a block or add a line). Full build 345 tests, 0 failures.
+
+**Run 2** (same email and model, after the fix): pending, run by the owner.
 
 ## 6. Problems and critical points
 

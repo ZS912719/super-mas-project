@@ -65,7 +65,8 @@ final class ReplyWork {
         }
         RolePromptBuilder.Built built;
         try {
-            built = RolePromptBuilder.build(agent.config.id(), agent.config.systemPrompt(), state.email().subject(),
+            built = RolePromptBuilder.build(agent.config.id(), agent.config.systemPrompt(), state.email().sender(),
+                    state.email().recipients(), state.email().subject(),
                     RoleText.currentText(state), plan.toJson(), selection.evidence(), latestFeedback(state),
                     agent.role.maxInputCharacters());
         } catch (IllegalStateException e) {

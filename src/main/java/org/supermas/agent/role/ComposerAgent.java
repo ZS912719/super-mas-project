@@ -141,7 +141,8 @@ public final class ComposerAgent implements SpecializedAgent {
                 : Optional.of(state.feedback().get(state.feedback().size() - 1).text());
         RolePromptBuilder.Built built;
         try {
-            built = RolePromptBuilder.build(config.id(), systemPrompt, state.email().subject(), RoleText.currentText(state),
+            built = RolePromptBuilder.build(config.id(), systemPrompt, state.email().sender(),
+                    state.email().recipients(), state.email().subject(), RoleText.currentText(state),
                     plan.toJson(), excerpts, feedback, maxInputCharacters);
         } catch (IllegalStateException e) {
             return failed(new Failure(FailureKind.BUDGET_EXHAUSTED, e.getMessage(), false));

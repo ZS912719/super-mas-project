@@ -15,7 +15,7 @@ Derived from the [compliance check](compliance.md) and the [code analysis](code-
 
 | # | Item | Acceptance | Owner | Prio |
 | --- | --- | --- | --- | --- |
-| 2.0 | First online run (step 13) | With an OpenRouter key and an open model that can also run locally: `synthetic-multi` recorded with `--llm-cache`; every email drafted or its failure explained; latency noted. Development evidence only | T | P1 |
+| 2.0 | First online run (step 13; connection verified on `en-01`, addressee bug fixed in the prompt, see step 13 §5b) | With an OpenRouter key and an open model that can also run locally: `synthetic-multi` recorded with `--llm-cache`; every email drafted or its failure explained; latency noted. Development evidence only | T | P1 |
 | 2.1 | Install a local engine and choose a model (on a stronger computer; this laptop fits only 1.5-3 B) | Ollama (or llama.cpp) running with the same open model as 2.0 and one alternative; context window set for a 5,000-token prompt; documented in `docs/plans/llm-setup.md` | T | P1 |
 | 2.2 | Run the prototype with the model | `--llm-endpoint/--llm-model` on the 24 + 12 synthetic emails: drafts produced, failure rate, latency p50/p95, timeouts recorded | T | P1 |
 | 2.3 | Replace-the-model demonstration | Same run with the second model by configuration only; results compared | T | P2 |
