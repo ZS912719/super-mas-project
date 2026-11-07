@@ -68,7 +68,7 @@ Each pipeline stage has a switch in one configuration record, so any benchmark v
 
 **Online LLM during development.** The project's documented invariant is local-only inference, and `LocalLlm` and `ModelConfig` assume it. An online LLM is therefore an accepted, temporary development exception, with these rules:
 
-- **No real mail goes online.** Only synthetic and public data (such as Enron) may reach it. Your university mail stays local, because sending it would pass other people's personal data to a third party.
+- **No real mail goes online.** Only synthetic and public data (such as Enron) may reach it. Your university mail stays local, because sending it would pass other people's personal data to a third party. *Amended by the project owner on 2026-11-07 (step 13):* the agent service, which serves the mailbox, may use the online model only behind a second explicit opt-in, `SUPERMAS_LLM_ONLINE_MAIL=yes`.
 - **It is off by default and explicit.** A configuration flag names the remote endpoint and is clearly marked as development only. The local-only check stays the default, so the later local deployment is not weakened.
 - **The API key stays out of Git**, for example in `.env`, which is already ignored.
 - **Online results do not carry over.** Accuracy and latency must be measured again on the final local model and hardware. A report must name the model and where it ran.
@@ -294,6 +294,9 @@ Corrections are human labels, which removes the LLM label risks. **Limitation:**
 - **12.2** Request splitter. **12.3** Specialists post contributions. **12.4** Agenda controller. **12.5** Composer.
 - **12.6** Revision after rejection. **12.7** Benchmark router vs blackboard. **12.8** Reports and docs.
 - Plus a local-model adapter for the OpenAI-compatible API (template stays the default). Report: `docs/reports/step-12.md`.
+
+### Phase 13: Online model for development, local for delivery (added and approved 2026-11-07)
+- `LlmSettings` (template, local, online, replay) from environment or flags; the online adapter for OpenRouter (HTTPS, key from the environment, second opt-in for the mailbox); `RecordedLlm` record and replay; setup guide `docs/plans/llm-setup.md`. Report: `docs/reports/step-13.md`.
 
 ### Phase 7: Finish (day 14)
 - **7.1** Final benchmark, on the frozen data.

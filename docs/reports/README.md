@@ -14,6 +14,7 @@ One report per step of the plan ([`docs/plans/metadata-context-agents.md`](../pl
 | 10 | Discovered topics: discovery, regrouping, agent, benchmark | `step-10.1` … `step-10.4` |
 | 11 | Prototype branch: merge, durable board, promotion, runnable prototype, mailbox connection | `step-11.0-11.1`, `step-11.2-11.3`, `step-11.4`, `step-11.6` |
 | 12 | A real blackboard: several specialists, composer, BB1 controller, revision, benchmark, local-LLM adapter, review fixes | `step-12` |
+| 13 | Online model (OpenRouter) for development, local for delivery; record and replay | `step-13` |
 
 Phases 5-7 (optional LLM checker, correction iteration, finish) were not run; their content moved into Phases 11-12 and [`docs/todo.md`](../todo.md).
 

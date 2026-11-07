@@ -61,6 +61,8 @@ Every refusal is `{"error": "<message safe to show>"}` with the status above, or
 
 Set `AGENT_SERVICE_URL=http://127.0.0.1:4318` and the same `AGENT_SERVICE_TOKEN` in `mailbox/.env`. Then `/api/generate` calls this service instead of Ollama, and returns `{body, origin: "model", agent}`. A non-null classification is stored on the message as an imported one is. Without `AGENT_SERVICE_URL`, the Ollama path is unchanged.
 
+The service reads the model settings of `docs/plans/llm-setup.md` (`SUPERMAS_LLM_*`, `--llm-*`). It refuses the `online` provider unless `SUPERMAS_LLM_ONLINE_MAIL=yes` is also set, because the mailbox may show real mail, and it refuses recording or replay (step 13).
+
 ## Not covered yet
 
 - Approval, edits and sends in the mailbox do not reach the agents (no `SENT` history, no revision after rejection).

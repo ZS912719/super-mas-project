@@ -12,6 +12,7 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.UnaryOperator;
 import org.supermas.model.Domain.Failure;
 import org.supermas.model.Domain.FailureKind;
 import org.supermas.model.Domain.ModelConfig;
@@ -19,27 +20,52 @@ import org.supermas.model.Domain.ModelRequest;
 import org.supermas.model.Domain.ModelResponse;
 
 /**
- * Adapter from {@link LocalLlm} to the OpenAI-compatible chat API ({@code POST /v1/chat/completions}), which local
- * engines such as Ollama, llama.cpp's server and LM Studio serve. Changing the model or engine is configuration
- * ({@link ModelConfig}): no agent depends on this class.
+ * Adapter from {@link LocalLlm} to the OpenAI-compatible chat API ({@code POST .../chat/completions}), which local
+ * engines such as Ollama, llama.cpp's server and LM Studio serve, and online services such as OpenRouter too.
+ * Changing the model or engine is configuration ({@link ModelConfig}, {@link LlmSettings}): no agent depends on
+ * this class.
  *
- * <p>Local-only by construction: the endpoint must be a literal loopback HTTP origin; redirects are never
- * followed. The trusted system prompt and the untrusted data travel as separate messages. Connection failure,
- * timeout, an error status and invalid output each become an explicit {@link Failure}; a response holds exactly one
- * of output or failure.
+ * <p>{@link #OpenAiCompatibleLlm() The local adapter} is local-only by construction: the endpoint must be a literal
+ * loopback HTTP origin, and no credential is ever sent. {@link #online(String) The online adapter} is a development
+ * stand-in (PROTOTYPE-STAND-IN, see {@link LlmSettings}): HTTPS only, the key as a bearer token. Neither follows
+ * redirects, so a key can never be forwarded elsewhere. The trusted system prompt and the untrusted data travel as
+ * separate messages. Connection failure, timeout, an error status and invalid output each become an explicit
+ * {@link Failure}; a response holds exactly one of output or failure.
  */
 public final class OpenAiCompatibleLlm implements LocalLlm {
     private static final Set<String> LOOPBACK = Set.of("127.0.0.1", "[::1]");
     private static final ObjectMapper JSON = new ObjectMapper();
+    private static final int MAX_ERROR = 200;
 
     private final HttpClient client;
+    private final UnaryOperator<URI> target;
+    private final Optional<String> apiKey;
+    private final String label;
 
+    /** The local adapter: loopback only, no credential. */
     public OpenAiCompatibleLlm() {
-        this(HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).build());
+        this(defaultClient(), OpenAiCompatibleLlm::chatEndpoint, Optional.empty(), "local model");
     }
 
-    OpenAiCompatibleLlm(HttpClient client) {
+    /** The online adapter, a development stand-in: HTTPS only, {@code apiKey} sent as a bearer token. */
+    public static OpenAiCompatibleLlm online(String apiKey) {
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalArgumentException("The online model needs an API key");
+        }
+        return new OpenAiCompatibleLlm(defaultClient(), OpenAiCompatibleLlm::onlineChatEndpoint, Optional.of(apiKey),
+                "online model");
+    }
+
+    /** For tests: any endpoint rule, so a fake engine on loopback can stand in for an HTTPS service. */
+    OpenAiCompatibleLlm(HttpClient client, UnaryOperator<URI> target, Optional<String> apiKey, String label) {
         this.client = client;
+        this.target = target;
+        this.apiKey = apiKey;
+        this.label = label;
+    }
+
+    private static HttpClient defaultClient() {
+        return HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).build();
     }
 
     /** The chat endpoint for a configured origin, or an exception if the origin is not a literal loopback one. */
@@ -54,11 +80,25 @@ public final class OpenAiCompatibleLlm implements LocalLlm {
         return origin.resolve("/v1/chat/completions");
     }
 
+    /**
+     * The chat endpoint under an online API base such as {@code https://openrouter.ai/api/v1}, or an exception if
+     * the base is not plain HTTPS (no credentials, query or fragment in the URL).
+     */
+    public static URI onlineChatEndpoint(URI base) {
+        if (base == null || !"https".equals(base.getScheme()) || base.getHost() == null || base.getUserInfo() != null
+                || base.getQuery() != null || base.getFragment() != null) {
+            throw new IllegalArgumentException("The online model endpoint must be an HTTPS API base without credentials, "
+                    + "such as " + LlmSettings.DEFAULT_ONLINE);
+        }
+        String path = base.getPath() == null ? "" : base.getPath().replaceAll("/+$", "");
+        return URI.create("https://" + base.getRawAuthority() + path + "/chat/completions");
+    }
+
     @Override
     public ModelResponse complete(ModelRequest request, ModelConfig config) {
-        URI target;
+        URI url;
         try {
-            target = chatEndpoint(config.endpoint());
+            url = target.apply(config.endpoint());
         } catch (IllegalArgumentException e) {
             return failure(FailureKind.CONNECTION, e.getMessage(), false);
         }
@@ -76,37 +116,55 @@ public final class OpenAiCompatibleLlm implements LocalLlm {
         messages.addObject().put("role", "user").put("content", request.untrustedData());
         HttpResponse<String> response;
         try {
-            response = client.send(HttpRequest.newBuilder(target).timeout(config.timeout())
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(body))).build(),
+            HttpRequest.Builder http = HttpRequest.newBuilder(url).timeout(config.timeout())
+                    .header("Content-Type", "application/json");
+            apiKey.ifPresent(key -> http.header("Authorization", "Bearer " + key));
+            response = client.send(http.POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(body))).build(),
                     HttpResponse.BodyHandlers.ofString());
         } catch (HttpTimeoutException e) {
-            return failure(FailureKind.TIMEOUT, "The local model did not answer within " + config.timeout(), true);
+            return failure(FailureKind.TIMEOUT, "The " + label + " did not answer within " + config.timeout(), true);
         } catch (ConnectException e) {
-            return failure(FailureKind.CONNECTION, "Cannot reach the local model at " + config.endpoint(), true);
+            return failure(FailureKind.CONNECTION, "Cannot reach the " + label + " at " + config.endpoint(), true);
         } catch (IOException e) {
-            return failure(FailureKind.CONNECTION, "Local model request failed: " + e.getMessage(), true);
+            return failure(FailureKind.CONNECTION, "The " + label + " request failed: " + e.getMessage(), true);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return failure(FailureKind.INTERRUPTED, "Interrupted while waiting for the local model", false);
+            return failure(FailureKind.INTERRUPTED, "Interrupted while waiting for the " + label, false);
         }
         if (response.statusCode() != 200) {
-            return failure(FailureKind.CONNECTION, "The local model answered HTTP " + response.statusCode(), false);
+            // 429 (rate limit) and 5xx are worth a retry; anything else (bad key, unknown model) is not.
+            boolean retryable = response.statusCode() == 429 || response.statusCode() >= 500;
+            return failure(FailureKind.CONNECTION, "The " + label + " answered HTTP " + response.statusCode()
+                    + errorMessage(response.body()), retryable);
         }
         try {
             JsonNode content = JSON.readTree(response.body()).path("choices").path(0).path("message").path("content");
             if (!content.isTextual() || content.asText().isBlank()) {
-                return failure(FailureKind.INVALID_OUTPUT, "The local model returned no text", false);
+                return failure(FailureKind.INVALID_OUTPUT, "The " + label + " returned no text", false);
             }
             String text = content.asText().strip();
             if (text.length() > config.maxOutputCharacters()) {
-                return failure(FailureKind.INVALID_OUTPUT, "The local model returned " + text.length()
+                return failure(FailureKind.INVALID_OUTPUT, "The " + label + " returned " + text.length()
                         + " characters, over the limit of " + config.maxOutputCharacters(), false);
             }
             return new ModelResponse(Optional.of(text), Optional.empty());
         } catch (IOException e) {
-            return failure(FailureKind.INVALID_OUTPUT, "The local model returned invalid JSON", false);
+            return failure(FailureKind.INVALID_OUTPUT, "The " + label + " returned invalid JSON", false);
         }
+    }
+
+    /** The engine's own error message ({@code error.message}), shortened, or nothing. */
+    private static String errorMessage(String body) {
+        try {
+            JsonNode message = JSON.readTree(body == null ? "" : body).path("error").path("message");
+            if (message.isTextual() && !message.asText().isBlank()) {
+                String text = message.asText().strip();
+                return ": " + (text.length() > MAX_ERROR ? text.substring(0, MAX_ERROR) + "..." : text);
+            }
+        } catch (IOException e) {
+            // not JSON: the status alone is the message
+        }
+        return "";
     }
 
     private static ModelResponse failure(FailureKind kind, String message, boolean retryable) {

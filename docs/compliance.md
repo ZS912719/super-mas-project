@@ -10,7 +10,7 @@
 | --- | --- |
 | Multi-agent organization, specialization, routing, collaboration | **Met** |
 | Context, memory and conversation management | **Met**, except sent-mail history (Partly) |
-| Local LLM | **Partly**: adapter built and tested against a fake engine; no real model measured |
+| Local LLM | **Partly**: adapter built and tested against a fake engine; no real model measured. Since step 13 an online model (OpenRouter) is a development stand-in; delivery needs the local one |
 | Assistance rather than sending | **Met** |
 | Java, OOP, design patterns, extensibility | **Met** (see the code analysis for the weak spots) |
 | Graphical interface | **Partly**: mailbox shows mail, drafts, approval; no agent management, no router view |
@@ -23,7 +23,7 @@
 | § | Requirement | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- |
 | Principle | Java framework drafting replies with local models only | **Partly** | Java 17 throughout; `llm/OpenAiCompatibleLlm` (loopback only); template default | No real local model run yet |
-| 1 | Data protection: local inference | **Met** | Loopback-only adapters in Java and Node (`OpenAiCompatibleLlm.chatEndpoint`, `mailbox/lib/model.js`, `lib/agents.js`); tests refuse remote origins and redirects | — |
+| 1 | Data protection: local inference | **Met** by default; a development exception exists | Loopback-only adapters in Java and Node (`OpenAiCompatibleLlm.chatEndpoint`, `mailbox/lib/model.js`, `lib/agents.js`); tests refuse remote origins and redirects. The `online` provider (step 13) sends email text to OpenRouter: off by default, named explicitly, key from the environment, HTTPS only, a second opt-in for the mailbox | Delivered configuration must be `local`; remove or disable `online` for the final demo |
 | 2 | Roles, organization, interactions, routing/delegation, per-agent knowledge, local LLM, modular architecture, OOP, patterns, justification | **Met** / Partly (LLM) | `docs/plans/blackboard-control.md`, `docs/reports/step-12.md`, role JSON files | LLM as above |
 | 3 | Determine which agent fits a message; use sender role, subject, thread, previous exchanges, context, documents, preferences | **Met** / Partly | Role hint, keywords, subject, thread history, discovered topics, knowledge sources (`RoleAgent.assess`, context agents). User preferences: only as rules in role JSON and prompts | No per-user preference store |
 | 4.1 | Routing agent using address, identity, role, subject, content, thread, metadata; not only the address | **Met** | `MetadataAgent` (role hint from text, not address), `RoleAgent` estimates, `AgendaStrategy` + recorded `RoutingDecision`. Sender verification exists for roles that need it | The "router" is the BB1 controller: justified in the design note |
@@ -63,7 +63,7 @@
 | 9 | Conversation history? | Per project and thread in Lucene, kinds kept apart; drafts never as facts | Step 8.1-8.4 |
 | 10 | Not sending too much context? | Per-role context and input budgets; excerpts capped; prompt builder cuts email and feedback, never the plan | `RolePromptBuilder`, step 9.5 |
 | 11 | Adding an agent? | One JSON file and one prompt file; no code | Step 9.2 |
-| 12 | Changing the LLM? | Configuration: `--llm-endpoint`, `--llm-model`; any OpenAI-compatible local engine | `OpenAiCompatibleLlm` |
+| 12 | Changing the LLM? | Configuration: `SUPERMAS_LLM_*` variables or `--llm-*` flags; any OpenAI-compatible local engine (and an online one during development); recorded replies replay without a model | `LlmSettings`, `OpenAiCompatibleLlm`, `RecordedLlm` |
 | 13 | Persistent data? | Boards (SQLite, every revision), conversation history and knowledge (Lucene), topics (JSON); mailbox sessions are in memory | Teammate's runtime doc; step 8 |
 | 14 | Advantages and limits | Collaboration on mixed emails, explainable control, isolation; costs ≈2× rounds, threshold-sensitive, rule-based specialists, no real LLM yet | Step 12 report |
 

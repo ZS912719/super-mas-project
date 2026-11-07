@@ -148,6 +148,27 @@ class AgentServiceTest {
     }
 
     @Test
+    void theOnlineModelNeedsASecondOptInForTheMailboxAndNothingIsRecorded() {
+        java.util.Map<String, String> online = java.util.Map.of(org.supermas.llm.LlmSettings.API_KEY, "sk-test-key");
+        java.util.Map<String, String> flags = java.util.Map.of("--llm-provider", "online", "--llm-model", "m");
+        IllegalArgumentException refused = assertThrows(IllegalArgumentException.class, () -> AgentService.checkModel(
+                org.supermas.llm.LlmSettings.from(online, flags)));
+        assertTrue(refused.getMessage().contains(org.supermas.llm.LlmSettings.ONLINE_MAIL), refused.getMessage());
+        assertThrows(IllegalArgumentException.class, () -> new AgentService(new PrototypeApp.Options(null,
+                Path.of("src/test/resources/university/knowledge"), data.resolve("online"), "uni",
+                PrototypeApp.Architecture.BLACKBOARD, 0.4, org.supermas.llm.LlmSettings.from(online, flags)), 0, TOKEN));
+
+        java.util.Map<String, String> consented = new java.util.HashMap<>(online);
+        consented.put(org.supermas.llm.LlmSettings.ONLINE_MAIL, "yes");
+        AgentService.checkModel(org.supermas.llm.LlmSettings.from(consented, flags));
+
+        java.util.Map<String, String> recording = java.util.Map.of("--llm-endpoint", "http://127.0.0.1:11434",
+                "--llm-model", "m", "--llm-cache", data.resolve("cache").toString());
+        assertThrows(IllegalArgumentException.class, () -> AgentService.checkModel(
+                org.supermas.llm.LlmSettings.from(java.util.Map.of(), recording)));
+    }
+
+    @Test
     void aShortTokenStopsTheServiceFromStarting() {
         assertThrows(IllegalArgumentException.class, () -> new AgentService(new PrototypeApp.Options(null,
                 Path.of("src/test/resources/university/knowledge"), data.resolve("other"), "uni"), 0, "short"));

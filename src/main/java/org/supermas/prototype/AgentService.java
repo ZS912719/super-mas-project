@@ -27,6 +27,7 @@ import org.supermas.agent.role.Contribution;
 import org.supermas.agent.role.ReplyPlan;
 import org.supermas.agent.role.RoleDefinition;
 import org.supermas.context.ProjectIndexes;
+import org.supermas.llm.LlmSettings;
 import org.supermas.metadata.MetadataAgent;
 import org.supermas.model.Domain.AgentAssessment;
 import org.supermas.model.Domain.BlackboardSnapshot;
@@ -43,8 +44,14 @@ import org.supermas.model.Domain.Scope;
  * conversation the mailbox shows and returns the specialist's draft, the routing decision and a classification
  * in the mailbox's own JSON shape. Nothing is approved or sent here: approval and sending stay in the mailbox.
  *
- * <p>Usage: {@code AgentService [--knowledge DIR] [--data DIR] [--project ID] [--port N]}, with the shared secret
- * in the environment variable {@code AGENT_SERVICE_TOKEN} (at least 32 characters).
+ * <p>Usage: {@code AgentService [--knowledge DIR] [--data DIR] [--project ID] [--port N] [--architecture A]
+ * [--llm-provider P] [--llm-endpoint URL] [--llm-model NAME]}, with the shared secret in the environment variable
+ * {@code AGENT_SERVICE_TOKEN} (at least 32 characters). The model settings are also read from the
+ * {@code SUPERMAS_LLM_*} variables ({@link LlmSettings}).
+ *
+ * <p>The mailbox may show real mail, so the service is stricter than the prototype runner: the online model (a
+ * development stand-in) needs a second opt-in, {@code SUPERMAS_LLM_ONLINE_MAIL=yes}, and recording or replaying
+ * replies is refused, because recordings would keep replies to real mail on disk.
  *
  * <p>Requests are refused unless they come with the exact loopback {@code Host}, a JSON body of at most
  * {@link #MAX_BODY} bytes and the token in {@code X-SuperMAS-Token}. The token matters because any web page in
@@ -88,6 +95,7 @@ public final class AgentService implements AutoCloseable {
         if (token == null || token.length() < MIN_TOKEN) {
             throw new IllegalArgumentException("AGENT_SERVICE_TOKEN must have at least " + MIN_TOKEN + " characters");
         }
+        checkModel(options.llm());
         this.token = token.getBytes(StandardCharsets.UTF_8);
         this.project = options.project();
         this.architecture = options.architecture();
@@ -100,14 +108,25 @@ public final class AgentService implements AutoCloseable {
         server.setExecutor(executor);
     }
 
+    /** Refuses model settings that would send or keep real mail without the user's explicit consent. */
+    static void checkModel(LlmSettings llm) {
+        if (llm.leavesComputer() && !llm.onlineForMail()) {
+            throw new IllegalArgumentException("The online model would send the mailbox's emails to " + llm.endpoint().getHost()
+                    + ". To allow it for the mailbox too, also set " + LlmSettings.ONLINE_MAIL + "=yes");
+        }
+        if (llm.cache().isPresent()) {
+            throw new IllegalArgumentException("Recording and replay are for benchmark emails, not the mailbox; drop "
+                    + LlmSettings.CACHE);
+        }
+    }
+
     public static void main(String[] args) throws Exception {
         Path knowledge = Path.of("src/test/resources/university/knowledge");
         Path data = Path.of("runtime");
         String project = "uni";
         int port = DEFAULT_PORT;
         PrototypeApp.Architecture architecture = PrototypeApp.Architecture.BLACKBOARD;
-        java.util.Optional<java.net.URI> llmEndpoint = java.util.Optional.empty();
-        String llmModel = "";
+        java.util.Map<String, String> llmFlags = new java.util.HashMap<>();
         for (int i = 0; i < args.length; i += 2) {
             if (i + 1 >= args.length) {
                 throw new IllegalArgumentException("Missing value for " + args[i]);
@@ -118,18 +137,22 @@ public final class AgentService implements AutoCloseable {
                 case "--project" -> project = args[i + 1];
                 case "--port" -> port = Integer.parseInt(args[i + 1]);
                 case "--architecture" -> architecture = PrototypeApp.Architecture.valueOf(args[i + 1].toUpperCase(java.util.Locale.ROOT));
-                case "--llm-endpoint" -> llmEndpoint = java.util.Optional.of(java.net.URI.create(args[i + 1]));
-                case "--llm-model" -> llmModel = args[i + 1];
-                default -> throw new IllegalArgumentException("Unknown option " + args[i]);
+                default -> {
+                    if (!LlmSettings.isFlag(args[i])) {
+                        throw new IllegalArgumentException("Unknown option " + args[i]);
+                    }
+                    llmFlags.put(args[i], args[i + 1]);
+                }
             }
         }
+        LlmSettings llm = LlmSettings.from(System.getenv(), llmFlags);
         AgentService service = new AgentService(new PrototypeApp.Options(null, knowledge, data, project, architecture,
-                org.supermas.control.AgendaStrategy.Settings.defaults().minContribution(), llmEndpoint, llmModel), port,
+                org.supermas.control.AgendaStrategy.Settings.defaults().minContribution(), llm), port,
                 System.getenv("AGENT_SERVICE_TOKEN"));
         Runtime.getRuntime().addShutdownHook(new Thread(service::close));
         service.start();
         System.out.println("Agent service on http://" + service.host() + "/v1/reply (project " + project + ", data "
-                + data.toAbsolutePath() + "). Ctrl+C stops it.");
+                + data.toAbsolutePath() + "). Model: " + llm.describe() + ". Ctrl+C stops it.");
     }
 
     public void start() {

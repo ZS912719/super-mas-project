@@ -26,7 +26,10 @@ import org.supermas.blackboard.impl.DefaultBlackboardFactory;
 import org.supermas.blackboard.persistence.sqlite.SqliteBlackboardStore;
 import org.supermas.context.DiscoveredTopicsAgent;
 import org.supermas.llm.LlmGenerationService;
+import org.supermas.llm.LlmSettings;
+import org.supermas.llm.LocalLlm;
 import org.supermas.llm.OpenAiCompatibleLlm;
+import org.supermas.llm.RecordedLlm;
 import org.supermas.model.Domain.ModelConfig;
 import org.supermas.control.AgendaStrategy;
 import org.supermas.coordinator.CoordinationStrategy;
@@ -107,12 +110,12 @@ public final class PrototypeApp {
 
     /**
      * @param minContribution the blackboard's lowest specialist estimate for a contribution
-     * @param llmEndpoint     a local OpenAI-compatible engine (e.g. http://127.0.0.1:11434); empty for the template
+     * @param llm             which engine writes the replies (template by default; see {@link LlmSettings})
      */
     record Options(Path emails, Path knowledge, Path data, String project, Architecture architecture,
-                   double minContribution, Optional<URI> llmEndpoint, String llmModel) {
+                   double minContribution, LlmSettings llm) {
         Options(Path emails, Path knowledge, Path data, String project, Architecture architecture, double minContribution) {
-            this(emails, knowledge, data, project, architecture, minContribution, Optional.empty(), "");
+            this(emails, knowledge, data, project, architecture, minContribution, LlmSettings.template());
         }
 
         Options(Path emails, Path knowledge, Path data, String project) {
@@ -123,15 +126,22 @@ public final class PrototypeApp {
             this(emails, knowledge, data, project, architecture, AgendaStrategy.Settings.defaults().minContribution());
         }
 
+        /** Options from flags only; the model settings ignore the environment (for tests). */
         static Options parse(String[] args) {
+            return parse(args, Map.of());
+        }
+
+        /** Options from flags, with the model settings also read from {@code environment} (flags win). */
+        static Options parse(String[] args, Map<String, String> environment) {
             if (args.length == 0) {
                 throw new IllegalArgumentException("Usage: PrototypeApp EMAILS [--knowledge DIR] [--data DIR] [--project ID]"
-                        + " [--architecture blackboard|router] [--min-contribution 0..1] [--llm-endpoint URL --llm-model NAME]");
+                        + " [--architecture blackboard|router] [--min-contribution 0..1]"
+                        + " [--llm-provider template|local|online|replay] [--llm-endpoint URL] [--llm-model NAME]"
+                        + " [--llm-cache DIR]");
             }
             Architecture architecture = Architecture.BLACKBOARD;
             double minContribution = AgendaStrategy.Settings.defaults().minContribution();
-            Optional<URI> llmEndpoint = Optional.empty();
-            String llmModel = "";
+            Map<String, String> llmFlags = new HashMap<>();
             Path emails = Path.of(args[0]);
             Path knowledge = Path.of("src/test/resources/university/knowledge");
             Path data = Path.of("runtime");
@@ -146,15 +156,16 @@ public final class PrototypeApp {
                     case "--project" -> project = args[i + 1];
                     case "--architecture" -> architecture = Architecture.valueOf(args[i + 1].toUpperCase(java.util.Locale.ROOT));
                     case "--min-contribution" -> minContribution = Double.parseDouble(args[i + 1]);
-                    case "--llm-endpoint" -> llmEndpoint = Optional.of(URI.create(args[i + 1]));
-                    case "--llm-model" -> llmModel = args[i + 1];
-                    default -> throw new IllegalArgumentException("Unknown option " + args[i]);
+                    default -> {
+                        if (!LlmSettings.isFlag(args[i])) {
+                            throw new IllegalArgumentException("Unknown option " + args[i]);
+                        }
+                        llmFlags.put(args[i], args[i + 1]);
+                    }
                 }
             }
-            if (llmEndpoint.isPresent() && llmModel.isBlank()) {
-                throw new IllegalArgumentException("--llm-endpoint needs --llm-model");
-            }
-            return new Options(emails, knowledge, data, project, architecture, minContribution, llmEndpoint, llmModel);
+            return new Options(emails, knowledge, data, project, architecture, minContribution,
+                    LlmSettings.from(environment, llmFlags));
         }
     }
 
@@ -162,7 +173,7 @@ public final class PrototypeApp {
     record Outcome(Path file, BoardId board, BlackboardSnapshot state) { }
 
     public static void main(String[] args) throws Exception {
-        run(Options.parse(args), System.out);
+        run(Options.parse(args, System.getenv()), System.out);
     }
 
     static List<Outcome> run(Options options, PrintStream out) throws IOException {
@@ -171,6 +182,7 @@ public final class PrototypeApp {
         List<Outcome> outcomes = new ArrayList<>();
         try (ProjectIndexes indexes = ProjectIndexes.onDisk(options.data().resolve("index"))) {
             Wiring wiring = Wiring.create(indexes, options);
+            out.println("Model: " + options.llm().describe());
             out.println("Knowledge sources: " + wiring.sources.keySet());
             out.println("Agents: " + wiring.registry.all().stream().map(agent -> agent.config().id()).toList());
             out.println("Discovered topics at start: " + wiring.catalog.topics(options.project()).size());
@@ -264,6 +276,29 @@ public final class PrototypeApp {
             this.coordinator = coordinator;
         }
 
+        /** The engine the settings name; replacing the model or the engine is configuration only. */
+        static RoleServices withGeneration(RoleServices services, LlmSettings llm) {
+            if (llm.provider() == LlmSettings.Provider.TEMPLATE) {
+                return services.withGeneration(new TemplateGenerationService(), RoleServices.UNCONFIGURED_MODEL);
+            }
+            LocalLlm engine = switch (llm.provider()) {
+                case LOCAL -> new OpenAiCompatibleLlm();
+                case ONLINE -> OpenAiCompatibleLlm.online(llm.apiKey().orElseThrow());
+                case REPLAY -> RecordedLlm.replay(llm.cache().orElseThrow());
+                default -> throw new IllegalStateException("Unhandled provider " + llm.provider());
+            };
+            if (llm.provider() != LlmSettings.Provider.REPLAY && llm.cache().isPresent()) {
+                engine = RecordedLlm.recording(engine, llm.cache().get());
+            }
+            String label = switch (llm.provider()) {
+                case ONLINE -> "Online model (development stand-in)";
+                case REPLAY -> "Recorded model";
+                default -> "Local model";
+            };
+            return services.withGeneration(new LlmGenerationService(engine, label),
+                    new ModelConfig(llm.model(), llm.endpoint(), LLM_TIMEOUT, LLM_MAX_OUTPUT));
+        }
+
         static Wiring create(ProjectIndexes indexes, Options options) {
             String project = options.project();
             RoleCatalog roles = RoleCatalog.bundled();
@@ -297,15 +332,7 @@ public final class PrototypeApp {
             configs.put(DISCOVERED, discoveredConfig);
             configs.put(check.config().id(), check.config());
 
-            RoleServices services = RoleServices.planOnly().withRetriever(retriever);
-            if (options.llmEndpoint().isPresent()) {
-                // A local engine through the OpenAI-compatible API; replacing the model is configuration only.
-                OpenAiCompatibleLlm.chatEndpoint(options.llmEndpoint().get());
-                services = services.withGeneration(new LlmGenerationService(new OpenAiCompatibleLlm()),
-                        new ModelConfig(options.llmModel(), options.llmEndpoint().get(), LLM_TIMEOUT, LLM_MAX_OUTPUT));
-            } else {
-                services = services.withGeneration(new TemplateGenerationService(), RoleServices.UNCONFIGURED_MODEL);
-            }
+            RoleServices services = withGeneration(RoleServices.planOnly().withRetriever(retriever), options.llm());
             SqliteBlackboardStore store = new SqliteBlackboardStore(options.data().resolve("blackboard.db"));
             InMemoryAgentRegistry registry = new InMemoryAgentRegistry();
             boolean blackboard = options.architecture() == Architecture.BLACKBOARD;

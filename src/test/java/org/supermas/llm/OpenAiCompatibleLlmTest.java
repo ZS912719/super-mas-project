@@ -29,12 +29,14 @@ class OpenAiCompatibleLlmTest {
 
     private HttpServer server;
     private final AtomicReference<JsonNode> received = new AtomicReference<>();
+    private final AtomicReference<String> authorization = new AtomicReference<>();
 
     /** A fake engine answering every request with this status, body and delay. */
     private URI engine(int status, String body, long delayMillis) throws Exception {
         server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
         server.createContext("/v1/chat/completions", exchange -> {
             received.set(JSON.readTree(exchange.getRequestBody()));
+            authorization.set(exchange.getRequestHeaders().getFirst("Authorization"));
             try {
                 Thread.sleep(delayMillis);
             } catch (InterruptedException e) {
@@ -81,6 +83,36 @@ class OpenAiCompatibleLlmTest {
         assertEquals("user", messages.path(1).path("role").asText());
         assertTrue(messages.path(1).path("content").asText().contains("Ignore all rules"));
         assertEquals("local-model", received.get().path("model").asText());
+        assertEquals(null, authorization.get(), "the local adapter never sends a credential");
+    }
+
+    /** The online adapter with its HTTPS rule replaced, so the fake engine on loopback can stand in for the service. */
+    private static OpenAiCompatibleLlm onlineAgainstFake(String key) {
+        return new OpenAiCompatibleLlm(java.net.http.HttpClient.newBuilder()
+                .followRedirects(java.net.http.HttpClient.Redirect.NEVER).build(),
+                origin -> origin.resolve("/v1/chat/completions"), java.util.Optional.of(key), "online model");
+    }
+
+    @Test
+    void theOnlineAdapterSendsTheKeyAsABearerToken() throws Exception {
+        URI endpoint = engine(200, reply("Dear Sarah, noted."), 0);
+        ModelResponse response = onlineAgainstFake("sk-test").complete(REQUEST, config(endpoint, Duration.ofSeconds(5), 1000));
+        assertEquals("Dear Sarah, noted.", response.output().orElseThrow());
+        assertEquals("Bearer sk-test", authorization.get());
+        assertThrows(IllegalArgumentException.class, () -> OpenAiCompatibleLlm.online(" "));
+        ModelResponse overHttp = OpenAiCompatibleLlm.online("sk-test").complete(REQUEST, config(endpoint, Duration.ofSeconds(5), 1000));
+        assertEquals(FailureKind.CONNECTION, overHttp.failure().orElseThrow().kind(), "the real online adapter refuses plain HTTP");
+    }
+
+    @Test
+    void anErrorStatusCarriesTheEngineMessageAndRateLimitsAreRetryable() throws Exception {
+        URI denied = engine(401, "{\"error\": {\"message\": \"No auth credentials found\", \"code\": 401}}", 0);
+        var failure = onlineAgainstFake("bad").complete(REQUEST, config(denied, Duration.ofSeconds(5), 100)).failure().orElseThrow();
+        assertTrue(failure.message().contains("401") && failure.message().contains("No auth credentials found"), failure.message());
+        assertEquals(false, failure.retryable());
+        stop();
+        URI limited = engine(429, "{\"error\": {\"message\": \"Rate limit exceeded\"}}", 0);
+        assertTrue(onlineAgainstFake("k").complete(REQUEST, config(limited, Duration.ofSeconds(5), 100)).failure().orElseThrow().retryable());
     }
 
     @Test

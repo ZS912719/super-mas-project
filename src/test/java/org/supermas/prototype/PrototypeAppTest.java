@@ -56,4 +56,16 @@ class PrototypeAppTest {
         assertThrows(IllegalArgumentException.class, () -> PrototypeApp.Options.parse(new String[] {"x", "--data"}));
         assertThrows(IllegalArgumentException.class, () -> PrototypeApp.Options.parse(new String[] {"x", "--send", "y"}));
     }
+
+    @Test
+    void theModelComesFromTheEnvironmentOrTheFlagsAndTheTemplateIsTheDefault() {
+        assertEquals(org.supermas.llm.LlmSettings.Provider.TEMPLATE, PrototypeApp.Options.parse(new String[] {"x"}).llm().provider());
+        java.util.Map<String, String> env = java.util.Map.of("SUPERMAS_LLM_PROVIDER", "local", "SUPERMAS_LLM_MODEL", "llama3.2:3b");
+        assertEquals("llama3.2:3b", PrototypeApp.Options.parse(new String[] {"x"}, env).llm().model());
+        assertEquals(org.supermas.llm.LlmSettings.Provider.TEMPLATE,
+                PrototypeApp.Options.parse(new String[] {"x"}).llm().provider(), "tests ignore the environment");
+        assertEquals("other", PrototypeApp.Options.parse(new String[] {"x", "--llm-model", "other"}, env).llm().model());
+        assertThrows(IllegalArgumentException.class, () -> PrototypeApp.Options.parse(new String[] {"x", "--llm-endpoint",
+                "http://127.0.0.1:11434"}), "an endpoint needs a model");
+    }
 }

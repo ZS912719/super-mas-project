@@ -191,8 +191,9 @@ class BlackboardCollaborationTest {
         try (ProjectIndexes other = ProjectIndexes.onDisk(data.resolve("llm-index"))) {
             PrototypeApp.Wiring withModel = PrototypeApp.Wiring.create(other, new PrototypeApp.Options(null,
                     Path.of("src/test/resources/university/knowledge"), data.resolve("llm"), "uni",
-                    PrototypeApp.Architecture.BLACKBOARD, 0.4,
-                    Optional.of(java.net.URI.create("http://127.0.0.1:" + engine.getAddress().getPort())), "fake-model"));
+                    PrototypeApp.Architecture.BLACKBOARD, 0.4, org.supermas.llm.LlmSettings.from(Map.of(),
+                            Map.of("--llm-endpoint", "http://127.0.0.1:" + engine.getAddress().getPort(),
+                                    "--llm-model", "fake-model"))));
             Email email = new Email("<llm@test>", new Scope("uni", "llm-thread"), "sarah.klein@students.example.edu",
                     List.of("prof@example.edu"), "Extension and registration form", "Could I have an extension for the "
                     + "CS204 assignment? Also, could you sign the registration form for the certificate office?", AT, Map.of());
@@ -206,6 +207,52 @@ class BlackboardCollaborationTest {
         } finally {
             engine.stop(0);
         }
+    }
+
+    /** One composed email through a fresh wiring with the given model settings. */
+    private BlackboardSnapshot composeWith(org.supermas.llm.LlmSettings llm, String folder) throws Exception {
+        try (ProjectIndexes other = ProjectIndexes.onDisk(data.resolve(folder).resolve("index"))) {
+            PrototypeApp.Wiring withModel = PrototypeApp.Wiring.create(other, new PrototypeApp.Options(null,
+                    Path.of("src/test/resources/university/knowledge"), data.resolve(folder), "uni",
+                    PrototypeApp.Architecture.BLACKBOARD, 0.4, llm));
+            Email email = new Email("<replay@test>", new Scope("uni", "replay-thread"), "sarah.klein@students.example.edu",
+                    List.of("prof@example.edu"), "Extension and registration form", "Could I have an extension for the "
+                    + "CS204 assignment? Also, could you sign the registration form for the certificate office?", AT, Map.of());
+            return withModel.coordinator.run(withModel.coordinator.receive(email), PrototypeApp.BLACKBOARD_LIMITS);
+        }
+    }
+
+    @Test
+    void aRunRecordedWithAModelIsReplayedWithoutOneOnAnotherBoard() throws Exception {
+        com.sun.net.httpserver.HttpServer engine = com.sun.net.httpserver.HttpServer.create(
+                new java.net.InetSocketAddress(java.net.InetAddress.getLoopbackAddress(), 0), 0);
+        java.util.concurrent.atomic.AtomicInteger calls = new java.util.concurrent.atomic.AtomicInteger();
+        engine.createContext("/v1/chat/completions", exchange -> {
+            calls.incrementAndGet();
+            exchange.getRequestBody().readAllBytes();
+            byte[] bytes = "{\"choices\":[{\"message\":{\"content\":\"Dear Sarah, recorded reply.\"}}]}"
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, bytes.length);
+            exchange.getResponseBody().write(bytes);
+            exchange.close();
+        });
+        engine.start();
+        Path cache = data.resolve("llm-cache");
+        try {
+            BlackboardSnapshot recorded = composeWith(org.supermas.llm.LlmSettings.from(Map.of(), Map.of(
+                    "--llm-endpoint", "http://127.0.0.1:" + engine.getAddress().getPort(), "--llm-model", "fake-model",
+                    "--llm-cache", cache.toString())), "record");
+            assertEquals("Dear Sarah, recorded reply.", recorded.drafts().get(0).body(), recorded.failure().toString());
+        } finally {
+            engine.stop(0);
+        }
+        int callsWhileRecording = calls.get();
+
+        BlackboardSnapshot replayed = composeWith(org.supermas.llm.LlmSettings.from(Map.of(), Map.of(
+                "--llm-provider", "replay", "--llm-model", "fake-model", "--llm-cache", cache.toString())), "replay");
+        assertEquals(BoardStatus.AWAITING_REVIEW, replayed.status(), replayed.failure().toString());
+        assertEquals("Dear Sarah, recorded reply.", replayed.drafts().get(0).body());
+        assertEquals(callsWhileRecording, calls.get(), "the replay never reached the engine");
     }
 
     @Test

@@ -10,7 +10,7 @@ A blackboard-based multi-agent email reply assistant project with a local Java b
 | --- | --- |
 | Java framework | SQLite blackboard storage, fenced task leases/recovery and Markdown observations are implemented. The real coordinator, routing and scheduling remain deferred. |
 | Java agents | Metadata analysis, conversation memory, knowledge loading, discovered topics, context agents, a missing-information check and five configurable specialized agents (student, teacher, research, administration, generic) are implemented. |
-| Prototype | `PrototypeApp` takes `.eml` files through all agents to drafts awaiting review on the SQLite blackboard. Several specialists contribute to one email and a composer writes one reply; a BB1-style controller chooses each step and records why (`docs/plans/blackboard-control.md`). Drafts come from a fixed template by default, or from a local model through `--llm-endpoint` (OpenAI-compatible API). The step 11 router stays as a baseline (`--architecture router`). |
+| Prototype | `PrototypeApp` takes `.eml` files through all agents to drafts awaiting review on the SQLite blackboard. Several specialists contribute to one email and a composer writes one reply; a BB1-style controller chooses each step and records why (`docs/plans/blackboard-control.md`). Drafts come from a fixed template by default, from a local model (OpenAI-compatible API), or during development from an online model (OpenRouter), all by configuration ([model setup](docs/plans/llm-setup.md)). The step 11 router stays as a baseline (`--architecture router`). |
 | UML | Documents the current Java packages, interfaces and selected records. |
 | Desktop mailbox | Electron opens an independent window and owns its local server; the UI provides demo mail, Gmail/Outlook adapters, history, labels and reviewed drafts. |
 | Local generation | The mailbox calls local Ollama directly; it does not implement the Java generation or agent interfaces. |
@@ -26,7 +26,7 @@ A blackboard-based multi-agent email reply assistant project with a local Java b
 | Optional metadata models | GLiNER and speech-act ONNX models, not in Git | Tests that need them skip when absent; the prototype uses rules only |
 | Blackboard observation | Obsidian for viewing generated Markdown; nuXmv for formal checks | [Runtime usage](docs/blackboard-runtime.md), [model-checking setup](formal/README.md) |
 | Desktop mailbox development | Node.js 22.12 or later and npm | [mailbox/package.json](mailbox/package.json) and [lockfile](mailbox/package-lock.json); Electron runs the window, esbuild bundles assets and electron-builder packages Windows builds |
-| Reply generation | A running local Ollama service and an installed model | [mailbox/.env.example](mailbox/.env.example) |
+| Reply generation | A running local Ollama service and an installed model; during development optionally an OpenRouter key (online stand-in, synthetic mail only by default) | [mailbox/.env.example](mailbox/.env.example), [model setup](docs/plans/llm-setup.md) |
 | Live mail accounts | User-provided Gmail or Outlook OAuth credentials and an Internet connection | [Mailbox setup](mailbox/README.md#connect-a-real-mailbox) |
 | UML rendering | A JDK and a locally supplied PlantUML JAR | [Rendering instructions](docs/uml/README.md#render-locally) |
 
@@ -146,7 +146,7 @@ mvn -q compile exec:java -Dexec.mainClass=org.supermas.prototype.PrototypeApp \
   -Dexec.args="benchmark/data/synthetic-dev"
 ```
 
-The argument is one `.eml` file or a folder. Options: `--knowledge <dir>` (default: the sample university knowledge in `src/test/resources/university/knowledge`), `--data <dir>` (default `runtime`), `--project <id>` (default `uni`), `--architecture blackboard|router` (default `blackboard`), `--min-contribution <0..1>` (default 0.4), `--llm-endpoint http://127.0.0.1:11434 --llm-model <name>` (a local engine such as Ollama; default: template). State persists in the data folder: `blackboard.db`, the Obsidian vault `super-mas-vault`, the search index `index` and discovered topics `topics`. Nothing is approved or sent. See [the prototype report](docs/reports/step-11.4.md).
+The argument is one `.eml` file or a folder. Options: `--knowledge <dir>` (default: the sample university knowledge in `src/test/resources/university/knowledge`), `--data <dir>` (default `runtime`), `--project <id>` (default `uni`), `--architecture blackboard|router` (default `blackboard`), `--min-contribution <0..1>` (default 0.4), `--llm-provider template|local|online|replay`, `--llm-model <name>`, `--llm-endpoint <url>`, `--llm-cache <dir>` (default: template; the same settings as `SUPERMAS_LLM_*` environment variables; `online` is a development stand-in, see [model setup](docs/plans/llm-setup.md)). State persists in the data folder: `blackboard.db`, the Obsidian vault `super-mas-vault`, the search index `index` and discovered topics `topics`. Nothing is approved or sent. See [the prototype report](docs/reports/step-11.4.md).
 
 ### Java package
 

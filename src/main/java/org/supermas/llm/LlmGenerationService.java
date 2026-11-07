@@ -24,9 +24,16 @@ import org.supermas.model.Domain.ModelResponse;
  */
 public final class LlmGenerationService implements GenerationService {
     private final LocalLlm llm;
+    private final String label;
 
     public LlmGenerationService(LocalLlm llm) {
+        this(llm, "Local model");
+    }
+
+    /** @param label how the draft's rationale names the engine, e.g. "Online model" for the development stand-in */
+    public LlmGenerationService(LocalLlm llm, String label) {
         this.llm = llm;
+        this.label = label;
     }
 
     @Override
@@ -48,7 +55,7 @@ public final class LlmGenerationService implements GenerationService {
             return failed(new Failure(FailureKind.INVALID_OUTPUT, "The model echoed prompt blocks instead of a reply", true));
         }
         return new GenerationResult(Optional.of(new DraftProposal("", body, request.agentId(),
-                "Local model " + config.model())), Optional.empty());
+                label + " " + config.model())), Optional.empty());
     }
 
     private static GenerationResult failed(Failure failure) {

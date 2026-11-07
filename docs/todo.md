@@ -15,10 +15,13 @@ Derived from the [compliance check](compliance.md) and the [code analysis](code-
 
 | # | Item | Acceptance | Owner | Prio |
 | --- | --- | --- | --- | --- |
-| 2.1 | Install a local engine and choose a model | Ollama (or llama.cpp) running; one small model (e.g. a 3-4B instruct model) and one alternative; documented in README | T | P1 |
+| 2.0 | First online run (step 13) | With an OpenRouter key and an open model that can also run locally: `synthetic-multi` recorded with `--llm-cache`; every email drafted or its failure explained; latency noted. Development evidence only | T | P1 |
+| 2.1 | Install a local engine and choose a model (on a stronger computer; this laptop fits only 1.5-3 B) | Ollama (or llama.cpp) running with the same open model as 2.0 and one alternative; context window set for a 5,000-token prompt; documented in `docs/plans/llm-setup.md` | T | P1 |
 | 2.2 | Run the prototype with the model | `--llm-endpoint/--llm-model` on the 24 + 12 synthetic emails: drafts produced, failure rate, latency p50/p95, timeouts recorded | T | P1 |
 | 2.3 | Replace-the-model demonstration | Same run with the second model by configuration only; results compared | T | P2 |
 | 2.4 | Lease heartbeat or longer leases for slow models | No task fenced during a slow generation (test with a slow fake engine) | T | P2 |
+| 2.5 | Retry retryable generation failures (429, 5xx, timeout) | The coordinator retries within `ExecutionLimits.maxRetries`; test with a fake engine answering 429 then 200 | T | P2 |
+| 2.6 | Delivered configuration is local | Final demo and every reported number use provider `local`; online results labelled with model and place where they appear | T | P1 |
 
 ## 3. Experiments (statement §15)
 
@@ -90,5 +93,5 @@ Derived from the [compliance check](compliance.md) and the [code analysis](code-
 | Specialists and prompts | Yes | Routing (synthetic), injections | Prompt influence (3.3) |
 | Blackboard storage | Yes (teammate), formal models | — | Load test with many boards (P3) |
 | Blackboard control | Yes (collaboration, revision, budget, fixes) | Router vs blackboard, threshold sweep | Fresh validation set (3.6), real model (2.2) |
-| Generation / LLM | Yes against a fake engine | — | Real engine (2.1-2.3) |
+| Generation / LLM | Yes against fake engines (local, online, record/replay) | — | Online run (2.0), real local engine (2.1-2.3) |
 | Agent service + mailbox | Yes (Java 7, Node 3 + teammate's 11) | Live drive (manual) | Electron run, UI items (4.x) |

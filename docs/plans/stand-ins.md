@@ -19,6 +19,7 @@ These classes exist only because the Metadata and Context agents need something 
 | `DraftFirstCoordinationStrategy` | Scheduling | The next action is chosen from board state |
 | `ContextFirstCoordinationStrategy` | Scheduling | Each selected context agent runs once before routing, then further context agents that fit (such as the discovered-topics agent), then the missing-information check, then one pending further retrieval, keeping rounds back for the reply |
 | `TemplateGenerationService` | LLM integration and final email writing | `generate(request, config)` returns exactly one of a draft or a failure. This stand-in writes a fixed template from the reply plan, with no model |
+| `llm.OpenAiCompatibleLlm.online` (in `llm`, selected by `LlmSettings` provider `online`) | Local LLM integration | A development stand-in for the local engine: OpenRouter over HTTPS with a key from the environment. Off by default; the agent service needs a second opt-in. Replace with provider `local` before delivery (step 13) |
 
 The teammate's `DefaultBlackboard`, `DefaultBlackboardFactory` and `SqliteBlackboardStore` (from `codex/blackboard-storage`) are the real blackboard. `InMemoryBlackboard` and its factory remain only so the unit tests stay fast.
 
@@ -29,5 +30,5 @@ The teammate's `DefaultBlackboard`, `DefaultBlackboardFactory` and `SqliteBlackb
 - Leases are not renewed by heartbeat; a task longer than the 5-minute prototype lease would be fenced.
 - `ScriptedCoordinator` carries out a pending task of the scheduled action, but only `ContextFirstCoordinationStrategy` schedules them, and only for further retrieval. Other suggested tasks are stored and not run.
 - There is no wall-clock timeout around agents.
-- No real `GenerationService` or `LocalLlm` adapter exists. Role agents build their own `ModelRequest` and call only `generate`; `prepare` is unused by them.
+- `LlmGenerationService` with `OpenAiCompatibleLlm` is the real generation path (step 12, step 13), tested only against fake engines so far. Role agents build their own `ModelRequest` and call only `generate`; `prepare` is unused by them.
 - Nothing calls `ConversationRecorder.onSentConfirmed`, because there is no mail transport.
