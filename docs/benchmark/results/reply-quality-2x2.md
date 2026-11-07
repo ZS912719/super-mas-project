@@ -33,3 +33,17 @@ The phrase check looks for 23 distinctive phrases of the other emails (a colleag
 - In one D draft (en-10) the model wrote only a closing and a name; after the signature guard the draft is just "Best regards,", which is not a reply and should be refused.
 - A plan can list a missing item twice in two forms ("COURSE" from the role's fields and "course (required by student-faq)" from the knowledge).
 - Wrong confirmations in other words than the forbidden phrases ("The exam date has not been changed").
+
+## A repeat: how much is noise
+
+Two runs meant as the composer-prompt variant ran by mistake in the main project at `46bed76` (all six prompt versions equal to C's; the variant's composer version would differ). They are therefore a **repeat of C and D** with the same prompts, plus the two small fixes of `46bed76` (greeting-only drafts refused, a missing field listed once). Folders: `runtime/reply-benchmark/C-repeat-3b-46bed76`, `D-repeat-8b-46bed76`.
+
+| Replies expected | C | C repeat | D | D repeat |
+| --- | --- | --- | --- | --- |
+| Drafted | 34 | 34 | 32 | 32 |
+| Facts mentioned | 4 / 32 | 7 / 32 | 9 / 32 | 11 / 32 |
+| Asked for | 4 / 10 | 6 / 10 | 8 / 10 | 8 / 10 |
+| Without violation | 25 / 34 | 29 / 34 | 18 / 32 | 18 / 32 |
+
+The same configuration differs by 2-3 facts between runs on this set. The fall in facts from A/B to C/D (6 → 4, 13 → 9) is within that spread, so it is **not evidence** that the "use only the facts" rule made the models terser. The variant run (branch `ablation/composer-only-facts`) is still to be done.
+
