@@ -96,7 +96,18 @@ Two causes are ours, one is the model's:
 3. `LlmGenerationService` removes a bracketed placeholder (up to 40 characters) that ends the reply, on its own line or right after the closing's comma, and notes "removed the placeholder [...]" in its rationale. A bracket inside a sentence ("annex [A]") or a placeholder followed by more text stays; a reply that is only a placeholder is invalid output. Code catches what a small model will keep doing despite the rule.
 4. **Found while doing it:** `ComposerAgent` and `ReplyWork` built their own draft explanation and dropped the generation service's rationale, so the engine label of §2 never reached a draft. Both now append it (`ReplyWork.engineNote`).
 
-Tests: `OpenAiCompatibleLlmTest` +1 (placeholder removed and noted, same-line form, legitimate brackets kept, placeholder-only refused); `BlackboardCollaborationTest` asserts the engine note on the composed draft for a local and a recorded model. Full build 346 tests, 0 failures. **Run 3** (after fix 2): pending.
+Tests: `OpenAiCompatibleLlmTest` +1 (placeholder removed and noted, same-line form, legitimate brackets kept, placeholder-only refused); `BlackboardCollaborationTest` asserts the engine note on the composed draft for a local and a recorded model. Full build 346 tests, 0 failures.
+
+**Run 3** (after fix 2, same email and model, again on the data folder of run 1). Draft explanation: "Composed from [student 0.87 → requests [1]]; plan reply-plan:composer:1, prompt f0fc3e8d2cac, 3 excerpts; Online model (development stand-in) meta-llama/llama-3.2-3b-instruct; removed the placeholder [Your Name]".
+
+| Check | Result |
+| --- | --- |
+| Addressee and closing | **Right.** "Dear Sarah," ... "Best regards,"; the model wrote "[Your Name]" again and the guard removed it, as the explanation shows |
+| Irrelevant context | **Gone** (no exams, resits, rooms) |
+| Repeating the sender's facts | **Still there** (deadline, student number), against the new rule |
+| Facts | **Wrong, a regression.** "Please contact the student office to request an extension" (the policy says the course leader decides and the request goes to the course leader) and "can be contacted through the facilities portal" (the portal is for booking rooms): two sources merged into a false statement, against the explicit rule. Certificate and the seven-day limit are missing |
+
+**Reading.** Each prompt change fixed what it targeted, and the 3 B model then broke something else, including an explicit rule. Three runs on one email are not evidence either way; tuning the prompt further on `en-01` would repeat the mistake avoided for the contribution threshold (tuning on the test item). Next, in order: the same email with a larger open model (configuration only), to separate the model's limits from the prompt's; then the whole `synthetic-multi` set recorded, scored with the rubric of to-do 3.2; a fact check of the reply against the excerpts (a critic, statement §20) if invented or merged facts persist; to-do 3.9 for the missing certificate.
 
 
 ## 6. Problems and critical points
