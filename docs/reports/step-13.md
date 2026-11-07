@@ -146,6 +146,10 @@ Two expectations of my own tests were wrong and corrected, not loosened: the mar
 
 Full build: **367 tests, 0 failures**. Runs C (3 B) and D (8 B) are the owner's. The fixes were designed from A and B on the same 36 emails, so C and D are development results (to-do 3.6).
 
+## 5f. Runs C and D: the 2×2
+
+Run by the owner on 2026-11-07 with the fixes of §5e. Results: [`docs/benchmark/results/reply-quality-2x2.md`](../benchmark/results/reply-quality-2x2.md). In short: the fixes removed other people's mail from every reply (phrase check 24 and 20 → 0), every lease timeout and most rule violations (replies without violation 5 → 25 of 34 for the 3 B model, 1 → 18 of 32 for the 8 B model), and raised asking for missing information (1 → 4 and 6 → 8 of 10). Facts fell (6 → 4, 13 → 9 of 32): in the emails checked by hand the fact was in the excerpts and the model left it out, possibly because of the new "use only the facts that help" rule (untested hypothesis). The 8 B model still states more facts and asks more. Six French replies of D contained real prompt labels, so the earlier quotation-mark explanation of the echo failures was wrong for those; the A/B results file carries the correction. Seen but not counted: a recipient greeted again, a draft reduced to "Best regards," by the signature guard, and a missing item listed twice in two forms.
+
 ## 6. Problems and critical points
 
 1. **Online results are not the project's results.** They overstate quality and understate latency. Every number in the final report must come from the local model, or be labelled with the model and where it ran.
