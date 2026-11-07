@@ -3,7 +3,8 @@
   "language": "en",
   "replyExpected": true,
   "greet": [
-    "Mark"
+    "Mark",
+    "Ruiz"
   ],
   "notGreet": [
     "Martin"
@@ -30,5 +31,6 @@
     }
   ],
   "allowInternal": false,
-  "note": "Industry partner: funding call (research office first) and an NDA"
+  "note": "Industry partner: funding call (research office first) and an NDA",
+  "revision": 2
 }

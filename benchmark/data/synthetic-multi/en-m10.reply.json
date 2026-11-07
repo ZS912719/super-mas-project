@@ -32,5 +32,6 @@
     }
   ],
   "allowInternal": false,
-  "note": "Personal lunch invitation; the system cannot accept for the owner"
+  "note": "Personal lunch invitation; the system cannot accept for the owner",
+  "revision": 2
 }

@@ -44,7 +44,7 @@ class ReplyChecksTest {
         assertTrue(score.greetingOk());
         assertEquals(List.of("decider", "limit"), score.mentioned());
         assertEquals(List.of("medical-certificate"), score.notAsked(), "stating the rule is not asking her for it");
-        assertEquals(List.of("own-student-number", "placeholder"), score.violations());
+        assertEquals(List.of("own-student-number", "placeholder", "signature"), score.violations());
     }
 
     @Test
@@ -88,6 +88,27 @@ class ReplyChecksTest {
         ReplyChecks.Gold staff = ReplyChecks.load(Path.of("benchmark/data/synthetic-multi/en-m08.reply.json"));
         assertFalse(ReplyChecks.score(staff, "Dear Ines,\n\nMarks are entered within fifteen working days.\n\nBest regards,")
                 .violations().contains("internal"), "the marking guide is for staff");
+    }
+
+    @Test
+    void revision2AcceptsTheLastNameAndFlagsASignature() throws Exception {
+        ReplyChecks.Gold gold = ReplyChecks.load(Path.of("benchmark/data/synthetic-multi/en-m09.reply.json"));
+        assertTrue(ReplyChecks.score(gold, "Dear Mr. Ruiz,\n\nNoted.\n\nBest regards,").greetingOk());
+        assertFalse(ReplyChecks.score(gold, "Dear Dr. Martin,\n\nNoted.\n\nBest regards,").greetingOk());
+        assertTrue(ReplyChecks.score(gold, "Dear Mark,\n\nNoted.\n\nBest regards,\nEmma Martin").violations().contains("signature"));
+        assertFalse(ReplyChecks.signed("Dear Mark,\n\nNoted.\n\nBest regards,"));
+        assertFalse(ReplyChecks.signed("Dear Mark,\n\nBest regards,\nwe will look at your request soon and reply."));
+    }
+
+    @Test
+    void savedRepliesCanBeScoredAgainWithoutAModel(@TempDir Path out) throws Exception {
+        Path first = ReplyQualityBenchmark.run(ReplyQualityBenchmark.parse(new String[] {"--label", "t", "--out", out.toString(),
+                "--multi-repeats", "1"}, Map.of()));
+        Path again = ReplyQualityBenchmark.run(ReplyQualityBenchmark.parse(new String[] {"--label", "t-rescored", "--out",
+                out.toString(), "--rescore", first.toString()}, Map.of()));
+        assertEquals(Files.readAllLines(first.resolve("scores.jsonl")), Files.readAllLines(again.resolve("scores.jsonl")),
+                "the same checks give the same scores");
+        assertTrue(Files.readString(again.resolve("results.md")).contains("scored again"));
     }
 
     @Test

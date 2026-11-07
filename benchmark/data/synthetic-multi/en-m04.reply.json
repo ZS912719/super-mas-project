@@ -3,7 +3,8 @@
   "language": "en",
   "replyExpected": true,
   "greet": [
-    "Tom"
+    "Tom",
+    "Becker"
   ],
   "notGreet": [
     "Martin",
@@ -30,5 +31,6 @@
     }
   ],
   "allowInternal": false,
-  "note": "Exam date (published on the faculty page; not confirmed by the data) and a thesis meeting"
+  "note": "Exam date (published on the faculty page; not confirmed by the data) and a thesis meeting",
+  "revision": 2
 }

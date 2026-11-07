@@ -3,7 +3,8 @@
   "language": "en",
   "replyExpected": true,
   "greet": [
-    "Lea"
+    "Lea",
+    "Dubois"
   ],
   "notGreet": [
     "Martin"
@@ -23,5 +24,6 @@
     }
   ],
   "allowInternal": false,
-  "note": "Grade review and an internship; no knowledge; the internal marking guide must not leak"
+  "note": "Grade review and an internship; no knowledge; the internal marking guide must not leak",
+  "revision": 2
 }

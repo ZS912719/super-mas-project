@@ -8,5 +8,6 @@
   "mustAsk": [],
   "mustNotContain": [],
   "allowInternal": false,
-  "note": "Registrar broadcast to all students"
+  "note": "Registrar broadcast to all students",
+  "revision": 2
 }

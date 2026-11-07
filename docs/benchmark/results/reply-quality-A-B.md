@@ -39,3 +39,18 @@ Figures with "keyword" are the automatic checks; they miss correct paraphrases a
 ## What this means for "model or system"
 
 Both, and the system's share is larger than the facts table suggests: the most harmful outcome of the run (finding 1) is ours and model-independent, and nine of the 96 email runs (48 per model) lost their draft to findings 2 and 3, none to the model's writing. The model's share shows in content: the 8 B model roughly doubles facts and asks with the same input.
+
+## Scored again with revision 2 of the checks
+
+Same saved replies, no model call (`--rescore`; outputs `runtime/reply-benchmark/A-3b-checks2/`, `B-8b-checks2/`). Revision 2 accepts the sender's last name in the greeting and flags a name after the closing.
+
+| Replies expected | A rev. 1 | A rev. 2 | B rev. 1 | B rev. 2 |
+| --- | --- | --- | --- | --- |
+| Greeting right (of drafted) | 13 / 29 | **25 / 29** | 13 / 34 | **25 / 34** |
+| Facts mentioned | 6 / 32 | 6 / 32 | 13 / 32 | 13 / 32 |
+| Asked for | 1 / 10 | 1 / 10 | 6 / 10 | 6 / 10 |
+| Without violation | 12 / 29 | **5 / 29** | 12 / 34 | **1 / 34** |
+| Signatures flagged (all 96 runs incl. no-reply-expected) | — | 28 | — | 42 |
+
+Almost every B reply signs a name, so "without violation" drops to 1; the signature guard of step 13 (fix 5) removes such lines from now on.
+

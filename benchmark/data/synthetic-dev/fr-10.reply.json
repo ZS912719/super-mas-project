@@ -3,7 +3,8 @@
   "language": "fr",
   "replyExpected": true,
   "greet": [
-    "Yanis"
+    "Yanis",
+    "Benali"
   ],
   "notGreet": [],
   "mustMention": [],
@@ -21,5 +22,6 @@
     }
   ],
   "allowInternal": false,
-  "note": "French version of en-10"
+  "note": "French version of en-10",
+  "revision": 2
 }

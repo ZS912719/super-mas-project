@@ -3,7 +3,8 @@
   "language": "en",
   "replyExpected": true,
   "greet": [
-    "Mei"
+    "Mei",
+    "Tan"
   ],
   "notGreet": [
     "Kofi"
@@ -33,5 +34,6 @@
     }
   ],
   "allowInternal": false,
-  "note": "Forwarded question about the exam room, which the forwarded notice says is still to be announced"
+  "note": "Forwarded question about the exam room, which the forwarded notice says is still to be announced",
+  "revision": 2
 }

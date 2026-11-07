@@ -3,7 +3,8 @@
   "language": "en",
   "replyExpected": true,
   "greet": [
-    "Noah"
+    "Noah",
+    "Kim"
   ],
   "notGreet": [],
   "mustMention": [
@@ -64,5 +65,6 @@
     }
   ],
   "allowInternal": false,
-  "note": "Attestation (registrar, three working days, needs the student number), extension (policy), lab (no knowledge)"
+  "note": "Attestation (registrar, three working days, needs the student number), extension (policy), lab (no knowledge)",
+  "revision": 2
 }

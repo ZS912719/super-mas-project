@@ -8,5 +8,6 @@
   "mustAsk": [],
   "mustNotContain": [],
   "allowInternal": false,
-  "note": "Broadcast of the student office"
+  "note": "Broadcast of the student office",
+  "revision": 2
 }

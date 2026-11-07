@@ -102,6 +102,21 @@ MULTI = {
      note="Project paper review and a travel form; no knowledge (no SuperMAS role yet)"),
 }
 
+# Revision 2 (2026-11-07, after runs A and B, approved by the project owner): the greeting check accepted only
+# first names, so "Dear Mr. Ruiz" counted as wrong. Each sender's last name is now accepted too. Nothing else
+# changed; the signature check is a general check in ReplyChecks, not a per-email expectation.
+SURNAMES = {
+ "en-01": ["Klein"], "en-03": ["Klein"], "en-05": ["Weber"], "en-08": ["Tan"], "en-10": ["Haddad"], "en-12": ["Bell"],
+ "fr-01": ["Moreau"], "fr-03": ["Moreau"], "fr-05": ["Lefèvre", "Lefevre"], "fr-08": ["Roux"], "fr-10": ["Benali"],
+ "fr-12": ["Perrin"], "en-m01": ["Klein"], "en-m02": ["Leroy"], "en-m03": ["Weber"], "en-m04": ["Becker"],
+ "en-m07": ["Dubois"], "en-m08": ["Costa"], "en-m09": ["Ruiz"], "en-m11": ["Kim"], "en-m12": ["Sato"],
+}
+for table in (DEV, MULTI):
+    for name, g in table.items():
+        g["revision"] = 2
+        if name in SURNAMES:
+            g["greet"] = g["greet"] + SURNAMES[name]
+
 root = sys.argv[1]
 for folder, table in (("synthetic-dev", DEV), ("synthetic-multi", MULTI)):
     for name, g in table.items():

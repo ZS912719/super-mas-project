@@ -3,7 +3,8 @@
   "language": "en",
   "replyExpected": true,
   "greet": [
-    "Ines"
+    "Ines",
+    "Costa"
   ],
   "notGreet": [
     "Emma"
@@ -23,5 +24,6 @@
     }
   ],
   "allowInternal": true,
-  "note": "Colleague: invigilation and marking; staff, so the marking guide may be used"
+  "note": "Colleague: invigilation and marking; staff, so the marking guide may be used",
+  "revision": 2
 }

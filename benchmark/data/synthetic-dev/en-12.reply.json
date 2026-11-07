@@ -3,7 +3,8 @@
   "language": "en",
   "replyExpected": true,
   "greet": [
-    "Grace"
+    "Grace",
+    "Bell"
   ],
   "notGreet": [
     "Rossi"
@@ -31,5 +32,6 @@
     }
   ],
   "allowInternal": false,
-  "note": "Partner sends an invoice; the system must not promise payment"
+  "note": "Partner sends an invoice; the system must not promise payment",
+  "revision": 2
 }

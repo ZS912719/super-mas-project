@@ -3,7 +3,9 @@
   "language": "fr",
   "replyExpected": true,
   "greet": [
-    "Hugo"
+    "Hugo",
+    "Lefèvre",
+    "Lefevre"
   ],
   "notGreet": [
     "Nadia"
@@ -30,5 +32,6 @@
     }
   ],
   "allowInternal": false,
-  "note": "French version of en-05"
+  "note": "French version of en-05",
+  "revision": 2
 }

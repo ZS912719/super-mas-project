@@ -25,7 +25,9 @@ The 24 `synthetic-dev` and 12 `synthetic-multi` emails. Each has a frozen `<emai
 | `mustNotContain` | Forbidden phrases: promises and decisions for the owner, the sender's own data repeated back, unrelated knowledge ("noise") |
 | `allowInternal` | `true` for staff senders, who may see the staff-only marking guide |
 
-Checks on every reply: a bracketed placeholder (`[Your Name]`) is a violation; text of the staff-only marking guide is a violation unless `allowInternal`. Matching ignores case, accents and apostrophe variants.
+Checks on every reply: a bracketed placeholder (`[Your Name]`) is a violation; text of the staff-only marking guide is a violation unless `allowInternal`; since revision 2, a name after the closing (`signature`: a last line of at most four words after "Best regards," and similar) is a violation.
+
+**Revision 2** (2026-11-07, after runs A and B, approved by the owner): the greeting check had accepted only first names, so "Dear Mr. Ruiz" counted as wrong; each sender's last name is accepted now (`"revision": 2` in every file, change in `benchmark/write_reply_gold.py`), and the signature check was added. Because this was decided after seeing results, A and B are reported with both revisions (`--rescore`, below). Matching ignores case, accents and apostrophe variants.
 
 **Limits.** Keyword checks find a missing fact or a forbidden phrase reliably, but they cannot see tone, a true fact used wrongly, or a correct paraphrase with other words (a false negative). Read `drafts.md` and score a sample with the rubric of to-do 3.2; treat the automatic numbers as indicators.
 
@@ -40,7 +42,7 @@ SUPERMAS_LLM_MODEL=meta-llama/llama-3.2-3b-instruct mvn -q test-compile exec:jav
 SUPERMAS_LLM_MODEL=meta-llama/llama-3.1-8b-instruct mvn -q test-compile exec:java -Dexec.classpathScope=test -Dexec.mainClass=org.supermas.prototype.ReplyQualityBenchmark -Dexec.args="--label B-8b"
 ```
 
-Defaults: dev once, multi twice (`--dev-repeats`, `--multi-repeats`), output `runtime/reply-benchmark/<label>/` (ignored by Git): `results.md` (summary, violations by kind, per email), `drafts.md` (every draft with its checks and explanation), `scores.jsonl`, `llm-cache/`. An existing label folder is refused, so runs never mix. To re-score a recorded run without a model: `--label A-3b-replay --llm-provider replay --llm-model <same model> --llm-cache runtime/reply-benchmark/A-3b/llm-cache`.
+Defaults: dev once, multi twice (`--dev-repeats`, `--multi-repeats`), output `runtime/reply-benchmark/<label>/` (ignored by Git): `results.md` (summary, violations by kind, per email), `drafts.md` (every draft with its checks and explanation), `scores.jsonl`, `llm-cache/`. An existing label folder is refused, so runs never mix. To score a run's saved replies again with the current checks, without a model: `--label A-3b-checks2 --rescore runtime/reply-benchmark/A-3b`. To re-run the system on recorded replies (only exact prompt matches answer): `--label A-3b-replay --llm-provider replay --llm-model <same model> --llm-cache runtime/reply-benchmark/A-3b/llm-cache`.
 
 About 36 + 12 = 48 model calls per run with the defaults (the composer makes one call per email).
 

@@ -3,7 +3,8 @@
   "language": "en",
   "replyExpected": true,
   "greet": [
-    "Anna"
+    "Anna",
+    "Weber"
   ],
   "notGreet": [
     "Emma"
@@ -32,5 +33,6 @@
     }
   ],
   "allowInternal": false,
-  "note": "Partner: dataset and conference invoice; no knowledge covers either"
+  "note": "Partner: dataset and conference invoice; no knowledge covers either",
+  "revision": 2
 }

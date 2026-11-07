@@ -3,7 +3,8 @@
   "language": "fr",
   "replyExpected": true,
   "greet": [
-    "Lucas"
+    "Lucas",
+    "Moreau"
   ],
   "notGreet": [
     "Dubois"
@@ -55,5 +56,6 @@
     }
   ],
   "allowInternal": false,
-  "note": "French version of en-01; the knowledge is in English, the reply must be in French"
+  "note": "French version of en-01; the knowledge is in English, the reply must be in French",
+  "revision": 2
 }

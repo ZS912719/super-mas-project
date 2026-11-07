@@ -8,5 +8,6 @@
   "mustAsk": [],
   "mustNotContain": [],
   "allowInternal": false,
-  "note": "The owner's own sent reply"
+  "note": "The owner's own sent reply",
+  "revision": 2
 }

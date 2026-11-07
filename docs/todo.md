@@ -20,7 +20,7 @@ Derived from the [compliance check](compliance.md) and the [code analysis](code-
 | 2.2 | Run the prototype with the model | `--llm-endpoint/--llm-model` on the 24 + 12 synthetic emails: drafts produced, failure rate, latency p50/p95, timeouts recorded | T | P1 |
 | 2.3 | Replace-the-model demonstration | Same run with the second model by configuration only; results compared | T | P2 |
 | 2.4 | Lease heartbeat or longer leases for slow models | No task fenced during a slow generation (test with a slow fake engine) | T | P2 |
-| 2.5 | Retry retryable generation failures (429, 5xx, timeout) | The coordinator retries within `ExecutionLimits.maxRetries`; test with a fake engine answering 429 then 200 | T | P2 |
+| 2.5 | Retry retryable generation failures (429, 5xx, timeout) (online adapter retries once since step 13 §5e; the coordinator still does not) | The coordinator retries within `ExecutionLimits.maxRetries`; test with a fake engine answering 429 then 200 | T | P2 |
 | 2.6 | Delivered configuration is local | Final demo and every reported number use provider `local`; online results labelled with model and place where they appear | T | P1 |
 
 ## 3. Experiments (statement §15)
@@ -35,7 +35,7 @@ Derived from the [compliance check](compliance.md) and the [code analysis](code-
 | 3.6 | Contribution threshold on a fresh set | A new held-out multi-request set; choose the threshold there; report on the old set only as a check | T | P2 |
 | 3.7 | Error analysis and LLM limits | Table of observed errors by type (missed request, wrong role, invented fact, disclosure, timeout) with examples | Team | P1 |
 | 3.8 | Injection suite on the blackboard with the real model | The step 9.8 suite run end to end through the composer; 0 violations or each documented | T | P2 |
-| 3.9 | Missing information from the knowledge | A requirement stated in a retrieved document (e.g. "must include a medical certificate") that the email does not satisfy is reported as missing, so the reply asks for it; test on `en-01` (step 13 §5b, run 2) | T | P2 |
+| 3.9 | Missing information from the knowledge (rules done in step 13 §5e, fix 4c; a model-based reading remains open) | A requirement stated in a retrieved document (e.g. "must include a medical certificate") that the email does not satisfy is reported as missing, so the reply asks for it; test on `en-01` (step 13 §5b, run 2) | T | P2 |
 | 3.10 | Human review of the reply checks | The 36 `*.reply.json` files (step 13 §5c) read against the emails and knowledge; changes made in a new commit before any comparison is reported | T (+ a second reader) | P1 |
 
 ## 4. Interface (statement §10)
@@ -59,7 +59,7 @@ Derived from the [compliance check](compliance.md) and the [code analysis](code-
 
 | # | Item | Acceptance | Owner | Prio |
 | --- | --- | --- | --- | --- |
-| 6.1 | Disclosure by audience | Sources carry an audience; the composer receives only excerpts whose audience includes the email's sender; test: a student email never gets a staff-only excerpt in the composer's prompt | T | P1 |
+| 6.1 | Disclosure by audience (other threads' mail is kept out of replies since step 13 §5e, fix 1; staff-only documents still open) | Sources carry an audience; the composer receives only excerpts whose audience includes the email's sender; test: a student email never gets a staff-only excerpt in the composer's prompt | T | P1 |
 | 6.2 | Bounded agent-service queue | 503 when full; test | T | P3 |
 
 ## 7. Code quality (from the code analysis)

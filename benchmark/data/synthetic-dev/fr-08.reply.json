@@ -4,7 +4,8 @@
   "replyExpected": true,
   "greet": [
     "Inès",
-    "Ines"
+    "Ines",
+    "Roux"
   ],
   "notGreet": [
     "Mathis"
@@ -34,5 +35,6 @@
     }
   ],
   "allowInternal": false,
-  "note": "French version of en-08"
+  "note": "French version of en-08",
+  "revision": 2
 }

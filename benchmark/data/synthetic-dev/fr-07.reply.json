@@ -8,5 +8,6 @@
   "mustAsk": [],
   "mustNotContain": [],
   "allowInternal": false,
-  "note": "IT notification"
+  "note": "IT notification",
+  "revision": 2
 }

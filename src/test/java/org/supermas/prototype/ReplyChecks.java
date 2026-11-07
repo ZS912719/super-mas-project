@@ -125,7 +125,27 @@ final class ReplyChecks {
         if (!gold.allowInternal() && containsAny(text, INTERNAL)) {
             violations.add("internal");
         }
+        if (signed(body)) {
+            violations.add("signature");
+        }
         return new Score(greetingOk, languageOk, mentioned, notMentioned, asked, notAsked, violations);
+    }
+
+    private static final Pattern CLOSING = Pattern.compile("^(?:(?:best|kind|warm|warmest)\\s+)?(?:regards|wishes)[,.!]?$"
+            + "|^(?:best|sincerely|thanks|thank you|cordialement|bien a vous|salutations|merci|respectueusement)[,.!]?$");
+
+    /**
+     * True if a name follows the closing: the last line has at most four words and the line before it is a
+     * closing ("Best regards,"). The common rules say nothing follows the closing (revision 2 of the checks).
+     */
+    static boolean signed(String body) {
+        List<String> lines = body.lines().map(String::strip).filter(line -> !line.isEmpty()).toList();
+        if (lines.size() < 2) {
+            return false;
+        }
+        String last = lines.get(lines.size() - 1);
+        return CLOSING.matcher(normalize(lines.get(lines.size() - 2))).matches()
+                && !CLOSING.matcher(normalize(last)).matches() && last.split("\\s+").length <= 4;
     }
 
     /** "en", "fr", or "unknown" when the stop words do not decide. */

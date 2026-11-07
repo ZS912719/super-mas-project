@@ -3,7 +3,8 @@
   "language": "en",
   "replyExpected": true,
   "greet": [
-    "Yuki"
+    "Yuki",
+    "Sato"
   ],
   "notGreet": [
     "Emma"
@@ -32,5 +33,6 @@
     }
   ],
   "allowInternal": false,
-  "note": "Project paper review and a travel form; no knowledge (no SuperMAS role yet)"
+  "note": "Project paper review and a travel form; no knowledge (no SuperMAS role yet)",
+  "revision": 2
 }

@@ -8,5 +8,6 @@
   "mustAsk": [],
   "mustNotContain": [],
   "allowInternal": false,
-  "note": "Helpdesk notification"
+  "note": "Helpdesk notification",
+  "revision": 2
 }

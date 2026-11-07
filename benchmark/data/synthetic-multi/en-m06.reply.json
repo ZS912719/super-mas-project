@@ -33,5 +33,6 @@
     }
   ],
   "allowInternal": false,
-  "note": "Vague message: the reply should ask what it is about"
+  "note": "Vague message: the reply should ask what it is about",
+  "revision": 2
 }

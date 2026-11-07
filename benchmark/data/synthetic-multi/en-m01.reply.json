@@ -3,7 +3,8 @@
   "language": "en",
   "replyExpected": true,
   "greet": [
-    "Sarah"
+    "Sarah",
+    "Klein"
   ],
   "notGreet": [
     "Martin"
@@ -49,5 +50,6 @@
     }
   ],
   "allowInternal": false,
-  "note": "Extension (policy) and a form to sign (no knowledge: must not promise to sign)"
+  "note": "Extension (policy) and a form to sign (no knowledge: must not promise to sign)",
+  "revision": 2
 }

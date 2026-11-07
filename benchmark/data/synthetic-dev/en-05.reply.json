@@ -3,7 +3,8 @@
   "language": "en",
   "replyExpected": true,
   "greet": [
-    "Tom"
+    "Tom",
+    "Weber"
   ],
   "notGreet": [
     "Anna"
@@ -31,5 +32,6 @@
     }
   ],
   "allowInternal": false,
-  "note": "Colleague proposes a meeting; the system cannot know the owner's agenda, so it must not accept"
+  "note": "Colleague proposes a meeting; the system cannot know the owner's agenda, so it must not accept",
+  "revision": 2
 }

@@ -3,7 +3,8 @@
   "language": "en",
   "replyExpected": false,
   "greet": [
-    "Sarah"
+    "Sarah",
+    "Klein"
   ],
   "notGreet": [
     "Martin"
@@ -20,5 +21,6 @@
     }
   ],
   "allowInternal": false,
-  "note": "A thank-you; no reply needed"
+  "note": "A thank-you; no reply needed",
+  "revision": 2
 }

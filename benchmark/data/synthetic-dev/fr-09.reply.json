@@ -8,5 +8,6 @@
   "mustAsk": [],
   "mustNotContain": [],
   "allowInternal": false,
-  "note": "Teacher's broadcast"
+  "note": "Teacher's broadcast",
+  "revision": 2
 }

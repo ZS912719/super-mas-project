@@ -3,7 +3,8 @@
   "language": "en",
   "replyExpected": true,
   "greet": [
-    "Omar"
+    "Omar",
+    "Haddad"
   ],
   "notGreet": [],
   "mustMention": [],
@@ -21,5 +22,6 @@
     }
   ],
   "allowInternal": false,
-  "note": "Thesis submission: the knowledge base has no procedure, so the reply must not import unrelated ones"
+  "note": "Thesis submission: the knowledge base has no procedure, so the reply must not import unrelated ones",
+  "revision": 2
 }

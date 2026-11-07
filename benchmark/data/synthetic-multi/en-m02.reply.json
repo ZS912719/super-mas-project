@@ -3,7 +3,8 @@
   "language": "en",
   "replyExpected": true,
   "greet": [
-    "Paul"
+    "Paul",
+    "Leroy"
   ],
   "notGreet": [
     "Emma"
@@ -43,5 +44,6 @@
     }
   ],
   "allowInternal": true,
-  "note": "Colleague: room swap (facilities portal) and a grant (research office reviews budgets ten days before the deadline)"
+  "note": "Colleague: room swap (facilities portal) and a grant (research office reviews budgets ten days before the deadline)",
+  "revision": 2
 }

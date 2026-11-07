@@ -3,7 +3,8 @@
   "language": "fr",
   "replyExpected": false,
   "greet": [
-    "Lucas"
+    "Lucas",
+    "Moreau"
   ],
   "notGreet": [
     "Dubois"
@@ -12,5 +13,6 @@
   "mustAsk": [],
   "mustNotContain": [],
   "allowInternal": false,
-  "note": "A thank-you; no reply needed"
+  "note": "A thank-you; no reply needed",
+  "revision": 2
 }

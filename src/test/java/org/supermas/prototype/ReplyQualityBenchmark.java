@@ -57,7 +57,9 @@ public final class ReplyQualityBenchmark {
         }
     }
 
-    record Options(String label, Path out, int devRepeats, int multiRepeats, Path dev, Path multi, LlmSettings llm) { }
+    /** @param rescore an earlier run's label folder whose saved replies are scored again, with no model */
+    record Options(String label, Path out, int devRepeats, int multiRepeats, Path dev, Path multi, LlmSettings llm,
+                   java.util.Optional<Path> rescore) { }
 
     public static void main(String[] args) throws Exception {
         Options options = parse(args, System.getenv());
@@ -73,6 +75,7 @@ public final class ReplyQualityBenchmark {
         Path dev = Path.of("benchmark/data/synthetic-dev");
         Path multi = Path.of("benchmark/data/synthetic-multi");
         Map<String, String> llmFlags = new HashMap<>();
+        java.util.Optional<Path> rescore = java.util.Optional.empty();
         for (int i = 0; i < args.length; i += 2) {
             if (i + 1 >= args.length) {
                 throw new IllegalArgumentException("Missing value for " + args[i]);
@@ -84,6 +87,7 @@ public final class ReplyQualityBenchmark {
                 case "--multi-repeats" -> multiRepeats = Integer.parseInt(args[i + 1]);
                 case "--dev" -> dev = Path.of(args[i + 1]);
                 case "--multi" -> multi = Path.of(args[i + 1]);
+                case "--rescore" -> rescore = java.util.Optional.of(Path.of(args[i + 1]));
                 default -> {
                     if (!LlmSettings.isFlag(args[i])) {
                         throw new IllegalArgumentException("Unknown option " + args[i]);
@@ -95,7 +99,7 @@ public final class ReplyQualityBenchmark {
         if (label == null || !label.matches("[A-Za-z0-9._-]+")) {
             throw new IllegalArgumentException("Give --label NAME (letters, digits, '.', '_', '-'), e.g. --label A-3b");
         }
-        return new Options(label, out, devRepeats, multiRepeats, dev, multi, LlmSettings.from(environment, llmFlags));
+        return new Options(label, out, devRepeats, multiRepeats, dev, multi, LlmSettings.from(environment, llmFlags), rescore);
     }
 
     /** Runs every set and repeat, writes the results, and returns the label folder. */
@@ -105,8 +109,13 @@ public final class ReplyQualityBenchmark {
             throw new IllegalArgumentException(folder + " exists; choose a new --label so runs are never mixed");
         }
         Files.createDirectories(folder);
-        Path cacheBase = options.llm().cache().orElse(folder.resolve("llm-cache"));
         List<Result> results = new ArrayList<>();
+        if (options.rescore().isPresent()) {
+            results.addAll(rescore(options));
+            write(options, folder, results);
+            return folder;
+        }
+        Path cacheBase = options.llm().cache().orElse(folder.resolve("llm-cache"));
         System.out.println("Model: " + options.llm().describe());
         for (String set : List.of("dev", "multi")) {
             List<Item> items = load(set, set.equals("dev") ? options.dev() : options.multi());
@@ -117,6 +126,11 @@ public final class ReplyQualityBenchmark {
                 results.addAll(runSet(items, repeat, llm, folder.resolve("work").resolve(set + "-r" + repeat)));
             }
         }
+        write(options, folder, results);
+        return folder;
+    }
+
+    private static void write(Options options, Path folder, List<Result> results) throws IOException {
         Files.writeString(folder.resolve("results.md"), render(options, results));
         Files.writeString(folder.resolve("drafts.md"), drafts(options, results));
         StringBuilder lines = new StringBuilder();
@@ -124,7 +138,30 @@ public final class ReplyQualityBenchmark {
             lines.append(JSON.writeValueAsString(json(result))).append('\n');
         }
         Files.writeString(folder.resolve("scores.jsonl"), lines);
-        return folder;
+    }
+
+    /** The saved replies of an earlier run, scored with the current expectations and checks. */
+    private static List<Result> rescore(Options options) throws IOException {
+        Map<String, Item> items = new HashMap<>();
+        for (Item item : load("dev", options.dev())) {
+            items.put("dev/" + item.name(), item);
+        }
+        for (Item item : load("multi", options.multi())) {
+            items.put("multi/" + item.name(), item);
+        }
+        List<Result> results = new ArrayList<>();
+        for (String line : Files.readAllLines(options.rescore().get().resolve("scores.jsonl"))) {
+            com.fasterxml.jackson.databind.JsonNode saved = JSON.readTree(line);
+            Item item = items.get(saved.path("set").asText() + "/" + saved.path("email").asText());
+            if (item == null) {
+                throw new IOException("No email " + saved.path("email").asText() + " in set " + saved.path("set").asText());
+            }
+            String body = saved.path("body").asText();
+            results.add(new Result(item, saved.path("repeat").asInt(), BoardStatus.valueOf(saved.path("status").asText()),
+                    saved.path("failure").asText(), body, saved.path("explanation").asText(),
+                    ReplyChecks.score(item.gold(), body), saved.path("millis").asDouble()));
+        }
+        return results;
     }
 
     static List<Item> load(String set, Path folder) throws IOException {
@@ -176,8 +213,9 @@ public final class ReplyQualityBenchmark {
 
     private static String render(Options options, List<Result> results) {
         StringBuilder out = new StringBuilder("# Reply Quality: ").append(options.label()).append("\n\n");
-        out.append("Run ").append(LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES)).append(". Model: ")
-                .append(options.llm().describe()).append(". Prompt versions seen: ").append(promptVersions(results))
+        out.append(options.rescore().map(from -> "Saved replies of `" + from + "` scored again on "
+                        + LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES) + " with the current checks (no model call). Model: as in that run")
+                .orElse("Run " + LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES) + ". Model: " + options.llm().describe())).append(". Prompt versions seen: ").append(promptVersions(results))
                 .append(". Blackboard architecture, rules-only metadata, threshold ")
                 .append(org.supermas.control.AgendaStrategy.Settings.defaults().minContribution())
                 .append(". Checks: frozen `reply-gold/v1` files, keyword-based (an approximation of a human rubric; ")

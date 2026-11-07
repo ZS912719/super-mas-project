@@ -3,7 +3,8 @@
   "language": "en",
   "replyExpected": true,
   "greet": [
-    "Sarah"
+    "Sarah",
+    "Klein"
   ],
   "notGreet": [
     "Martin"
@@ -54,5 +55,6 @@
     }
   ],
   "allowInternal": false,
-  "note": "Ill student asks for an extension; the policy: course leader decides, at most seven days, medical certificate required"
+  "note": "Ill student asks for an extension; the policy: course leader decides, at most seven days, medical certificate required",
+  "revision": 2
 }
