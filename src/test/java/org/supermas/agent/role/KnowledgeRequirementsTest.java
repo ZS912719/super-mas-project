@@ -31,7 +31,7 @@ class KnowledgeRequirementsTest {
     @Test
     void theStudentNumberIsMissingOnlyWithoutAnId() throws Exception {
         Evidence certificates = knowledge("admin-procedures", "admin-procedures/certificates.md");
-        assertEquals(List.of("student number (required by admin-procedures)"), KnowledgeRequirements.unmet(List.of(certificates),
+        assertEquals(List.of("ID"), KnowledgeRequirements.unmet(List.of(certificates),
                 "Could the office send me an attestation of enrolment for my visa?", Set.of()));
         assertEquals(List.of(), KnowledgeRequirements.unmet(List.of(certificates), "My number is 20231187.", Set.of("ID")));
     }
@@ -46,5 +46,12 @@ class KnowledgeRequirementsTest {
         // "must be reported" is an obligation of staff, not something the sender has to provide.
         assertEquals(List.of(), KnowledgeRequirements.unmet(List.of(knowledge("teaching-guide", "teaching-guide/marking.md")),
                 "Hello", Set.of()));
+    }
+
+    @Test
+    void aMissingCourseIsTheCourseFieldSoThePlanListsItOnce() throws Exception {
+        assertEquals(List.of("COURSE", "medical certificate (required by student-faq)"), KnowledgeRequirements.unmet(
+                List.of(knowledge("student-faq", "student-faq/extensions.md")), "Could I have an extension for the assignment due Monday?",
+                Set.of()));
     }
 }

@@ -238,6 +238,17 @@ class OpenAiCompatibleLlmTest {
     }
 
     @Test
+    void aReplyWithOnlyAGreetingAndAClosingIsRefused() {
+        assertEquals(FailureKind.INVALID_OUTPUT, generated("Best regards,\nOmar Haddad").failure().orElseThrow().kind(),
+                "run D, en-10: only a closing and a name");
+        assertEquals(FailureKind.INVALID_OUTPUT, generated("Dear Omar,\n\nBest regards,").failure().orElseThrow().kind());
+        assertEquals(FailureKind.INVALID_OUTPUT, generated("Bonjour Yanis,\n\nCordialement,").failure().orElseThrow().kind());
+        assertEquals("Dear Omar,\n\nNoted.\n\nBest regards,", generated("Dear Omar,\n\nNoted.\n\nBest regards,").draft().orElseThrow().body());
+        assertEquals("Dear Sarah, both points are noted.", generated("Dear Sarah, both points are noted.").draft().orElseThrow().body(),
+                "a sentence on the greeting line is content");
+    }
+
+    @Test
     void frenchQuotationMarksAreNotAnEchoButPromptLabelsAre() {
         String french = "Bonjour Lucas,\n\nLe cours <<Bases de données>> est géré par le responsable du cours.";
         assertEquals(french, generated(french).draft().orElseThrow().body());

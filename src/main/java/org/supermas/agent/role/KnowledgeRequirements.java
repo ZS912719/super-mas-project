@@ -34,7 +34,8 @@ final class KnowledgeRequirements {
 
     /**
      * @param presentEntities entity types the analysis found in the email (COURSE, ID, ...)
-     * @return unmet items, each with the source that requires it, in the order found
+     * @return unmet items in the order found: a field name (COURSE, ID) for the course and the student number,
+     *         otherwise the item with the source that requires it
      */
     static List<String> unmet(List<Evidence> context, String emailText, Set<String> presentEntities) {
         String email = emailText == null ? "" : emailText.toLowerCase(Locale.ROOT);
@@ -49,12 +50,28 @@ final class KnowledgeRequirements {
                 for (String part : SPLIT.split(sentence.group(1))) {
                     String requirement = ARTICLE.matcher(part.strip()).replaceFirst("").strip();
                     if (!requirement.isEmpty() && !met(requirement, email, presentEntities)) {
-                        unmet.add(requirement + " (required by " + item.provenance().sourceId() + ")");
+                        // A field is named as the field, so it merges with the role's own required fields.
+                        unmet.add(field(requirement).orElse(requirement + " (required by " + item.provenance().sourceId() + ")"));
                     }
                 }
             }
         }
         return new ArrayList<>(unmet);
+    }
+
+    /**
+     * The analysis field a requirement names, if any: "course" is COURSE and "student number" is ID, so a plan
+     * that already misses the field does not list it again in other words (step 13, run D).
+     */
+    static java.util.Optional<String> field(String requirement) {
+        String lower = requirement.toLowerCase(Locale.ROOT);
+        if (lower.contains("student number") || lower.contains("numero") || lower.contains("numéro")) {
+            return java.util.Optional.of("ID");
+        }
+        if (lower.contains("course") || lower.contains("cours")) {
+            return java.util.Optional.of("COURSE");
+        }
+        return java.util.Optional.empty();
     }
 
     private static boolean met(String requirement, String email, Set<String> presentEntities) {

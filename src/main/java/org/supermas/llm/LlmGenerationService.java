@@ -90,7 +90,22 @@ public final class LlmGenerationService implements GenerationService {
             rationale += "; removed the signature " + signature.group(2).strip();
             body = body.substring(0, signature.end(1)).strip();
         }
+        if (!hasContent(body)) {
+            // Only a greeting and a closing are left (step 13, run D: "Best regards," and a name): not a reply.
+            return failed(new Failure(FailureKind.INVALID_OUTPUT, "The model returned no reply text, only a greeting or "
+                    + "a closing", true));
+        }
         return new GenerationResult(Optional.of(new DraftProposal("", body, request.agentId(), rationale)), Optional.empty());
+    }
+
+    private static final Pattern GREETING_OR_CLOSING = Pattern.compile("(?i)^(?:(?:dear|hello|hi|bonjour|madame|monsieur|cher|"
+            + "chère)\\b[^.!?]{0,40},|(?:best|kind|warm|warmest)?\\s*(?:regards|wishes)[,.!]?|best[,.!]?|sincerely[,.!]?|"
+            + "thanks,?|thank you,?|cordialement[,.!]?|bien (?:a|à) vous[,.!]?|salutations[,.!]?|merci,?)$");
+
+    /** True if some line is neither a greeting nor a closing. */
+    static boolean hasContent(String body) {
+        return body.lines().map(String::strip).filter(line -> !line.isEmpty())
+                .anyMatch(line -> !GREETING_OR_CLOSING.matcher(line).matches());
     }
 
     private static GenerationResult failed(Failure failure) {
