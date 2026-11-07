@@ -11,6 +11,7 @@ A blackboard-based multi-agent email reply assistant project with a local Java b
 | Java framework | SQLite blackboard storage, fenced task leases/recovery and Markdown observations are implemented. The real coordinator, routing and scheduling remain deferred. |
 | Java agents | Metadata analysis, conversation memory, knowledge loading, discovered topics, context agents, a missing-information check and five configurable specialized agents (student, teacher, research, administration, generic) are implemented. |
 | Prototype | `PrototypeApp` takes `.eml` files through all agents to drafts awaiting review on the SQLite blackboard. Several specialists contribute to one email and a composer writes one reply; a BB1-style controller chooses each step and records why (`docs/plans/blackboard-control.md`). Drafts come from a fixed template by default, from a local model (OpenAI-compatible API), or during development from an online model (OpenRouter), all by configuration ([model setup](docs/plans/llm-setup.md)). The step 11 router stays as a baseline (`--architecture router`). |
+| Generation workspace | Independent JavaFX demonstration, native Ollama transport and structured composition validation; not wired into `PrototypeApp` or the Electron mailbox. |
 | UML | Documents the current Java packages, interfaces and selected records. |
 | Desktop mailbox | Electron opens an independent window and owns its local server; the UI provides demo mail, Gmail/Outlook adapters, history, labels and reviewed drafts. |
 | Local generation | The mailbox calls local Ollama directly; it does not implement the Java generation or agent interfaces. |
@@ -30,6 +31,8 @@ A blackboard-based multi-agent email reply assistant project with a local Java b
 | Live mail accounts | User-provided Gmail or Outlook OAuth credentials and an Internet connection | [Mailbox setup](mailbox/README.md#connect-a-real-mailbox) |
 | UML rendering | A JDK and a locally supplied PlantUML JAR | [Rendering instructions](docs/uml/README.md#render-locally) |
 
+The independent JavaFX demonstration also uses Gson 2.13.2 and JavaFX Controls 17.0.18. Its UI tests require a graphical desktop, or Xvfb on Linux. See [generation workspace integration](docs/person3.md).
+
 ## Code structure
 
 ```text
@@ -48,6 +51,8 @@ A blackboard-based multi-agent email reply assistant project with a local Java b
 |   |   `-- app/
 |   |-- agent/
 |   |   `-- role/
+|   |-- composition/
+|   |-- ui/
 |   |-- coordinator/
 |   |-- context/
 |   |-- llm/
@@ -148,6 +153,14 @@ mvn -q compile exec:java -Dexec.mainClass=org.supermas.prototype.PrototypeApp \
 
 The argument is one `.eml` file or a folder. Options: `--knowledge <dir>` (default: the sample university knowledge in `src/test/resources/university/knowledge`), `--data <dir>` (default `runtime`), `--project <id>` (default `uni`), `--architecture blackboard|router` (default `blackboard`), `--min-contribution <0..1>` (default 0.4), `--llm-provider template|local|online|replay`, `--llm-model <name>`, `--llm-endpoint <url>`, `--llm-cache <dir>` (default: template; the same settings as `SUPERMAS_LLM_*` environment variables; `online` is a development stand-in, see [model setup](docs/plans/llm-setup.md)). State persists in the data folder: `blackboard.db`, the Obsidian vault `super-mas-vault`, the search index `index` and discovered topics `topics`. Nothing is approved or sent. See [the prototype report](docs/reports/step-11.4.md).
 
+### Independent JavaFX generation workspace
+
+```powershell
+mvn javafx:run
+```
+
+This workspace uses labeled sample data and simulated replies by default. Select the local Ollama option to use an already installed model through the native `/api/chat` endpoint. It does not run the prototype agents, approve drafts or send mail. The prototype retains its existing generation path. See [usage and integration boundaries](docs/person3.md).
+
 ### Java package
 
 Run from the repository root with JDK 17 selected in the environment:
@@ -164,6 +177,12 @@ Build and package the Java API from the repository root:
 
 ```powershell
 mvn package
+```
+
+On headless Linux, run Java tests with a virtual display:
+
+```bash
+xvfb-run -a mvn -B -ntp clean verify
 ```
 
 Run mailbox tests and rebuild browser assets:

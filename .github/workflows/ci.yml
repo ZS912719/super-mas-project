@@ -59,7 +59,11 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
-      - name: Verify Java implementation
+      - name: Verify Java implementation (Linux virtual display)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a mvn -B -ntp clean verify
+      - name: Verify Java implementation (Windows)
+        if: runner.os == 'Windows'
         run: mvn -B -ntp clean verify
       - name: Upload test reports
         if: always() && hashFiles('target/surefire-reports/*') != ''

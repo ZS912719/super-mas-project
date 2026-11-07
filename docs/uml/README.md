@@ -1,6 +1,6 @@
 # Current Java API UML
 
-These diagrams describe the Java interfaces, selected data contracts and the first local SQLite blackboard runtime. A complete email-processing assistant is not implemented.
+These diagrams describe the Java interfaces, selected data contracts and the first local SQLite blackboard runtime. The prototype runs agents to reviewable drafts, but the diagrams do not cover every prototype class. The independent composition, native Ollama and JavaFX implementation classes are not yet represented; see [their integration boundaries](../person3.md).
 
 ## Diagrams
 
@@ -12,7 +12,7 @@ These diagrams describe the Java interfaces, selected data contracts and the fir
 | Core task, evidence and draft data contracts | [PlantUML](data-contracts.puml) | [SVG](data-contracts.svg) | [PNG](data-contracts.png) |
 | SQLite blackboard runtime and Markdown observations | [PlantUML](runtime.puml) | [SVG](runtime.svg) | [PNG](runtime.png) |
 
-All 24 current interfaces are covered across the blackboard/specialist and service views, including the new `blackboard.persistence.BlackboardStore`. Blackboard service contracts live in `blackboard.api`; snapshot and transactional storage contracts live in `blackboard.persistence`, separate from their implementations. Method names, parameter types, return types and interface inheritance match `src/main/java/org/supermas`. Long parameter lists use display-only line breaks. The five specialist role interfaces currently declare no additional methods.
+The 24 interfaces from the documented blackboard baseline are covered across the blackboard/specialist and service views, including the new `blackboard.persistence.BlackboardStore`. Blackboard service contracts live in `blackboard.api`; snapshot and transactional storage contracts live in `blackboard.persistence`, separate from their implementations. This is a baseline view; later prototype contract additions and the UI-local WorkspaceProvider require a future diagram refresh. Long parameter lists use display-only line breaks. The five specialist role interfaces currently declare no additional methods.
 
 The data view shows 15 selected records nested in `org.supermas.model.Domain`, including all components of each displayed record. Supporting routing, context and model records/enums remain defined in `Domain.java` and appear by type name in signatures and fields. Field-reference multiplicities express intended API semantics, not runtime validation.
 
