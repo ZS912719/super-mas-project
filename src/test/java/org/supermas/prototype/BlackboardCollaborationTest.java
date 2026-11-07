@@ -69,6 +69,32 @@ class BlackboardCollaborationTest {
     }
 
     @Test
+    void anotherThreadsMailNeverReachesTheContributionsOfAReply() {
+        // Step 13, runs A and B: a vague email got five other people's emails as excerpts, and the model wrote
+        // them into the reply. Several earlier emails in other threads, then a vague one that matches them.
+        handle("Paul Leroy <p.leroy@example.edu>", "Room swap and grant proposal", "Hi Emma, could we swap lecture rooms "
+                + "next Tuesday, since my class grew to 80 students? And would you co-author the grant proposal?");
+        handle("Sarah Klein <sarah.klein@students.example.edu>", "Extension", "I was ill this week. Could I have an "
+                + "extension for the CS204 assignment?");
+        BlackboardSnapshot vague = handle("Chris <chris@example.net>", "Quick question",
+                "Hi, could we talk about the rooms, the grant proposal and the extension sometime? Chris");
+
+        assertEquals(BoardStatus.AWAITING_REVIEW, vague.status(), vague.failure().toString());
+        List<Contribution> contributions = Contribution.latest(vague.evidence());
+        assertFalse(contributions.isEmpty());
+        for (Contribution contribution : contributions) {
+            for (Contribution.Excerpt excerpt : contribution.excerpts()) {
+                assertFalse(excerpt.text().contains("swap lecture rooms") || excerpt.text().contains("I was ill"),
+                        contribution.agentId() + " passed another thread's mail on: " + excerpt.text());
+            }
+        }
+        // The specialist's own search did not even put them on the board for itself.
+        assertTrue(vague.evidence().stream().filter(item -> item.id().contains(".search"))
+                .noneMatch(item -> item.text().contains("swap lecture rooms") || item.text().contains("I was ill")),
+                vague.evidence().stream().map(org.supermas.model.Domain.Evidence::id).toList().toString());
+    }
+
+    @Test
     void anEmailWithTwoRequestsGetsTwoSpecialistsAndOneComposedReply() {
         BlackboardSnapshot state = handle("Sarah Klein <sarah.klein@students.example.edu>", "Extension and registration form",
                 "Dear Prof. Martin,\n\nCould I have an extension for the CS204 assignment? Also, could you sign the "
@@ -221,6 +247,30 @@ class BlackboardCollaborationTest {
                     List.of("prof@example.edu"), "Extension and registration form", "Could I have an extension for the "
                     + "CS204 assignment? Also, could you sign the registration form for the certificate office?", AT, Map.of());
             return withModel.coordinator.run(withModel.coordinator.receive(email), PrototypeApp.BLACKBOARD_LIMITS);
+        }
+    }
+
+    @Test
+    void aFailedCompositionEndsWithItsReasonNotABareStop() throws Exception {
+        com.sun.net.httpserver.HttpServer engine = com.sun.net.httpserver.HttpServer.create(
+                new java.net.InetSocketAddress(java.net.InetAddress.getLoopbackAddress(), 0), 0);
+        engine.createContext("/v1/chat/completions", exchange -> {
+            exchange.getRequestBody().readAllBytes();
+            byte[] bytes = "{\"choices\":[{\"message\":{\"content\":\"<<EMAIL TEXT>> Could I have an extension?\"}}]}"
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, bytes.length);
+            exchange.getResponseBody().write(bytes);
+            exchange.close();
+        });
+        engine.start();
+        try {
+            BlackboardSnapshot state = composeWith(org.supermas.llm.LlmSettings.from(Map.of(), Map.of(
+                    "--llm-endpoint", "http://127.0.0.1:" + engine.getAddress().getPort(), "--llm-model", "echo-model")), "echo");
+            assertEquals(BoardStatus.FAILED, state.status());
+            assertTrue(state.failure().orElseThrow().message().contains("echoed"), state.failure().toString());
+            assertTrue(state.drafts().isEmpty());
+        } finally {
+            engine.stop(0);
         }
     }
 

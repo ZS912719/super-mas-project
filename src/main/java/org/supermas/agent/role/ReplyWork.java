@@ -13,6 +13,7 @@ import java.util.TreeSet;
 import org.supermas.agent.collaboration.RequestEntry;
 import org.supermas.blackboard.api.AgentBlackboard;
 import org.supermas.context.AgentContextAccess;
+import org.supermas.context.LuceneContextRetriever;
 import org.supermas.context.InformationField;
 import org.supermas.context.TopicEvidence;
 import org.supermas.metadata.MetadataAgent;
@@ -51,7 +52,8 @@ final class ReplyWork {
         List<String> notes = new ArrayList<>();
         searchOwnSources(agent, board, notes);
         BlackboardSnapshot state = board.snapshot();
-        ContextSelection selection = agent.services.selector().select(board, agent.config, agent.role.maxContextCharacters());
+        ContextSelection selection = ownThreadOnly(agent.services.selector().select(board, agent.config,
+                agent.role.maxContextCharacters()), state, notes);
         if (!selection.omittedSourceIds().isEmpty()) {
             notes.add("Context over budget was left out from sources " + selection.omittedSourceIds());
         }
@@ -116,7 +118,8 @@ final class ReplyWork {
             }
             covers = requests.stream().map(RequestEntry::index).toList();
         }
-        ContextSelection selection = agent.services.selector().select(board, agent.config, agent.role.maxContextCharacters());
+        ContextSelection selection = ownThreadOnly(agent.services.selector().select(board, agent.config,
+                agent.role.maxContextCharacters()), state, notes);
         if (!selection.omittedSourceIds().isEmpty()) {
             notes.add("Context over budget was left out from sources " + selection.omittedSourceIds());
         }
@@ -126,11 +129,20 @@ final class ReplyWork {
                 quotes.add(entry.quote());
             }
         }
+        // Only excerpts that share a stem with a request this agent answers (or the subject) are passed on.
+        List<String> about = new ArrayList<>();
+        for (RequestEntry entry : requests) {
+            if (covers.contains(entry.index())) {
+                about.add(entry.quote());
+            }
+        }
+        about.add(state.email().subject() == null ? "" : state.email().subject());
+        ContextSelection relevant = ExcerptRelevance.related(selection, about, notes);
         long earlier = state.evidence().stream().map(Contribution::from).flatMap(Optional::stream)
                 .filter(found -> found.agentId().equals(agent.config.id())).map(Contribution::id).distinct().count();
         String id = Contribution.ID_PREFIX + agent.config.id() + ":" + (earlier + 1);
-        ReplyPlan plan = plan(agent, state, selection, notes, Optional.of(new RequestExtractor.Requests(quotes, "board")), id);
-        List<Contribution.Excerpt> excerpts = selection.evidence().stream()
+        ReplyPlan plan = plan(agent, state, relevant, notes, Optional.of(new RequestExtractor.Requests(quotes, "board")), id);
+        List<Contribution.Excerpt> excerpts = relevant.evidence().stream()
                 .map(item -> new Contribution.Excerpt(item.id(), item.provenance().sourceId(),
                         item.text().length() > MAX_EXCERPT ? item.text().substring(0, MAX_EXCERPT) : item.text()))
                 .toList();
@@ -139,6 +151,22 @@ final class ReplyWork {
         board.submitEvidence(List.of(contribution.toEvidence(state.id().scope(), state.email().receivedAt())));
         return new AgentOutcome(TaskStatus.SUCCEEDED, "Contribution " + id + " to requests " + covers + ", "
                 + excerpts.size() + " excerpts", List.of(), Optional.empty());
+    }
+
+    /**
+     * Leaves out messages from other threads, however they reached the board (the agent's own search, or a
+     * context agent's topic evidence promoted to it): they are other correspondents' mail and must not reach a
+     * reply to this sender. Knowledge documents and this thread's messages stay.
+     */
+    static ContextSelection ownThreadOnly(ContextSelection selection, BlackboardSnapshot state, List<String> notes) {
+        List<Evidence> kept = selection.evidence().stream()
+                .filter(item -> !LuceneContextRetriever.fromAnotherThread(item, state.id().scope())).toList();
+        if (kept.size() == selection.evidence().size()) {
+            return selection;
+        }
+        notes.add((selection.evidence().size() - kept.size()) + " messages from other threads were left out");
+        int used = kept.stream().mapToInt(item -> item.text().length()).sum();
+        return new ContextSelection(kept, used, selection.omittedSourceIds());
     }
 
     /** The agent's own search: the thread's history, then a search of its sources, as C1 plus thread history. */
@@ -167,7 +195,8 @@ final class ReplyWork {
         String list = author + suffix;
         for (Evidence item : result.evidence()) {
             String id = TopicEvidence.id(item.id(), list);
-            if (!item.id().equals(state.email().id()) && existing.add(id)) {
+            if (!item.id().equals(state.email().id()) && !LuceneContextRetriever.fromAnotherThread(item, state.id().scope())
+                    && existing.add(id)) {
                 // A reply agent's own search stays private to it; only context agents' findings are promoted.
                 added.add(new Evidence(id, item.scope(), item.kind(), item.provenance(), item.text(),
                         Set.of(author)));
@@ -193,7 +222,8 @@ final class ReplyWork {
         Set<String> present = new TreeSet<>();
         for (Map<String, Object> entity : entities(state)) {
             String type = String.valueOf(entity.get("type"));
-            facts.add(new ReplyPlan.Fact(type, String.valueOf(entity.get("text")), "email"));
+            // The sender wrote these themselves: labelled so the reply uses them to understand, not to repeat them.
+            facts.add(new ReplyPlan.Fact(type, String.valueOf(entity.get("text")), ReplyPlan.Fact.FROM_SENDER));
             present.add(type);
         }
         Set<String> missing = new TreeSet<>();
@@ -203,6 +233,8 @@ final class ReplyWork {
             }
         }
         agent.missingRequired(state).forEach(field -> missing.add(field.name()));
+        // What the agent's own knowledge says the request needs, and the email lacks (to-do 3.9).
+        missing.addAll(KnowledgeRequirements.unmet(selection.evidence(), RoleText.currentText(state), present));
         List<ReplyPlan.Reference> context = selection.evidence().stream()
                 .map(item -> new ReplyPlan.Reference(item.id(), item.provenance().sourceId(), item.kind().name()))
                 .toList();

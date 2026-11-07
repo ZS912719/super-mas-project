@@ -102,6 +102,8 @@ public final class PrototypeApp {
     }
     /** A local model on modest hardware can be slow; the composer makes one call per draft version. */
     static final Duration LLM_TIMEOUT = Duration.ofMinutes(3);
+    /** An online service answers in seconds; with one retry, two attempts stay well inside the 5-minute lease. */
+    static final Duration ONLINE_TIMEOUT = Duration.ofSeconds(60);
     static final int LLM_MAX_OUTPUT = 8_000;
     /** Discovered topics are rebuilt after this many new received or sent messages. */
     static final int REGROUP_EVERY = 25;
@@ -296,7 +298,8 @@ public final class PrototypeApp {
                 default -> "Local model";
             };
             return services.withGeneration(new LlmGenerationService(engine, label),
-                    new ModelConfig(llm.model(), llm.endpoint(), LLM_TIMEOUT, LLM_MAX_OUTPUT));
+                    new ModelConfig(llm.model(), llm.endpoint(),
+                            llm.provider() == LlmSettings.Provider.ONLINE ? ONLINE_TIMEOUT : LLM_TIMEOUT, LLM_MAX_OUTPUT));
         }
 
         static Wiring create(ProjectIndexes indexes, Options options) {

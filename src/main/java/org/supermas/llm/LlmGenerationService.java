@@ -18,7 +18,7 @@ import org.supermas.model.Domain.ModelResponse;
 /**
  * Turns a local model's answer into a draft proposal. The model output is the reply body only; the subject is left
  * empty so the agent derives it from the email, and nothing internal (plans, evidence) is concatenated into the
- * reply. Output that still carries the prompt's block markers is refused, because it means the model echoed its
+ * reply. Output that still carries one of the prompt's block labels is refused, because it means the model echoed its
  * input instead of writing a reply. A bracketed placeholder at the very end ("[Your Name]") is removed and noted in
  * the rationale, because the person who sends the reply signs it.
  *
@@ -26,6 +26,21 @@ import org.supermas.model.Domain.ModelResponse;
  * so {@link #prepare} is not supported, as in the template stand-in.
  */
 public final class LlmGenerationService implements GenerationService {
+    /**
+     * A block label of the prompt ({@code RolePromptBuilder}). Only these mean the model echoed its input: any
+     * "<<" and ">>" also appear in French replies typed with ASCII quotation marks (step 13, run B).
+     */
+    static final Pattern PROMPT_BLOCK = Pattern.compile("<<\\s*(EMAIL (ADDRESSES|SUBJECT|TEXT)|REPLY PLAN|CONTEXT id=|FEEDBACK ON THE PREVIOUS DRAFT)");
+
+    /**
+     * A closing line followed by a short last line of at most four words with no sentence in it: a signature,
+     * such as "Prof. Martin", "Sarah" or "e.martin@example.edu" (step 13, runs A and B).
+     */
+    static final Pattern TRAILING_SIGNATURE = Pattern.compile("(?im)(^[ \\t]*(?:best|kind|warm|warmest)?[ \\t]*(?:regards|wishes)"
+            + "[ \\t]*[,.!]?[ \\t]*$|^[ \\t]*(?:best|sincerely|thanks|thank you|cordialement|bien (?:a|à) vous|salutations"
+            + "|merci|respectueusement)[ \\t]*[,.!]?[ \\t]*$)\\s*\\n[ \\t]*([\\p{L}][\\p{L}.@'\\-]*(?:[ \\t]+[\\p{L}.@'\\-]+){0,3})"
+            + "[ \\t]*\\z");
+
     /** A bracketed placeholder ending the reply, on its own line or after the closing: "[Your Name]", "[Signature]". */
     static final Pattern TRAILING_PLACEHOLDER = Pattern.compile("(?m)(?:^|(?<=,))[ \\t]*(\\[[^\\[\\]\\n]{1,40}\\])\\s*\\z");
     private final LocalLlm llm;
@@ -56,7 +71,7 @@ public final class LlmGenerationService implements GenerationService {
             return failed(response.failure().get());
         }
         String body = response.output().get().strip();
-        if (body.contains("<<") && body.contains(">>")) {
+        if (PROMPT_BLOCK.matcher(body).find()) {
             return failed(new Failure(FailureKind.INVALID_OUTPUT, "The model echoed prompt blocks instead of a reply", true));
         }
         String rationale = label + " " + config.model();
@@ -68,6 +83,12 @@ public final class LlmGenerationService implements GenerationService {
             if (body.isEmpty()) {
                 return failed(new Failure(FailureKind.INVALID_OUTPUT, "The model returned only a placeholder", true));
             }
+        }
+        Matcher signature = TRAILING_SIGNATURE.matcher(body);
+        if (signature.find()) {
+            // Signed despite the rule ("Prof. Martin", the sender's own name, an address): whoever sends it signs.
+            rationale += "; removed the signature " + signature.group(2).strip();
+            body = body.substring(0, signature.end(1)).strip();
         }
         return new GenerationResult(Optional.of(new DraftProposal("", body, request.agentId(), rationale)), Optional.empty());
     }

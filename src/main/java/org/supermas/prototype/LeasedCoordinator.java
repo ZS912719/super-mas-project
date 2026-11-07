@@ -33,6 +33,7 @@ import org.supermas.model.Domain.Draft;
 import org.supermas.model.Domain.Email;
 import org.supermas.model.Domain.Evidence;
 import org.supermas.model.Domain.ExecutionLimits;
+import org.supermas.model.Domain.ExecutionRecord;
 import org.supermas.model.Domain.Failure;
 import org.supermas.model.Domain.FailureKind;
 import org.supermas.model.Domain.NextAction;
@@ -112,7 +113,16 @@ public final class LeasedCoordinator implements Coordinator {
         Optional<org.supermas.control.ControlEntry> decision = strategy instanceof ControlRecording recording
                 ? recording.decision(board.snapshot().id()) : Optional.empty();
         if (next.action() == Action.STOP) {
-            board.setStatus(BoardStatus.STOPPED);
+            BlackboardSnapshot state = board.snapshot();
+            List<ExecutionRecord> executions = state.executions();
+            ExecutionRecord last = executions.isEmpty() ? null : executions.get(executions.size() - 1);
+            if (state.drafts().isEmpty() && last != null && last.failure().isPresent()) {
+                // Nothing more will run and no draft exists because the last step failed: say so, instead of
+                // a bare STOPPED that hides the reason (step 13, run B).
+                fail(board, last.failure().get());
+            } else {
+                board.setStatus(BoardStatus.STOPPED);
+            }
             return;
         }
         if (next.action() == Action.PRESENT_DRAFT) {

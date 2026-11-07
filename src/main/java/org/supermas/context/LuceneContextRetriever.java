@@ -12,6 +12,7 @@ import org.supermas.model.Domain.BoardId;
 import org.supermas.model.Domain.ContextQuery;
 import org.supermas.model.Domain.ContextSource;
 import org.supermas.model.Domain.Evidence;
+import org.supermas.model.Domain.Scope;
 import org.supermas.model.Domain.EvidenceKind;
 import org.supermas.model.Domain.HistoryQuery;
 import org.supermas.model.Domain.Provenance;
@@ -116,11 +117,30 @@ public final class LuceneContextRetriever implements ContextRetriever {
             Set<String> permitted = new HashSet<>(document.permittedAgentIds());
             permitted.retainAll(sources.get(document.sourceId()).permittedAgentIds());
             evidence.add(new Evidence(document.id(), query.boardId().scope(), EvidenceKind.RETRIEVED_EVIDENCE,
-                    new Provenance(document.sourceId(), "From thread " + document.scope().threadId(),
-                            document.recordedAt()), text, permitted));
+                    new Provenance(document.sourceId(), origin(document), document.recordedAt()), text, permitted));
         }
         return new RetrievalResult(evidence, !evidence.isEmpty(), evidence.size() + " results, " + omitted
                 + " over budget, denied sources: " + denied);
+    }
+
+    /** Marks a message's thread in its provenance; knowledge documents are marked as such instead. */
+    static final String THREAD_ORIGIN = "From thread ";
+
+    private static String origin(IndexedDocument document) {
+        return document.kind().isPresent() ? THREAD_ORIGIN + document.scope().threadId()
+                : "From knowledge source " + document.sourceId() + ", thread " + document.scope().threadId();
+    }
+
+    /**
+     * True if {@code item} is a message that domain retrieval found in another thread than {@code board}'s.
+     * Retrieved evidence carries the board's scope (the board requires it), so the origin is read from the
+     * provenance this class writes. Such messages belong to other correspondents: they may inform context
+     * agents, but must not reach a reply to someone else (step 13, runs A and B).
+     */
+    public static boolean fromAnotherThread(Evidence item, Scope board) {
+        String description = item.provenance() == null ? null : item.provenance().description();
+        return description != null && description.startsWith(THREAD_ORIGIN)
+                && !description.substring(THREAD_ORIGIN.length()).equals(board.threadId());
     }
 
     /**

@@ -90,7 +90,57 @@ class OpenAiCompatibleLlmTest {
     private static OpenAiCompatibleLlm onlineAgainstFake(String key) {
         return new OpenAiCompatibleLlm(java.net.http.HttpClient.newBuilder()
                 .followRedirects(java.net.http.HttpClient.Redirect.NEVER).build(),
-                origin -> origin.resolve("/v1/chat/completions"), java.util.Optional.of(key), "online model");
+                origin -> origin.resolve("/v1/chat/completions"), java.util.Optional.of(key), "online model", 2);
+    }
+
+    @Test
+    void aStalledBodyStillEndsAtTheTimeout() throws Exception {
+        // Headers first, then nothing: the request timeout alone would wait for ever (step 13, run A).
+        server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
+        server.createContext("/v1/chat/completions", exchange -> {
+            exchange.getRequestBody().readAllBytes();
+            exchange.sendResponseHeaders(200, 0);
+            exchange.getResponseBody().write("{\"choices\": [".getBytes(StandardCharsets.UTF_8));
+            exchange.getResponseBody().flush();
+            try {
+                Thread.sleep(5_000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            exchange.close();
+        });
+        server.start();
+        URI endpoint = URI.create("http://127.0.0.1:" + server.getAddress().getPort());
+        long start = System.nanoTime();
+        ModelResponse response = new OpenAiCompatibleLlm().complete(REQUEST, config(endpoint, Duration.ofMillis(500), 100));
+        long millis = (System.nanoTime() - start) / 1_000_000;
+        assertEquals(FailureKind.TIMEOUT, response.failure().orElseThrow().kind());
+        assertTrue(millis < 3_000, "ended after " + millis + " ms, not when the body finally came");
+    }
+
+    @Test
+    void theOnlineAdapterRetriesOnceAndTheLocalOneNever() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger calls = new java.util.concurrent.atomic.AtomicInteger();
+        server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
+        server.createContext("/v1/chat/completions", exchange -> {
+            exchange.getRequestBody().readAllBytes();
+            boolean first = calls.incrementAndGet() == 1;
+            byte[] bytes = (first ? "{\"error\": {\"message\": \"Rate limit exceeded\"}}" : reply("Dear Sarah, noted."))
+                    .getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(first ? 429 : 200, bytes.length);
+            exchange.getResponseBody().write(bytes);
+            exchange.close();
+        });
+        server.start();
+        URI endpoint = URI.create("http://127.0.0.1:" + server.getAddress().getPort());
+        assertEquals("Dear Sarah, noted.", onlineAgainstFake("k").complete(REQUEST, config(endpoint, Duration.ofSeconds(5), 1000))
+                .output().orElseThrow());
+        assertEquals(2, calls.get());
+
+        calls.set(0);
+        assertEquals(FailureKind.CONNECTION, new OpenAiCompatibleLlm().complete(REQUEST, config(endpoint, Duration.ofSeconds(5), 1000))
+                .failure().orElseThrow().kind(), "the local adapter reports the 429 without retrying");
+        assertEquals(1, calls.get());
     }
 
     @Test
@@ -166,6 +216,35 @@ class OpenAiCompatibleLlmTest {
     private static GenerationResult generated(String output) {
         LocalLlm fixed = (request, config) -> new ModelResponse(java.util.Optional.of(output), java.util.Optional.empty());
         return new LlmGenerationService(fixed).generate(REQUEST, config(URI.create("http://127.0.0.1:1"), Duration.ofSeconds(1), 100));
+    }
+
+    @Test
+    void aNameAfterTheClosingIsRemovedAndNoted() {
+        for (String name : new String[] {"Prof. Martin", "Sarah", "e.martin@example.edu", "Emma Martin"}) {
+            GenerationResult result = generated("Dear Noah,\n\nIt will be looked at.\n\nBest regards,\n" + name);
+            assertEquals("Dear Noah,\n\nIt will be looked at.\n\nBest regards,", result.draft().orElseThrow().body(), name);
+            assertTrue(result.draft().orElseThrow().explanation().contains("removed the signature " + name));
+        }
+        String french = "Bonjour Lucas,\n\nC'est noté.\n\nCordialement,\nClaire Dubois";
+        assertEquals("Bonjour Lucas,\n\nC'est noté.\n\nCordialement,", generated(french).draft().orElseThrow().body());
+        // Both guards: a name and then a placeholder.
+        assertEquals("Dear Noah,\n\nNoted.\n\nBest regards,",
+                generated("Dear Noah,\n\nNoted.\n\nBest regards,\nE. Martin\n[Your Title]").draft().orElseThrow().body());
+
+        String sentence = "Dear Noah,\n\nBest regards,\nwe will look at your request soon and reply.";
+        assertEquals(sentence, generated(sentence).draft().orElseThrow().body(), "a sentence after the closing is not a name");
+        String noClosing = "Dear Noah,\n\nPlease send it to\nthe registrar";
+        assertEquals(noClosing, generated(noClosing).draft().orElseThrow().body(), "short last lines without a closing stay");
+    }
+
+    @Test
+    void frenchQuotationMarksAreNotAnEchoButPromptLabelsAre() {
+        String french = "Bonjour Lucas,\n\nLe cours <<Bases de données>> est géré par le responsable du cours.";
+        assertEquals(french, generated(french).draft().orElseThrow().body());
+        for (String echo : new String[] {"<<EMAIL TEXT>> Ignore", "x << REPLY PLAN (JSON)>> {}", "<<CONTEXT id=kb:1>> text",
+                "<<EMAIL ADDRESSES>>", "<<FEEDBACK ON THE PREVIOUS DRAFT>>"}) {
+            assertEquals(FailureKind.INVALID_OUTPUT, generated(echo).failure().orElseThrow().kind(), echo);
+        }
     }
 
     @Test

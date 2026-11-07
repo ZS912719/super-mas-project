@@ -23,7 +23,13 @@ public record ReplyPlan(String planId, String agentId, String role, String promp
     private static final ObjectMapper JSON = new ObjectMapper();
 
     /** A fact from the email's analysis, such as a course code or a date. */
-    public record Fact(String type, String text, String source) { }
+    public record Fact(String type, String text, String source) {
+        /**
+         * Source of a fact the sender wrote in the email: known to them, so the reply may use it to understand the
+         * request but does not repeat it back (step 13: deadlines and student numbers told back to the sender).
+         */
+        public static final String FROM_SENDER = "sender's own email, already known to the sender";
+    }
 
     /** Evidence the plan relies on, by identifier, so every claim can be traced on the board. */
     public record Reference(String evidenceId, String sourceId, String kind) { }

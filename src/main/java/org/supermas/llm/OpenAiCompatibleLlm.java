@@ -12,6 +12,10 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.UnaryOperator;
 import org.supermas.model.Domain.Failure;
 import org.supermas.model.Domain.FailureKind;
@@ -37,14 +41,18 @@ public final class OpenAiCompatibleLlm implements LocalLlm {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final int MAX_ERROR = 200;
 
+    /** Pause before the one retry of the online adapter. */
+    static final long RETRY_PAUSE_MILLIS = 2_000;
+
     private final HttpClient client;
     private final UnaryOperator<URI> target;
     private final Optional<String> apiKey;
     private final String label;
+    private final int attempts;
 
     /** The local adapter: loopback only, no credential. */
     public OpenAiCompatibleLlm() {
-        this(defaultClient(), OpenAiCompatibleLlm::chatEndpoint, Optional.empty(), "local model");
+        this(defaultClient(), OpenAiCompatibleLlm::chatEndpoint, Optional.empty(), "local model", 1);
     }
 
     /** The online adapter, a development stand-in: HTTPS only, {@code apiKey} sent as a bearer token. */
@@ -53,15 +61,21 @@ public final class OpenAiCompatibleLlm implements LocalLlm {
             throw new IllegalArgumentException("The online model needs an API key");
         }
         return new OpenAiCompatibleLlm(defaultClient(), OpenAiCompatibleLlm::onlineChatEndpoint, Optional.of(apiKey),
-                "online model");
+                "online model", 2);
     }
 
-    /** For tests: any endpoint rule, so a fake engine on loopback can stand in for an HTTPS service. */
-    OpenAiCompatibleLlm(HttpClient client, UnaryOperator<URI> target, Optional<String> apiKey, String label) {
+    /**
+     * For tests: any endpoint rule, so a fake engine on loopback can stand in for an HTTPS service.
+     *
+     * @param attempts 1 for no retry; the online adapter retries once a retryable failure (timeout, rate limit,
+     *                 server error, lost connection), because a shared service fails transiently
+     */
+    OpenAiCompatibleLlm(HttpClient client, UnaryOperator<URI> target, Optional<String> apiKey, String label, int attempts) {
         this.client = client;
         this.target = target;
         this.apiKey = apiKey;
         this.label = label;
+        this.attempts = attempts;
     }
 
     private static HttpClient defaultClient() {
@@ -96,6 +110,20 @@ public final class OpenAiCompatibleLlm implements LocalLlm {
 
     @Override
     public ModelResponse complete(ModelRequest request, ModelConfig config) {
+        ModelResponse response = attempt(request, config);
+        for (int retry = 1; retry < attempts && response.failure().map(Failure::retryable).orElse(false); retry++) {
+            try {
+                Thread.sleep(RETRY_PAUSE_MILLIS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return failure(FailureKind.INTERRUPTED, "Interrupted while waiting to retry the " + label, false);
+            }
+            response = attempt(request, config);
+        }
+        return response;
+    }
+
+    private ModelResponse attempt(ModelRequest request, ModelConfig config) {
         URI url;
         try {
             url = target.apply(config.endpoint());
@@ -119,14 +147,30 @@ public final class OpenAiCompatibleLlm implements LocalLlm {
             HttpRequest.Builder http = HttpRequest.newBuilder(url).timeout(config.timeout())
                     .header("Content-Type", "application/json");
             apiKey.ifPresent(key -> http.header("Authorization", "Bearer " + key));
-            response = client.send(http.POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(body))).build(),
+            // The request timeout bounds only the wait for the response headers. A service that sends the headers
+            // and then stalls the body would hold the task until its lease expires (step 13, run A), so the
+            // whole exchange gets the same deadline.
+            CompletableFuture<HttpResponse<String>> pending = client.sendAsync(
+                    http.POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(body))).build(),
                     HttpResponse.BodyHandlers.ofString());
-        } catch (HttpTimeoutException e) {
-            return failure(FailureKind.TIMEOUT, "The " + label + " did not answer within " + config.timeout(), true);
-        } catch (ConnectException e) {
-            return failure(FailureKind.CONNECTION, "Cannot reach the " + label + " at " + config.endpoint(), true);
+            try {
+                response = pending.get(config.timeout().toMillis(), TimeUnit.MILLISECONDS);
+            } catch (TimeoutException e) {
+                pending.cancel(true);
+                return failure(FailureKind.TIMEOUT, "The " + label + " did not answer within " + config.timeout(), true);
+            } catch (ExecutionException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof HttpTimeoutException) {
+                    return failure(FailureKind.TIMEOUT, "The " + label + " did not answer within " + config.timeout(), true);
+                }
+                if (cause instanceof ConnectException) {
+                    return failure(FailureKind.CONNECTION, "Cannot reach the " + label + " at " + config.endpoint(), true);
+                }
+                return failure(FailureKind.CONNECTION, "The " + label + " request failed: "
+                        + (cause == null ? e.getMessage() : cause.getMessage()), true);
+            }
         } catch (IOException e) {
-            return failure(FailureKind.CONNECTION, "The " + label + " request failed: " + e.getMessage(), true);
+            return failure(FailureKind.CONNECTION, "The " + label + " request could not be built: " + e.getMessage(), false);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return failure(FailureKind.INTERRUPTED, "Interrupted while waiting for the " + label, false);
