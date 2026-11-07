@@ -16,6 +16,7 @@ import java.util.stream.Stream;
 public record Dataset(List<Case> cases, String sha256) {
     private static final String EMAIL_SUFFIX = ".eml";
     private static final String GOLD_SUFFIX = ".gold.json";
+    private static final String REPLY_SUFFIX = ".reply.json";
 
     public record Case(String id, byte[] rawEmail, Extraction gold) { }
 
@@ -29,6 +30,15 @@ public record Dataset(List<Case> cases, String sha256) {
         List<Case> cases = new ArrayList<>();
         for (Path file : files) {
             String name = file.getFileName().toString();
+            if (name.endsWith(REPLY_SUFFIX)) {
+                // Reply checks (step 13) are a separate layer of labels: allowed beside their email, and left out of
+                // the fingerprint so the metadata results stay tied to the same dataset hash.
+                String id = name.substring(0, name.length() - REPLY_SUFFIX.length());
+                if (!Files.exists(directory.resolve(id + EMAIL_SUFFIX))) {
+                    throw new IOException("Missing email for " + name);
+                }
+                continue;
+            }
             digest.update(name.getBytes(StandardCharsets.UTF_8));
             digest.update(Files.readAllBytes(file));
             if (name.endsWith(EMAIL_SUFFIX)) {

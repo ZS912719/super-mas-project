@@ -129,6 +129,19 @@ public record LlmSettings(Provider provider, URI endpoint, String model, Optiona
         }
     }
 
+    /**
+     * The same settings with another recording or replay folder (a benchmark uses one per run). The template keeps
+     * none. Replay needs the folder to exist.
+     */
+    public LlmSettings withCache(Path folder) {
+        if (provider == Provider.TEMPLATE) {
+            return this;
+        }
+        LlmSettings settings = new LlmSettings(provider, endpoint, model, apiKey, Optional.of(folder), onlineForMail);
+        settings.validate();
+        return settings;
+    }
+
     /** The provider in lower case, as it is configured. */
     public String name() {
         return provider.name().toLowerCase(Locale.ROOT);

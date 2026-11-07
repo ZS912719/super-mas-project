@@ -110,6 +110,21 @@ Tests: `OpenAiCompatibleLlmTest` +1 (placeholder removed and noted, same-line fo
 **Reading.** Each prompt change fixed what it targeted, and the 3 B model then broke something else, including an explicit rule. Three runs on one email are not evidence either way; tuning the prompt further on `en-01` would repeat the mistake avoided for the contribution threshold (tuning on the test item). Next, in order: the same email with a larger open model (configuration only), to separate the model's limits from the prompt's; then the whole `synthetic-multi` set recorded, scored with the rubric of to-do 3.2; a fact check of the reply against the excerpts (a critic, statement §20) if invented or merged facts persist; to-do 3.9 for the missing certificate.
 
 
+## 5c. A reply-quality benchmark (approved 2026-11-07)
+
+Three runs on one email cannot say whether the model or the system is at fault; the input of run 3, read from its board, showed both (two of three excerpts were unrelated, the plan presented the sender's own details as facts to use, and the missing certificate was not detected). The owner approved a 2×2 benchmark: 3 B and 8 B models, each on the system as it is and after the system fixes. Method: [`docs/benchmark/reply-quality.md`](../benchmark/reply-quality.md).
+
+1. **Frozen expectations** (`reply-gold/v1`, one `<email>.reply.json` per email, 36 in all, commit `451a654`, before any model run): language, whether a reply is expected (10 of the 24 dev emails need none: notices, broadcasts, thank-you notes, the owner's own sent mail), whom to greet, facts from the six knowledge documents to mention, what to ask for, and forbidden phrases (promises or decisions for the owner, the sender's own data repeated back, unrelated knowledge). Written by the AI assistant; **human review pending**. A first draft had over-broad prohibitions ("the room is" would have flagged "the room is not yet announced"; French "accordée" the policy sentence itself); they were narrowed before the freeze.
+2. **`ReplyChecks`** (test scope): keyword checks with case, accent and apostrophe folding; greeting line; language by stop words; an "ask" is a sentence with the term that is a question or carries an asking cue; placeholders and staff-only text are violations on every reply.
+3. **`ReplyQualityBenchmark`** (test scope): one model configuration per run, fresh data per set and repeat, dev once and multi twice by default, every reply recorded for replay; `results.md`, `drafts.md`, `scores.jsonl`; refuses an existing label folder.
+4. `LlmSettings.withCache` gives each run its own recording folder.
+
+Tests (`ReplyChecksTest`, 6): the three real drafts of runs 1-3 score as read by hand (run 1 wrong greeting; run 2 student number and placeholder, the certificate stated but not asked for; run 3 decider and limit missing), and a correct reply is clean; French, accents and the staff exception; every email has its checks; a template run writes all outputs and a second run with the same label is refused.
+
+**A broken commit, fixed.** The Phase 0 dataset loader (`benchmark.Dataset`) refuses unknown files in a benchmark folder, so the commit of the checks (`451a654`) made 10 metadata tests fail; the full build was not run before that commit. The loader now accepts a `.reply.json` beside its email and leaves it out of the dataset fingerprint, so the hashes cited by earlier results stay valid (`DatasetReplyChecksTest`). Full build 353 tests, 0 failures.
+
+**Template floor** (no model): 0 of 22 replies without violation (it greets "Hello," and leaves a placeholder by construction), 3 of 21 facts, all from quoting the request text. Runs A and B are the owner's, with the key.
+
 ## 6. Problems and critical points
 
 1. **Online results are not the project's results.** They overstate quality and understate latency. Every number in the final report must come from the local model, or be labelled with the model and where it ran.

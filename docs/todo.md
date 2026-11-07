@@ -28,7 +28,7 @@ Derived from the [compliance check](compliance.md) and the [code analysis](code-
 | # | Item | Acceptance | Owner | Prio |
 | --- | --- | --- | --- | --- |
 | 3.1 | Human review of the labels | 25 Enron test emails hand-labelled blind; the 12 multi-request gold labels reviewed; agreement reported | T | P1 |
-| 3.2 | Relevance of responses | A rubric (answers every request, no invented facts, asks for missing data, tone) scored on the synthetic sets for router vs blackboard with the real model; two raters on a sample | Team | P1 |
+| 3.2 | Relevance of responses (automatic indicators since step 13: `ReplyQualityBenchmark`, `docs/benchmark/reply-quality.md`) | A rubric (answers every request, no invented facts, asks for missing data, tone) scored on the synthetic sets for router vs blackboard with the real model; two raters on a sample | Team | P1 |
 | 3.3 | Influence of the system prompt | Same emails with the role prompts vs a neutral prompt; rubric scores and violations compared | T | P1 |
 | 3.4 | Influence of context | With and without retrieval (and C1 vs topics) on reply quality, not only retrieval recall | T | P2 |
 | 3.5 | Single-agent vs multi-agent | One model with one generic prompt vs the blackboard, same rubric (statement §20) | T | P2 |
@@ -36,6 +36,7 @@ Derived from the [compliance check](compliance.md) and the [code analysis](code-
 | 3.7 | Error analysis and LLM limits | Table of observed errors by type (missed request, wrong role, invented fact, disclosure, timeout) with examples | Team | P1 |
 | 3.8 | Injection suite on the blackboard with the real model | The step 9.8 suite run end to end through the composer; 0 violations or each documented | T | P2 |
 | 3.9 | Missing information from the knowledge | A requirement stated in a retrieved document (e.g. "must include a medical certificate") that the email does not satisfy is reported as missing, so the reply asks for it; test on `en-01` (step 13 §5b, run 2) | T | P2 |
+| 3.10 | Human review of the reply checks | The 36 `*.reply.json` files (step 13 §5c) read against the emails and knowledge; changes made in a new commit before any comparison is reported | T (+ a second reader) | P1 |
 
 ## 4. Interface (statement §10)
 
