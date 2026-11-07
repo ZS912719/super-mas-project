@@ -1,6 +1,6 @@
 # Current Java API UML
 
-These diagrams replace the former class, sequence and agent-organization proposal. They describe the current Java interfaces and selected data contracts, not a running email assistant.
+These diagrams describe the shared API baseline and selected data contracts. They exclude Person 3 implementation classes and its UI-local provider; see the root README for those additions. They do not describe a running multi-agent system.
 
 ## Diagrams
 
@@ -11,7 +11,7 @@ These diagrams replace the former class, sequence and agent-organization proposa
 | Coordination, context, model, storage and review interfaces | [PlantUML](service-contracts.puml) | [SVG](service-contracts.svg) | [PNG](service-contracts.png) |
 | Core task, evidence and draft data contracts | [PlantUML](data-contracts.puml) | [SVG](data-contracts.svg) | [PNG](data-contracts.png) |
 
-All 23 current interfaces are covered across the blackboard/specialist and service views. Method names, parameter types, return types and interface inheritance match `src/main/java/org/supermas`. Long parameter lists use display-only line breaks. The five specialist role interfaces currently declare no additional methods.
+All 23 shared baseline interfaces are covered across the blackboard/specialist and service views. Method names, parameter types, return types and interface inheritance match their unchanged sources. Long parameter lists use display-only line breaks. The five specialist role interfaces currently declare no additional methods.
 
 The data view shows 15 selected records nested in `org.supermas.model.Domain`, including all components of each displayed record. Supporting routing, context and model records/enums remain defined in `Domain.java` and appear by type name in signatures and fields. Field-reference multiplicities express intended API semantics, not runtime validation.
 

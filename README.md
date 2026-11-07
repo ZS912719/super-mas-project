@@ -1,12 +1,12 @@
 # SuperMASProject
 
-Java API contracts for a blackboard-based multi-agent email reply assistant using local language models.
+Java 17 foundations for a blackboard-based multi-agent email reply assistant using local language models.
 
 ## Current scope
 
-This revision contains **interfaces and data contracts only**. Concrete methods, scheduling algorithms, model adapters, persistence engines, English prompt text, configuration loading and user interfaces require further discussion. There is no executable application, mock model, model connection or email sending capability yet.
+The shared multi-agent infrastructure remains **interfaces and data contracts only**. Person 3 supplies an Ollama adapter, independent composition and an executable JavaFX demonstration. No authoritative Blackboard, coordinator, business agent, review store or email transport is implemented by this module. See [Person 3 usage and integration](docs/person3.md).
 
-The API describes an extensible organization coordinated through a task blackboard. It does not implement or validate the proposed runtime behavior.
+The demonstration uses visibly labeled, fixed presentation fixtures. Optional real inference calls an already installed local Ollama server; sample agents remain fixtures.
 
 ## Build
 
@@ -14,9 +14,10 @@ Requirements: JDK 17 and Maven 3.9 or later.
 
 ```powershell
 mvn package
+mvn javafx:run
 ```
 
-This compiles the interfaces and packages `target/supermas-1.0.0-SNAPSHOT.jar`, a library without a main class. Maven may download build plugins on first use. There are no application or test-library dependencies.
+This runs tests and creates a thin JAR. Launch with `mvn javafx:run`, not `java -jar`. Dependencies are Gson 2.13.2, JavaFX 17.0.18 and test-only JUnit 5.14.2. Maven may download dependencies/plugins on first use.
 
 If necessary, select the JDK explicitly on Windows:
 
@@ -25,15 +26,16 @@ $env:JAVA_HOME = 'C:/Program Files/Java/jdk-17'
 mvn package
 ```
 
-Direct compilation without Maven is also possible:
+On the development Windows machine, Maven is installed outside PATH. Equivalent commands with a workspace-local cache are:
 
 ```powershell
-New-Item -ItemType Directory -Force target/classes | Out-Null
-$sources = Get-ChildItem src/main/java -Filter *.java -Recurse | ForEach-Object FullName
-javac --release 17 -encoding UTF-8 -d target/classes $sources
+$maven = 'C:/Program Files/Apache/Maven/apache-maven-3.9.16/bin/mvn.cmd'
+& $maven '-Dmaven.repo.local=target/maven-cache' test
+& $maven '-Dmaven.repo.local=target/maven-cache' package
+& $maven '-Dmaven.repo.local=target/maven-cache' javafx:run
 ```
 
-There are no behavioral tests because no runtime behavior is implemented. Build success verifies compilation and packaging only.
+Tests use deterministic local HTTP responses, composition fixtures and JavaFX. They require no Ollama/model installation. UI tests require a graphical desktop and create `target/ui-smoke.png`. Test success does not validate real-model quality or unimplemented peer modules.
 
 ## Module contracts
 
@@ -78,13 +80,13 @@ Records define field shapes only. Input validation, defensive copying, access ch
 
 ## Configuration and demonstration status
 
-`AgentConfig`, `ContextSource`, `ModelConfig` and `ExecutionLimits` define configuration vocabulary. No format or loader has been selected. Model adapters, a simulator, sample emails and an interactive demo are intentionally deferred. There are no placeholder business methods that throw unsupported-operation exceptions.
+`AgentConfig`, `ContextSource`, `ModelConfig` and `ExecutionLimits` define shared configuration vocabulary. No shared persistent format or loader has been selected. Person 3's session-only settings and fixed demo examples do not replace these contracts.
 
 See [the API design notes](docs/architecture.md) for collaboration boundaries, open decisions and future validation.
 
 ## Current UML
 
-[The current UML](docs/uml/README.md) documents package dependencies, blackboard and specialist interfaces, service contracts and core domain records. Editable PlantUML sources and rendered SVG/PNG previews are in `docs/uml`. The old proposal has been removed. Diagrams describe interfaces and data shapes, not implemented runtime behavior.
+[The shared API UML](docs/uml/README.md) documents the unchanged infrastructure contracts and domain records. Editable PlantUML sources and SVG/PNG previews are in `docs/uml`. These baseline diagrams do not include Person 3 implementations or UI-local types.
 
 ## License
 

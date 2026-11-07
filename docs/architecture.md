@@ -2,7 +2,7 @@
 
 ## Status
 
-This revision contains interfaces and data contracts only. Concrete implementation requires further discussion. [The current UML diagrams](uml/README.md) reflect these Java contracts; the earlier UML proposal has been removed. Java 17 is the baseline; no external agent framework, database, inference SDK or UI has been chosen.
+This document describes the shared API baseline, whose infrastructure remains unimplemented. [The UML diagrams](uml/README.md) reflect those unchanged contracts. Java 17 remains the baseline. Person 3's independent implementation and JavaFX demonstration are described in [Person 3 usage and integration](person3.md). Deferred guarantees below concern shared contracts; Person 3 implementations enforce their own transport and composition checks.
 
 ## Collaboration boundaries
 
@@ -79,4 +79,4 @@ These are requirements for later behavioral tests, not passing tests in this rev
 - Embedded instructions cannot grant access or authorize sending.
 - Stale versions cannot be approved; no unapproved message can be sent.
 
-Build validation currently verifies API compilation and packaging only. No email-processing workflow is executable yet.
+Person 3 tests validate transport, independent composition and demonstration UI behavior. The authoritative multi-agent workflow described here remains unimplemented.
