@@ -125,6 +125,10 @@ Tests (`ReplyChecksTest`, 6): the three real drafts of runs 1-3 score as read by
 
 **Template floor** (no model): 0 of 22 replies without violation (it greets "Hello," and leaves a placeholder by construction), 3 of 21 facts, all from quoting the request text. Runs A and B are the owner's, with the key.
 
+## 5d. Runs A and B
+
+Run by the owner on 2026-11-07 (3 B and 8 B models, system as of `13354df`). Results and findings: [`docs/benchmark/results/reply-quality-A-B.md`](../benchmark/results/reply-quality-A-B.md). In short: the 8 B model doubles facts and asks with the same input (13 vs 6 of 32 facts, 6 vs 1 of 10 asks) at about three times the latency. The run also exposed four problems of ours that no model fixes: role agents search the whole project's mail, so other people's emails reached a reply (disclosure across threads, high); a stalled online response outlives `HttpRequest.timeout`, which bounds only the headers, so five tasks were fenced by the lease; the echo guard refuses French replies (`<<`/`>>` quotation marks, likely), leaving the board `STOPPED` without a reason; and two of my checks were wrong or missing (first names only in greetings; no check for a name after the closing). While run A seemed stuck, the owner was told it was waiting for OpenRouter; it was one of these hung requests.
+
 ## 6. Problems and critical points
 
 1. **Online results are not the project's results.** They overstate quality and understate latency. Every number in the final report must come from the local model, or be labelled with the model and where it ran.
