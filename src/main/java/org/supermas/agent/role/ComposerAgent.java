@@ -166,7 +166,7 @@ public final class ComposerAgent implements SpecializedAgent {
                 + String.format(java.util.Locale.ROOT, "%.2f", found.estimate()) + " → requests " + found.covers()).toList()
                 + "; plan " + plan.planId() + ", prompt " + version(systemPrompt) + ", " + built.contextIncluded()
                 + " excerpts" + (built.contextOmitted() > 0 ? ", " + built.contextOmitted() + " left out for budget" : "")
-                + (feedback.isPresent() ? ", after feedback" : "");
+                + (feedback.isPresent() ? ", after feedback" : "") + ReplyWork.engineNote(generated);
         board.submitDraft(new DraftProposal(subject, generated.body(), config.id(), explanation));
         return new AgentOutcome(TaskStatus.SUCCEEDED, "Draft composed from " + contributors, List.of(), Optional.empty());
     }

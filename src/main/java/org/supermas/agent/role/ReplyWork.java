@@ -89,7 +89,7 @@ final class ReplyWork {
                 ? "Re: " + (state.email().subject() == null ? "" : state.email().subject()) : generated.subject();
         String explanation = "Plan " + plan.planId() + ", prompt " + agent.promptVersion + ", " + built.contextIncluded()
                 + " context items" + (built.contextOmitted() > 0 ? ", " + built.contextOmitted() + " left out for budget" : "")
-                + (built.truncated() ? ", email or feedback cut for budget" : "");
+                + (built.truncated() ? ", email or feedback cut for budget" : "") + engineNote(generated);
         board.submitDraft(new DraftProposal(subject, generated.body(), agent.config.id(), explanation));
         return new AgentOutcome(TaskStatus.SUCCEEDED, "Draft written from plan " + plan.planId(), List.of(), Optional.empty());
     }
@@ -230,5 +230,11 @@ final class ReplyWork {
 
     private static AgentOutcome failed(Failure failure) {
         return new AgentOutcome(TaskStatus.FAILED, failure.message(), List.of(), Optional.of(failure));
+    }
+
+    /** The generation service's own rationale (which engine wrote the text, any repair), kept on the draft. */
+    static String engineNote(DraftProposal generated) {
+        String note = generated.explanation();
+        return note == null || note.isBlank() ? "" : "; " + note.strip();
     }
 }

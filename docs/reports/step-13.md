@@ -15,7 +15,7 @@ The owner asked whether the model matters much, since it only words the reply fr
 | `llm.LlmSettings` | One record for the engine: provider `template` (default), `local`, `online`, `replay`; model; endpoint; API key; cache folder; mailbox opt-in. Read from `SUPERMAS_LLM_*` variables, overridden by `--llm-*` flags. The key and the mailbox opt-in exist only as variables. Validates everything at start; `describe()` and `toString()` never show the key |
 | `llm.OpenAiCompatibleLlm` | Two modes. The local adapter (unchanged rules: literal loopback HTTP origin, no credential ever sent). The online adapter `online(key)`: HTTPS API base only (no credentials, query or fragment in the URL), key as a bearer token, `.../chat/completions` under the base. Neither follows redirects. Error statuses now carry the engine's own message (shortened to 200 characters); 429 and 5xx are retryable |
 | `llm.RecordedLlm` | Decorator that records each successful reply (`llm-recording/v1` JSON under a SHA-256 of model, trusted prompt and untrusted data; atomic write), and a replay engine that answers only exact matches. A miss is an explicit failure |
-| `llm.LlmGenerationService` | Names the engine in the draft's rationale ("Online model (development stand-in) ...", "Recorded model ...") |
+| `llm.LlmGenerationService` | Names the engine in its rationale ("Online model (development stand-in) ...", "Recorded model ..."). *Correction (§5b, fix 2):* the composer and the specialists dropped that rationale until fix 2, so drafts did not name the engine before it |
 | `PrototypeApp` | `Options` now holds `LlmSettings`; `Wiring.withGeneration` builds the engine from it; prints `Model: ...` first. `main` reads the environment; `Options.parse(args)` ignores it so tests never call a real model by accident |
 | `AgentService` | Reads the same settings. `checkModel` refuses `online` without `SUPERMAS_LLM_ONLINE_MAIL=yes`, and refuses recording or replay (a recording would keep replies to real mail on disk). Prints the model at start |
 | Docs | Setup guide [`docs/plans/llm-setup.md`](../plans/llm-setup.md) (online now, local later, SSH tunnel, replay, context window) |
@@ -39,7 +39,7 @@ The plan's Phase 5 rule said "no real mail goes online". On 2026-11-07 the owner
 
 ## 5. Tests
 
-15 new tests; full build **343 tests, 0 failures, 0 skipped** (328 before); 345 after the prompt fix of §5b; mailbox `npm test` 14 of 14.
+15 new tests; full build **343 tests, 0 failures, 0 skipped** (328 before); 345 after the prompt fix of §5b, 346 after fix 2; mailbox `npm test` 14 of 14.
 
 | Test | Shows |
 | --- | --- |
@@ -72,7 +72,32 @@ The plan's Phase 5 rule said "no real mail goes online". On 2026-11-07 the owner
 
 The prompt versions (hashes recorded with every plan and draft) change accordingly, and recordings made before the fix no longer replay, by design. Tests: `RoleAgentTest` +2 (the block and the rules reach the model; an address cannot open a block or add a line). Full build 345 tests, 0 failures.
 
-**Run 2** (same email and model, after the fix): pending, run by the owner.
+**Run 2** (same email and model, after the fix; run on the data folder of run 1):
+
+| Check | Result |
+| --- | --- |
+| Addressee | **Fixed.** "Dear Sarah," |
+| Invented facts | **None** |
+| Key facts | **Present now:** medical certificate, the course leader decides, at most seven days |
+| Relevance | **Poor.** Every excerpt is dumped into the reply: room booking, exam dates, resits. The sender's own deadline and student number are repeated back to her |
+| Closing | **Rule broken:** "[Your Name]" placeholder, although the prompt says no name |
+| Helpfulness | **Weak.** It explains how to request an extension to someone who has just requested one, instead of asking her for the medical certificate |
+
+Two causes are ours, one is the model's:
+
+1. The composer's prompt never says to leave out context that answers no request (prompt gap).
+2. The missing-information agent reported nothing missing, although the policy requires a certificate that the email lacks: the rule check looks at the role's required fields, not at requirements stated in the knowledge (system gap, not the model's; to-do 3.9).
+3. The placeholder despite an explicit rule is the 3 B model's weakness in following rules.
+
+**Fix 2** (approved by the owner the same day):
+
+1. `prompts/composer.txt`: use only the facts that help answer a request or ask for what is missing; leave out all other context even when true; do not repeat back what the sender wrote (own deadline, student number).
+2. `prompts/common.txt`: end with the line "Best regards," and nothing after it; never a placeholder such as [Your Name] or [Signature].
+3. `LlmGenerationService` removes a bracketed placeholder (up to 40 characters) that ends the reply, on its own line or right after the closing's comma, and notes "removed the placeholder [...]" in its rationale. A bracket inside a sentence ("annex [A]") or a placeholder followed by more text stays; a reply that is only a placeholder is invalid output. Code catches what a small model will keep doing despite the rule.
+4. **Found while doing it:** `ComposerAgent` and `ReplyWork` built their own draft explanation and dropped the generation service's rationale, so the engine label of §2 never reached a draft. Both now append it (`ReplyWork.engineNote`).
+
+Tests: `OpenAiCompatibleLlmTest` +1 (placeholder removed and noted, same-line form, legitimate brackets kept, placeholder-only refused); `BlackboardCollaborationTest` asserts the engine note on the composed draft for a local and a recorded model. Full build 346 tests, 0 failures. **Run 3** (after fix 2): pending.
+
 
 ## 6. Problems and critical points
 

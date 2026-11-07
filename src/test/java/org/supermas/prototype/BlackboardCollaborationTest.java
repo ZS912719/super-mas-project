@@ -202,6 +202,8 @@ class BlackboardCollaborationTest {
 
             assertEquals(BoardStatus.AWAITING_REVIEW, state.status(), state.failure().toString());
             assertEquals("Dear Sarah, both points are noted.", state.drafts().get(0).body());
+            assertTrue(state.drafts().get(0).explanation().endsWith("; Local model fake-model"),
+                    "the draft names the engine that wrote it: " + state.drafts().get(0).explanation());
             // The trusted prompt names the rules of both contributing roles, from the catalogue.
             assertTrue(system.get().contains("[student]") && system.get().contains("[administration]"), system.get());
         } finally {
@@ -252,6 +254,8 @@ class BlackboardCollaborationTest {
                 "--llm-provider", "replay", "--llm-model", "fake-model", "--llm-cache", cache.toString())), "replay");
         assertEquals(BoardStatus.AWAITING_REVIEW, replayed.status(), replayed.failure().toString());
         assertEquals("Dear Sarah, recorded reply.", replayed.drafts().get(0).body());
+        assertTrue(replayed.drafts().get(0).explanation().endsWith("; Recorded model fake-model"),
+                replayed.drafts().get(0).explanation());
         assertEquals(callsWhileRecording, calls.get(), "the replay never reached the engine");
     }
 

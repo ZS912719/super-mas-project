@@ -163,6 +163,27 @@ class OpenAiCompatibleLlmTest {
         assertEquals(FailureKind.CONNECTION, moved.failure().orElseThrow().kind(), "the redirect is not followed");
     }
 
+    private static GenerationResult generated(String output) {
+        LocalLlm fixed = (request, config) -> new ModelResponse(java.util.Optional.of(output), java.util.Optional.empty());
+        return new LlmGenerationService(fixed).generate(REQUEST, config(URI.create("http://127.0.0.1:1"), Duration.ofSeconds(1), 100));
+    }
+
+    @Test
+    void aTrailingNamePlaceholderIsRemovedAndNoted() {
+        GenerationResult own = generated("Dear Sarah,\n\nPlease send the certificate.\n\nBest regards,\n[Your Name]\n");
+        assertEquals("Dear Sarah,\n\nPlease send the certificate.\n\nBest regards,", own.draft().orElseThrow().body());
+        assertTrue(own.draft().orElseThrow().explanation().contains("removed the placeholder [Your Name]"));
+
+        GenerationResult sameLine = generated("Dear Sarah,\n\nNoted.\n\nBest regards, [Signature]");
+        assertEquals("Dear Sarah,\n\nNoted.\n\nBest regards,", sameLine.draft().orElseThrow().body());
+
+        String legitimate = "Dear Sarah,\n\nPlease use the form in annex [A]";
+        assertEquals(legitimate, generated(legitimate).draft().orElseThrow().body(), "a bracket inside a sentence stays");
+        assertEquals(legitimate + "\n[Your Name] wrote this", generated(legitimate + "\n[Your Name] wrote this")
+                .draft().orElseThrow().body(), "only a placeholder at the very end is removed");
+        assertEquals(FailureKind.INVALID_OUTPUT, generated("[Your Name]").failure().orElseThrow().kind());
+    }
+
     @Test
     void theGenerationServiceTurnsOutputIntoABodyAndRefusesEchoedPrompts() {
         LocalLlm fixed = (request, config) -> new ModelResponse(java.util.Optional.of("Dear Sarah,\n\nThank you."), java.util.Optional.empty());

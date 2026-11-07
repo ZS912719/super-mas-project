@@ -35,6 +35,7 @@ Derived from the [compliance check](compliance.md) and the [code analysis](code-
 | 3.6 | Contribution threshold on a fresh set | A new held-out multi-request set; choose the threshold there; report on the old set only as a check | T | P2 |
 | 3.7 | Error analysis and LLM limits | Table of observed errors by type (missed request, wrong role, invented fact, disclosure, timeout) with examples | Team | P1 |
 | 3.8 | Injection suite on the blackboard with the real model | The step 9.8 suite run end to end through the composer; 0 violations or each documented | T | P2 |
+| 3.9 | Missing information from the knowledge | A requirement stated in a retrieved document (e.g. "must include a medical certificate") that the email does not satisfy is reported as missing, so the reply asks for it; test on `en-01` (step 13 §5b, run 2) | T | P2 |
 
 ## 4. Interface (statement §10)
 
