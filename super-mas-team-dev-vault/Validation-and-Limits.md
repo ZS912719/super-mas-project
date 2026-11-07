@@ -2,7 +2,7 @@
 id: team-validation
 type: evidence-summary
 scope: team-development
-updated: 2026-11-05
+updated: 2026-11-07
 status: historical-evidence
 ---
 
@@ -26,3 +26,7 @@ Kripke models use states, initial states, transition relations and labels. Task 
 Record command, date, exact source revision, relevant working-tree changes, environment class, result and limits. Keep simulated/live, file/UI and abstract-model/implementation evidence distinct. A current build cannot retroactively validate a different branch. Hosted Actions and real integrations require their own evidence.
 
 Do not publish private logs, emails, runtime boards or credentials as validation fixtures. Prefer synthetic data and short attributable summaries. Related: [Templates](Templates.md), [Contribution-Workflow](Contribution-Workflow.md).
+
+## Generation workspace merge: 2026-11-07
+
+[Generation-UI-Integration](Generation-UI-Integration.md) records the actual local Java and mailbox checks, their Windows symbolic-link privilege and occupied-port limitations, and the distinction between controlled model tests and real inference. Earlier results are historical and do not certify this merge. Hosted CI remains unverified.

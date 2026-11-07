@@ -2,7 +2,7 @@
 id: team-source-index
 type: index
 scope: team-development
-updated: 2026-11-05
+updated: 2026-11-07
 status: active
 ---
 
@@ -46,3 +46,7 @@ git show codex/blackboard-storage:docs/blackboard-runtime.md
 ```
 
 Do not switch branches just to read a source file. Branch tips and symbols may evolve; use the snapshot mapping in [Project-Status](Project-Status.md) when reproducing historical claims.
+
+## Generation workspace on prototype
+
+See [Generation-UI-Integration](Generation-UI-Integration.md) for the exact merge revision. Entry points: `composition/CompositionService.java`, `llm/OllamaLlm.java`, `ui/MailApplication.java`, `ui/WorkspaceProvider.java`, `ui/DraftEditGuard.java`, `ui/demo/DemoWorkspace.java` under `src/main/java/org/supermas/`; usage: `docs/person3.md`; build: `pom.xml`. The existing prototype pipeline is separate.

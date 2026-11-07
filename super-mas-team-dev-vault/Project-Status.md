@@ -2,7 +2,7 @@
 id: team-project-status
 type: status
 scope: team-development
-updated: 2026-11-05
+updated: 2026-11-07
 status: active
 ---
 
@@ -33,3 +33,7 @@ Implementation documents cited above remain on their named code branches. This k
 4. Introduce development semantic RAG only as a separate capability with defined corpus, freshness and access controls.
 
 Sources: local branch tips and tracked trees inspected on 2026-11-05; `docs/ci-cd.md`; branch-specific `docs/architecture.md` and `mailbox/README.md`. Related: [Validation-and-Limits](Validation-and-Limits.md).
+
+## Prototype integration: 2026-11-07
+
+The earlier table above is historical. Prototype now contains a runnable multi-agent pipeline and opt-in mailbox connection. Merge `5504b71e925bd25765ef7462e974e4b040aad0c3` adds the independent generation workspace from `feat/generation-ui` at `4563c2a`; it was pushed to origin/prototype and verified remotely. See [Generation-UI-Integration](Generation-UI-Integration.md) for capabilities and the current validation limits. Other protocol designs in the local knowledge workspace are outside this publication; no installed knowledge automation is claimed.

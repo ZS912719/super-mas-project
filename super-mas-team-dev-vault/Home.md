@@ -2,7 +2,7 @@
 id: team-home
 type: index
 scope: team-development
-updated: 2026-11-05
+updated: 2026-11-07
 status: active
 ---
 
@@ -39,3 +39,7 @@ Start with [Project-Status](Project-Status.md), then select a topic from [Source
 Do not require personal notes to understand shared work. Runtime SQLite is authoritative for application state; this vault describes development and never replaces that database. No semantic RAG service is installed by this documentation change.
 
 Sources: `AGENTS.md`; user decision on 2026-11-05 to adopt Obsidian + Git and preserve the personal vault.
+
+## Latest prototype integration
+
+[Generation-UI-Integration](Generation-UI-Integration.md) describes the 2026-11-07 published merge, independent JavaFX workspace, native Ollama transport, composition checks and test limitations. Earlier branch snapshots remain historical. The code merge was pushed and verified remotely; this note is included in the separate knowledge update.
