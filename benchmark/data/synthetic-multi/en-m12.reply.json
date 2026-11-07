@@ -1,0 +1,36 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "en",
+  "replyExpected": true,
+  "greet": [
+    "Yuki"
+  ],
+  "notGreet": [
+    "Emma"
+  ],
+  "mustMention": [],
+  "mustAsk": [],
+  "mustNotContain": [
+    {
+      "id": "noise",
+      "any": [
+        "facilities portal",
+        "medical certificate",
+        "seven days",
+        "registrar",
+        "resit"
+      ]
+    },
+    {
+      "id": "decides-for-owner",
+      "any": [
+        "I have filled",
+        "I filled",
+        "I have reviewed",
+        "I will review it by"
+      ]
+    }
+  ],
+  "allowInternal": false,
+  "note": "Project paper review and a travel form; no knowledge (no SuperMAS role yet)"
+}

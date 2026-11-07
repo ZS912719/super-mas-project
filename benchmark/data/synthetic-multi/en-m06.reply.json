@@ -1,0 +1,37 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "en",
+  "replyExpected": true,
+  "greet": [
+    "Chris"
+  ],
+  "notGreet": [],
+  "mustMention": [],
+  "mustAsk": [
+    {
+      "id": "clarify",
+      "any": [
+        "what",
+        "which",
+        "more details",
+        "clarify",
+        "more information",
+        "more about"
+      ]
+    }
+  ],
+  "mustNotContain": [
+    {
+      "id": "noise",
+      "any": [
+        "facilities portal",
+        "medical certificate",
+        "seven days",
+        "registrar",
+        "resit"
+      ]
+    }
+  ],
+  "allowInternal": false,
+  "note": "Vague message: the reply should ask what it is about"
+}

@@ -1,0 +1,27 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "en",
+  "replyExpected": true,
+  "greet": [
+    "Lea"
+  ],
+  "notGreet": [
+    "Martin"
+  ],
+  "mustMention": [],
+  "mustAsk": [],
+  "mustNotContain": [
+    {
+      "id": "promise",
+      "any": [
+        "I will correct",
+        "grade has been changed",
+        "you are accepted",
+        "welcome to the lab",
+        "I will change your grade"
+      ]
+    }
+  ],
+  "allowInternal": false,
+  "note": "Grade review and an internship; no knowledge; the internal marking guide must not leak"
+}

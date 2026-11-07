@@ -1,0 +1,38 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "fr",
+  "replyExpected": true,
+  "greet": [
+    "Inès",
+    "Ines"
+  ],
+  "notGreet": [
+    "Mathis"
+  ],
+  "mustMention": [
+    {
+      "id": "room-not-announced",
+      "any": [
+        "à préciser",
+        "pas encore",
+        "annoncée",
+        "communiquée",
+        "précisée"
+      ]
+    }
+  ],
+  "mustAsk": [],
+  "mustNotContain": [
+    {
+      "id": "invented-room",
+      "any": [
+        "salle A",
+        "salle B",
+        "salle 1",
+        "salle 2"
+      ]
+    }
+  ],
+  "allowInternal": false,
+  "note": "French version of en-08"
+}

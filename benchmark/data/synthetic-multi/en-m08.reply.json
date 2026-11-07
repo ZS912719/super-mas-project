@@ -1,0 +1,27 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "en",
+  "replyExpected": true,
+  "greet": [
+    "Ines"
+  ],
+  "notGreet": [
+    "Emma"
+  ],
+  "mustMention": [],
+  "mustAsk": [],
+  "mustNotContain": [
+    {
+      "id": "decides-for-owner",
+      "any": [
+        "I will take the invigilation",
+        "I can take",
+        "I'll take",
+        "happy to split",
+        "let's split"
+      ]
+    }
+  ],
+  "allowInternal": true,
+  "note": "Colleague: invigilation and marking; staff, so the marking guide may be used"
+}

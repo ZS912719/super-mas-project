@@ -1,0 +1,24 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "en",
+  "replyExpected": false,
+  "greet": [
+    "Sarah"
+  ],
+  "notGreet": [
+    "Martin"
+  ],
+  "mustMention": [],
+  "mustAsk": [],
+  "mustNotContain": [
+    {
+      "id": "promise",
+      "any": [
+        "extension is granted",
+        "I grant you"
+      ]
+    }
+  ],
+  "allowInternal": false,
+  "note": "A thank-you; no reply needed"
+}

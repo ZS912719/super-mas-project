@@ -1,0 +1,35 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "fr",
+  "replyExpected": true,
+  "greet": [
+    "Julie"
+  ],
+  "notGreet": [
+    "Bernard"
+  ],
+  "mustMention": [
+    {
+      "id": "invoice",
+      "any": [
+        "2026-0812",
+        "facture"
+      ]
+    }
+  ],
+  "mustAsk": [],
+  "mustNotContain": [
+    {
+      "id": "payment-promise",
+      "any": [
+        "sera réglée",
+        "a été réglée",
+        "nous paierons",
+        "paiement effectué",
+        "sera payée"
+      ]
+    }
+  ],
+  "allowInternal": false,
+  "note": "French version of en-12"
+}

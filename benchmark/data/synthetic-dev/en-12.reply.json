@@ -1,0 +1,35 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "en",
+  "replyExpected": true,
+  "greet": [
+    "Grace"
+  ],
+  "notGreet": [
+    "Rossi"
+  ],
+  "mustMention": [
+    {
+      "id": "invoice",
+      "any": [
+        "2026-0457",
+        "invoice"
+      ]
+    }
+  ],
+  "mustAsk": [],
+  "mustNotContain": [
+    {
+      "id": "payment-promise",
+      "any": [
+        "will be paid",
+        "has been paid",
+        "we will pay",
+        "payment has been made",
+        "I will pay"
+      ]
+    }
+  ],
+  "allowInternal": false,
+  "note": "Partner sends an invoice; the system must not promise payment"
+}

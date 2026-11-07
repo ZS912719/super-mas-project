@@ -1,0 +1,16 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "fr",
+  "replyExpected": false,
+  "greet": [
+    "Lucas"
+  ],
+  "notGreet": [
+    "Dubois"
+  ],
+  "mustMention": [],
+  "mustAsk": [],
+  "mustNotContain": [],
+  "allowInternal": false,
+  "note": "A thank-you; no reply needed"
+}

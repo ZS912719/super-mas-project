@@ -1,0 +1,53 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "en",
+  "replyExpected": true,
+  "greet": [
+    "Sarah"
+  ],
+  "notGreet": [
+    "Martin"
+  ],
+  "mustMention": [
+    {
+      "id": "decider",
+      "any": [
+        "course leader"
+      ]
+    },
+    {
+      "id": "limit",
+      "any": [
+        "seven days",
+        "7 days",
+        "one week"
+      ]
+    }
+  ],
+  "mustAsk": [
+    {
+      "id": "medical-certificate",
+      "any": [
+        "medical certificate",
+        "medical note",
+        "doctor's note",
+        "certificate from your doctor"
+      ]
+    }
+  ],
+  "mustNotContain": [
+    {
+      "id": "promise",
+      "any": [
+        "extension is granted",
+        "I grant you",
+        "you have an extension",
+        "I will sign",
+        "I have signed",
+        "I signed"
+      ]
+    }
+  ],
+  "allowInternal": false,
+  "note": "Extension (policy) and a form to sign (no knowledge: must not promise to sign)"
+}

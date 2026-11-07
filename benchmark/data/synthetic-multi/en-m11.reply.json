@@ -1,0 +1,68 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "en",
+  "replyExpected": true,
+  "greet": [
+    "Noah"
+  ],
+  "notGreet": [],
+  "mustMention": [
+    {
+      "id": "registrar",
+      "any": [
+        "registrar"
+      ]
+    },
+    {
+      "id": "three-days",
+      "any": [
+        "three working days",
+        "3 working days"
+      ]
+    },
+    {
+      "id": "decider",
+      "any": [
+        "course leader"
+      ]
+    },
+    {
+      "id": "limit",
+      "any": [
+        "seven days",
+        "7 days",
+        "one week"
+      ]
+    }
+  ],
+  "mustAsk": [
+    {
+      "id": "student-number",
+      "any": [
+        "student number"
+      ]
+    },
+    {
+      "id": "medical-certificate",
+      "any": [
+        "medical certificate",
+        "medical note",
+        "doctor's note",
+        "certificate from your doctor"
+      ]
+    }
+  ],
+  "mustNotContain": [
+    {
+      "id": "promise",
+      "any": [
+        "extension is granted",
+        "I grant you",
+        "you can join the lab",
+        "you are welcome to join"
+      ]
+    }
+  ],
+  "allowInternal": false,
+  "note": "Attestation (registrar, three working days, needs the student number), extension (policy), lab (no knowledge)"
+}

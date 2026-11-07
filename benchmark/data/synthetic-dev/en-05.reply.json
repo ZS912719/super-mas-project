@@ -1,0 +1,35 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "en",
+  "replyExpected": true,
+  "greet": [
+    "Tom"
+  ],
+  "notGreet": [
+    "Anna"
+  ],
+  "mustMention": [
+    {
+      "id": "meeting",
+      "any": [
+        "Thursday",
+        "12 November"
+      ]
+    }
+  ],
+  "mustAsk": [],
+  "mustNotContain": [
+    {
+      "id": "confirms-for-owner",
+      "any": [
+        "Thursday works",
+        "see you on Thursday",
+        "I will be there",
+        "I confirm the meeting",
+        "I'll be there"
+      ]
+    }
+  ],
+  "allowInternal": false,
+  "note": "Colleague proposes a meeting; the system cannot know the owner's agenda, so it must not accept"
+}

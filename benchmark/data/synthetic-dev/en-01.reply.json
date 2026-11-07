@@ -1,0 +1,58 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "en",
+  "replyExpected": true,
+  "greet": [
+    "Sarah"
+  ],
+  "notGreet": [
+    "Martin"
+  ],
+  "mustMention": [
+    {
+      "id": "decider",
+      "any": [
+        "course leader"
+      ]
+    },
+    {
+      "id": "limit",
+      "any": [
+        "seven days",
+        "7 days",
+        "one week"
+      ]
+    }
+  ],
+  "mustAsk": [
+    {
+      "id": "medical-certificate",
+      "any": [
+        "medical certificate",
+        "medical note",
+        "doctor's note",
+        "certificate from your doctor"
+      ]
+    }
+  ],
+  "mustNotContain": [
+    {
+      "id": "own-student-number",
+      "any": [
+        "20231187"
+      ]
+    },
+    {
+      "id": "promise",
+      "any": [
+        "extension is granted",
+        "I grant you",
+        "I can give you until",
+        "you have an extension",
+        "your extension has been"
+      ]
+    }
+  ],
+  "allowInternal": false,
+  "note": "Ill student asks for an extension; the policy: course leader decides, at most seven days, medical certificate required"
+}

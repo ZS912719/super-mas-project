@@ -1,0 +1,59 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "fr",
+  "replyExpected": true,
+  "greet": [
+    "Lucas"
+  ],
+  "notGreet": [
+    "Dubois"
+  ],
+  "mustMention": [
+    {
+      "id": "decider",
+      "any": [
+        "responsable du cours",
+        "responsable de l'enseignement",
+        "enseignant responsable",
+        "course leader"
+      ]
+    },
+    {
+      "id": "limit",
+      "any": [
+        "sept jours",
+        "7 jours",
+        "une semaine"
+      ]
+    }
+  ],
+  "mustAsk": [
+    {
+      "id": "medical-certificate",
+      "any": [
+        "certificat médical",
+        "justificatif médical",
+        "certificat"
+      ]
+    }
+  ],
+  "mustNotContain": [
+    {
+      "id": "own-student-number",
+      "any": [
+        "21904432"
+      ]
+    },
+    {
+      "id": "promise",
+      "any": [
+        "je vous accorde",
+        "vous est accordée",
+        "votre demande est acceptée",
+        "votre report est accepté"
+      ]
+    }
+  ],
+  "allowInternal": false,
+  "note": "French version of en-01; the knowledge is in English, the reply must be in French"
+}

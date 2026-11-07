@@ -1,0 +1,12 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "fr",
+  "replyExpected": false,
+  "greet": null,
+  "notGreet": [],
+  "mustMention": [],
+  "mustAsk": [],
+  "mustNotContain": [],
+  "allowInternal": false,
+  "note": "Library notice"
+}

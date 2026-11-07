@@ -1,0 +1,37 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "en",
+  "replyExpected": true,
+  "greet": [
+    "Mei"
+  ],
+  "notGreet": [
+    "Kofi"
+  ],
+  "mustMention": [
+    {
+      "id": "room-not-announced",
+      "any": [
+        "to be announced",
+        "not yet",
+        "not been announced",
+        "not announced",
+        "will be announced"
+      ]
+    }
+  ],
+  "mustAsk": [],
+  "mustNotContain": [
+    {
+      "id": "invented-room",
+      "any": [
+        "room A",
+        "room B",
+        "room 1",
+        "room 2"
+      ]
+    }
+  ],
+  "allowInternal": false,
+  "note": "Forwarded question about the exam room, which the forwarded notice says is still to be announced"
+}
