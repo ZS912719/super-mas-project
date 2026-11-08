@@ -1,0 +1,10 @@
+apiVersion: 1
+providers:
+  - name: SuperMAS
+    folder: SuperMAS
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: ${SUPERMAS_DASHBOARD_PATH}

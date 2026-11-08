@@ -1,0 +1,1036 @@
+{
+  "id": null,
+  "uid": "supermas-blackboard",
+  "title": "SuperMAS Blackboard Workflow",
+  "tags": [
+    "supermas",
+    "read-only"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "editable": false,
+  "templating": {
+    "list": [
+      {
+        "name": "board",
+        "label": "Board",
+        "type": "query",
+        "datasource": {
+          "type": "yesoreyeram-infinity-datasource",
+          "uid": "supermas-observation"
+        },
+        "query": {
+          "infinityQuery": {
+            "refId": "A",
+            "datasource": {
+              "type": "yesoreyeram-infinity-datasource",
+              "uid": "supermas-observation"
+            },
+            "type": "json",
+            "source": "url",
+            "url": "http://127.0.0.1:8091/boards",
+            "url_options": {
+              "method": "GET"
+            },
+            "parser": "backend",
+            "format": "table",
+            "root_selector": "boards",
+            "columns": [
+              {
+                "selector": "key",
+                "text": "__text",
+                "type": "string"
+              },
+              {
+                "selector": "key",
+                "text": "__value",
+                "type": "string"
+              }
+            ],
+            "filters": []
+          },
+          "queryType": "infinity",
+          "refId": "board",
+          "meta": {
+            "textField": "__text",
+            "valueField": "__value"
+          }
+        },
+        "definition": "Authorized observation metadata",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": false,
+        "allValue": null,
+        "current": {},
+        "options": []
+      },
+      {
+        "name": "expert",
+        "label": "Expert",
+        "type": "query",
+        "datasource": {
+          "type": "yesoreyeram-infinity-datasource",
+          "uid": "supermas-observation"
+        },
+        "query": {
+          "infinityQuery": {
+            "refId": "A",
+            "datasource": {
+              "type": "yesoreyeram-infinity-datasource",
+              "uid": "supermas-observation"
+            },
+            "type": "json",
+            "source": "url",
+            "url": "http://127.0.0.1:8091/view?board=${board:percentencode}",
+            "url_options": {
+              "method": "GET"
+            },
+            "parser": "backend",
+            "format": "table",
+            "root_selector": "experts",
+            "columns": [
+              {
+                "selector": "agent",
+                "text": "__text",
+                "type": "string"
+              },
+              {
+                "selector": "agent",
+                "text": "__value",
+                "type": "string"
+              }
+            ],
+            "filters": []
+          },
+          "queryType": "infinity",
+          "refId": "expert",
+          "meta": {
+            "textField": "__text",
+            "valueField": "__value"
+          }
+        },
+        "definition": "Authorized observation metadata",
+        "refresh": 2,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": "*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Observation contract",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "Read-only developer observation. Every panel exposes its own source revision; separate queries may capture different revisions. **Check query errors and the last observation time before using retained values.** No data means no matching recorded rows; request errors mean unavailable data. Terminal results are events, not current expert states. Model-call success, composer adoption, answered requests and mailbox sending remain UNKNOWN. Positive historic scores without recorded eligibility remain UNKNOWN. Graph coverage/excerpt edges are declarations, not semantic proof. Reasons are redacted unless diagnostics is explicitly enabled."
+      },
+      "targets": []
+    },
+    {
+      "id": 2,
+      "title": "Observation age (seconds; query errors mean unavailable)",
+      "type": "stat",
+      "gridPos": {
+        "x": 4,
+        "y": 4,
+        "w": 4,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "s",
+          "noValue": "UNAVAILABLE",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 45
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNAVAILABLE",
+                  "color": "gray",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "supermas-observation"
+          },
+          "type": "json",
+          "source": "url",
+          "url": "http://127.0.0.1:8091/view?board=${board:percentencode}&agent=${expert:percentencode}&from=${__from}&to=${__to}",
+          "url_options": {
+            "method": "GET"
+          },
+          "parser": "backend",
+          "format": "table",
+          "root_selector": "$map(overview, function($v) {{\"age\": ($millis() - $v.observedAtMs) / 1000}})",
+          "columns": [
+            {
+              "selector": "age",
+              "text": "age",
+              "type": "number"
+            }
+          ],
+          "filters": []
+        }
+      ],
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "supermas-observation"
+      }
+    },
+    {
+      "id": 3,
+      "title": "Blackboard overview (current; independent of time range)",
+      "type": "table",
+      "gridPos": {
+        "x": 8,
+        "y": 4,
+        "w": 16,
+        "h": 4
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "supermas-observation"
+          },
+          "type": "json",
+          "source": "url",
+          "url": "http://127.0.0.1:8091/view?board=${board:percentencode}&agent=${expert:percentencode}&from=${__from}&to=${__to}",
+          "url_options": {
+            "method": "GET"
+          },
+          "parser": "backend",
+          "format": "table",
+          "root_selector": "overview",
+          "columns": [
+            {
+              "selector": "status",
+              "text": "status",
+              "type": "string"
+            },
+            {
+              "selector": "draftVersion",
+              "text": "draftVersion",
+              "type": "number"
+            },
+            {
+              "selector": "taskCount",
+              "text": "taskCount",
+              "type": "number"
+            },
+            {
+              "selector": "failedTaskCount",
+              "text": "failedTaskCount",
+              "type": "number"
+            },
+            {
+              "selector": "failedAttemptCount",
+              "text": "failedAttemptCount",
+              "type": "number"
+            },
+            {
+              "selector": "sourceRevision",
+              "text": "sourceRevision",
+              "type": "number"
+            },
+            {
+              "selector": "observedAt",
+              "text": "observedAt",
+              "type": "timestamp"
+            },
+            {
+              "selector": "committedAt",
+              "text": "committedAt",
+              "type": "timestamp"
+            },
+            {
+              "selector": "historyTruncated",
+              "text": "historyTruncated",
+              "type": "boolean"
+            }
+          ],
+          "filters": []
+        }
+      ],
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "supermas-observation"
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "status": 0,
+              "draftVersion": 1,
+              "taskCount": 2,
+              "failedTaskCount": 3,
+              "failedAttemptCount": 4,
+              "sourceRevision": 5,
+              "observedAt": 6,
+              "committedAt": 7,
+              "historyTruncated": 8
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Expert assessments and current recorded work",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 24,
+        "h": 8
+      },
+      "description": "Suitability is recorded eligibility at assessment time, not execution status. RUNNING_RECORDED does not assert a valid lease. Finished experts return to UNKNOWN unless pending/running work exists.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "supermas-observation"
+          },
+          "type": "json",
+          "source": "url",
+          "url": "http://127.0.0.1:8091/view?board=${board:percentencode}&agent=${expert:percentencode}&from=${__from}&to=${__to}",
+          "url_options": {
+            "method": "GET"
+          },
+          "parser": "backend",
+          "format": "table",
+          "root_selector": "experts",
+          "columns": [
+            {
+              "selector": "agent",
+              "text": "agent",
+              "type": "string"
+            },
+            {
+              "selector": "currentExecution",
+              "text": "currentExecution",
+              "type": "string"
+            },
+            {
+              "selector": "assessment",
+              "text": "assessment",
+              "type": "string"
+            },
+            {
+              "selector": "score",
+              "text": "score",
+              "type": "number"
+            },
+            {
+              "selector": "reason",
+              "text": "reason",
+              "type": "string"
+            },
+            {
+              "selector": "contributionCount",
+              "text": "contributionCount",
+              "type": "number"
+            },
+            {
+              "selector": "lastExecutionResult",
+              "text": "lastExecutionResult",
+              "type": "string"
+            },
+            {
+              "selector": "lastDurationMs",
+              "text": "lastDurationMs",
+              "type": "number"
+            },
+            {
+              "selector": "lastFailureKind",
+              "text": "lastFailureKind",
+              "type": "string"
+            },
+            {
+              "selector": "lastFailureReason",
+              "text": "lastFailureReason",
+              "type": "string"
+            },
+            {
+              "selector": "usedByComposer",
+              "text": "usedByComposer",
+              "type": "string"
+            },
+            {
+              "selector": "sourceRevision",
+              "text": "sourceRevision",
+              "type": "number"
+            },
+            {
+              "selector": "observedAt",
+              "text": "observedAt",
+              "type": "timestamp"
+            },
+            {
+              "selector": "committedAt",
+              "text": "committedAt",
+              "type": "timestamp"
+            },
+            {
+              "selector": "historyTruncated",
+              "text": "historyTruncated",
+              "type": "boolean"
+            }
+          ],
+          "filters": []
+        }
+      ],
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "supermas-observation"
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "agent": 0,
+              "currentExecution": 1,
+              "assessment": 2,
+              "score": 3,
+              "reason": 4,
+              "contributionCount": 5,
+              "lastExecutionResult": 6,
+              "lastDurationMs": 7,
+              "lastFailureKind": 8,
+              "lastFailureReason": 9,
+              "usedByComposer": 10,
+              "sourceRevision": 11,
+              "observedAt": 12,
+              "committedAt": 13,
+              "historyTruncated": 14
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Expert activity intervals (gaps are unknown)",
+      "type": "state-timeline",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 24,
+        "h": 8
+      },
+      "description": "Execution start/finish prove RUNNING intervals; adjacent immutable snapshots prove PENDING intervals. Open running work, cancellation and zero-duration executions are not given invented end times. Terminal results appear below. Each agent is a separate frame/row. Revision is available in Query inspector response and the expert table; separate queries are not atomic. Conflicting pending/execution bounds are shown as OVERLAPPING_RECORDS; interval boundaries are split without inventing event times.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "displayName": "${__field.labels.agent}",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "RUNNING": {
+                  "text": "RUNNING",
+                  "color": "blue",
+                  "index": 0
+                },
+                "PENDING": {
+                  "text": "PENDING",
+                  "color": "yellow",
+                  "index": 1
+                },
+                "OVERLAPPING_RECORDS": {
+                  "text": "OVERLAPPING_RECORDS",
+                  "color": "gray",
+                  "index": 2
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "mergeValues": true,
+        "showValue": "auto",
+        "rowHeight": 0.8,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "supermas-observation"
+          },
+          "type": "json",
+          "source": "url",
+          "url": "http://127.0.0.1:8091/view?board=${board:percentencode}&agent=${expert:percentencode}&from=${__from}&to=${__to}",
+          "url_options": {
+            "method": "GET"
+          },
+          "parser": "backend",
+          "format": "table",
+          "root_selector": "timeline",
+          "columns": [
+            {
+              "selector": "start",
+              "text": "start",
+              "type": "timestamp_epoch"
+            },
+            {
+              "selector": "end",
+              "text": "end",
+              "type": "timestamp_epoch"
+            },
+            {
+              "selector": "agent",
+              "text": "agent",
+              "type": "string"
+            },
+            {
+              "selector": "state",
+              "text": "state",
+              "type": "string"
+            },
+            {
+              "selector": "sourceRevision",
+              "text": "sourceRevision",
+              "type": "number"
+            },
+            {
+              "selector": "observedAt",
+              "text": "observedAt",
+              "type": "timestamp"
+            }
+          ],
+          "filters": []
+        }
+      ],
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "supermas-observation"
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "sourceRevision": true,
+              "observedAt": true
+            },
+            "indexByName": {
+              "start": 0,
+              "end": 1,
+              "agent": 2,
+              "state": 3,
+              "sourceRevision": 4,
+              "observedAt": 5
+            }
+          }
+        },
+        {
+          "id": "partitionByValues",
+          "options": {
+            "fields": [
+              "agent"
+            ],
+            "keepFields": false
+          }
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Coordinator decisions, attempts and cancellations",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 24,
+        "h": 10
+      },
+      "description": "CONTROL time is the first retained snapshot commit that contains the decision; eventTime is unknown because existing provenance often uses mail receipt time. EXECUTION time is finishedAt. Interrupted recovery is a recorded failure, never inferred from wall-clock age. Task completion acceptance does not imply output/model success.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "time",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "supermas-observation"
+          },
+          "type": "json",
+          "source": "url",
+          "url": "http://127.0.0.1:8091/view?board=${board:percentencode}&agent=${expert:percentencode}&from=${__from}&to=${__to}",
+          "url_options": {
+            "method": "GET"
+          },
+          "parser": "backend",
+          "format": "table",
+          "root_selector": "events",
+          "columns": [
+            {
+              "selector": "time",
+              "text": "time",
+              "type": "timestamp_epoch"
+            },
+            {
+              "selector": "eventTime",
+              "text": "eventTime",
+              "type": "timestamp"
+            },
+            {
+              "selector": "board",
+              "text": "board",
+              "type": "string"
+            },
+            {
+              "selector": "kind",
+              "text": "kind",
+              "type": "string"
+            },
+            {
+              "selector": "task",
+              "text": "task",
+              "type": "string"
+            },
+            {
+              "selector": "attempt",
+              "text": "attempt",
+              "type": "string"
+            },
+            {
+              "selector": "agent",
+              "text": "agent",
+              "type": "string"
+            },
+            {
+              "selector": "action",
+              "text": "action",
+              "type": "string"
+            },
+            {
+              "selector": "reason",
+              "text": "reason",
+              "type": "string"
+            },
+            {
+              "selector": "result",
+              "text": "result",
+              "type": "string"
+            },
+            {
+              "selector": "durationMs",
+              "text": "durationMs",
+              "type": "number"
+            },
+            {
+              "selector": "failureKind",
+              "text": "failureKind",
+              "type": "string"
+            },
+            {
+              "selector": "failureReason",
+              "text": "failureReason",
+              "type": "string"
+            },
+            {
+              "selector": "modelCallResult",
+              "text": "modelCallResult",
+              "type": "string"
+            },
+            {
+              "selector": "taskCompletionAccepted",
+              "text": "taskCompletionAccepted",
+              "type": "boolean"
+            },
+            {
+              "selector": "outputAccepted",
+              "text": "outputAccepted",
+              "type": "string"
+            },
+            {
+              "selector": "firstObservedRevision",
+              "text": "firstObservedRevision",
+              "type": "number"
+            },
+            {
+              "selector": "sourceRevision",
+              "text": "sourceRevision",
+              "type": "number"
+            },
+            {
+              "selector": "observedAt",
+              "text": "observedAt",
+              "type": "timestamp"
+            },
+            {
+              "selector": "committedAt",
+              "text": "committedAt",
+              "type": "timestamp"
+            },
+            {
+              "selector": "historyTruncated",
+              "text": "historyTruncated",
+              "type": "boolean"
+            }
+          ],
+          "filters": []
+        }
+      ],
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "supermas-observation"
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "time": 0,
+              "eventTime": 1,
+              "board": 2,
+              "kind": 3,
+              "task": 4,
+              "attempt": 5,
+              "agent": 6,
+              "action": 7,
+              "reason": 8,
+              "result": 9,
+              "durationMs": 10,
+              "failureKind": 11,
+              "failureReason": 12,
+              "modelCallResult": 13,
+              "taskCompletionAccepted": 14,
+              "outputAccepted": 15,
+              "firstObservedRevision": 16,
+              "sourceRevision": 17,
+              "observedAt": 18,
+              "committedAt": 19,
+              "historyTruncated": 20
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Recorded relationships (no inferred composer adoption)",
+      "type": "nodeGraph",
+      "gridPos": {
+        "x": 0,
+        "y": 34,
+        "w": 24,
+        "h": 12
+      },
+      "description": "Stable board-scoped nodes: requests, experts, contributions, evidence references, attempts (hashed fencing identifiers), draft versions and draft authors. No contribution-to-draft adoption edge: the current draft schema has no structured receipt. Node and edge queries can race; inspect their revisions and refresh before interpretation.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {
+        "nodes": {
+          "mainStatUnit": "none"
+        },
+        "edges": {
+          "mainStatUnit": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "supermas-observation"
+          },
+          "type": "json",
+          "source": "url",
+          "url": "http://127.0.0.1:8091/view?board=${board:percentencode}&agent=${expert:percentencode}&from=${__from}&to=${__to}",
+          "url_options": {
+            "method": "GET"
+          },
+          "parser": "backend",
+          "format": "node-graph-nodes",
+          "root_selector": "nodes",
+          "columns": [
+            {
+              "selector": "id",
+              "text": "id",
+              "type": "string"
+            },
+            {
+              "selector": "title",
+              "text": "title",
+              "type": "string"
+            },
+            {
+              "selector": "subTitle",
+              "text": "subTitle",
+              "type": "string"
+            },
+            {
+              "selector": "sourceRevision",
+              "text": "detail__sourceRevision",
+              "type": "string"
+            },
+            {
+              "selector": "observedAt",
+              "text": "detail__observedAt",
+              "type": "timestamp"
+            }
+          ],
+          "filters": []
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "supermas-observation"
+          },
+          "type": "json",
+          "source": "url",
+          "url": "http://127.0.0.1:8091/view?board=${board:percentencode}&agent=${expert:percentencode}&from=${__from}&to=${__to}",
+          "url_options": {
+            "method": "GET"
+          },
+          "parser": "backend",
+          "format": "node-graph-edges",
+          "root_selector": "edges",
+          "columns": [
+            {
+              "selector": "id",
+              "text": "id",
+              "type": "string"
+            },
+            {
+              "selector": "source",
+              "text": "source",
+              "type": "string"
+            },
+            {
+              "selector": "target",
+              "text": "target",
+              "type": "string"
+            },
+            {
+              "selector": "mainStat",
+              "text": "mainStat",
+              "type": "string"
+            },
+            {
+              "selector": "sourceRevision",
+              "text": "detail__sourceRevision",
+              "type": "string"
+            }
+          ],
+          "filters": []
+        }
+      ],
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "supermas-observation"
+      }
+    },
+    {
+      "id": 8,
+      "title": "Authorized boards (0 = no board data)",
+      "type": "stat",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "supermas-observation"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "supermas-observation"
+          },
+          "type": "json",
+          "source": "url",
+          "url": "http://127.0.0.1:8091/boards",
+          "url_options": {
+            "method": "GET"
+          },
+          "parser": "backend",
+          "format": "table",
+          "root_selector": "$map([$], function($v) {{\"count\": $count($v.boards)}})",
+          "columns": [
+            {
+              "selector": "count",
+              "text": "count",
+              "type": "number"
+            }
+          ],
+          "filters": []
+        }
+      ],
+      "description": "A successful zero means the authorized boards do not exist yet. A query error means collection failed. Select a board before interpreting the other panels.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "UNAVAILABLE",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "NO BOARD DATA",
+                  "color": "gray",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNAVAILABLE",
+                  "color": "gray",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    }
+  ],
+  "annotations": {
+    "list": []
+  }
+}
