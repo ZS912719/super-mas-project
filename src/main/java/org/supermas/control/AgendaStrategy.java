@@ -193,7 +193,7 @@ public final class AgendaStrategy implements CoordinationStrategy, ControlRecord
                               double rating, String reason, List<Candidate> candidates) {
         List<ControlEntry.Rated> todo = candidates.stream()
                 .map(c -> new ControlEntry.Rated(c.agentId, action(c.level).name(), c.level.name(), c.estimate, c.rating,
-                        c.why)).toList();
+                        c.why, c.eligible)).toList();
         decisions.put(state.id(), new ControlEntry(ControlEntry.SCHEMA, round, focus.name(), action.name(), agentId,
                 rating, reason, agentId == null ? 0 : ControlEntry.othersEvidence(state, agentId), state.feedback().size(),
                 todo));

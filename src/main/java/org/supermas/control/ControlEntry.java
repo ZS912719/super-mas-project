@@ -27,7 +27,13 @@ public record ControlEntry(String schema, int round, String focus, String action
     private static final ObjectMapper JSON = new ObjectMapper();
 
     /** One activation of the To-Do-Set: an agent, the action it would take, its estimate and rating. */
-    public record Rated(String agentId, String action, String level, double estimate, double rating, String why) { }
+    public record Rated(String agentId, String action, String level, double estimate, double rating, String why,
+                        Boolean eligible) {
+        /** Old persisted decisions have no eligibility record; never infer their threshold. */
+        public Rated(String agentId, String action, String level, double estimate, double rating, String why) {
+            this(agentId, action, level, estimate, rating, why, null);
+        }
+    }
 
     public ControlEntry {
         todo = List.copyOf(todo);
