@@ -194,3 +194,11 @@ npm run build
 ```
 
 Java packaging runs blackboard concurrency, recovery and projection tests. Run `./scripts/check-formal.ps1` for the finite Kripke models and their negative controls. See [blackboard validation](docs/blackboard-validation.md). Mailbox tests exercise the separate application; see [the mailbox validation report](mailbox/VALIDATION.md) for its recorded checks and remaining live-service prerequisites.
+
+### Grafana blackboard observation
+
+`src/main/java/org/supermas/observation/` provides a separate loopback-only, authenticated, read-only SQLite metadata API. Versioned Grafana provisioning and dashboard JSON live in `observability/grafana/`. Java 17 and Maven use the existing dependencies; the optional native Windows viewer pins Grafana 13.1.2 and Infinity 4.1.6.
+
+Inject `SUPERMAS_OBSERVATION_TOKEN` and exact `SUPERMAS_OBSERVATION_BOARDS` keys, then run `./scripts/start-observation.ps1 -Database runtime/blackboard.db`. With an extracted Grafana distribution and the pinned plugin already available, inject `GF_SECURITY_ADMIN_PASSWORD` and run `./scripts/start-observation-grafana.ps1 -GrafanaHome ./tools/grafana` in a second terminal. See [deployment, API fields and validation progress](docs/blackboard-observation.md).
+
+The first dashboard includes overview, expert assessments, activity intervals, coordinator/execution records and recorded relationships. A synthetic Docker Desktop stack is available through `./scripts/start-observation-docker.ps1`; supply environment credentials or its protected runtime environment file. `python ./scripts/verify-observation-grafana.py --fault-tests` checks actual Infinity queries and controlled failure cases. Docker deployment and browser validation are recorded in the observation guide; the native Windows Grafana distribution remains unverified and the JavaFX sample remains independent.
