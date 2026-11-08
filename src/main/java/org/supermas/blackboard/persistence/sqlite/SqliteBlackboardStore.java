@@ -44,6 +44,7 @@ public final class SqliteBlackboardStore implements BlackboardStore {
             execute(c, "CREATE TABLE IF NOT EXISTS snapshots (board_key TEXT NOT NULL REFERENCES boards(board_key), revision INTEGER NOT NULL, committed_at TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(board_key, revision))");
             execute(c, "CREATE TABLE IF NOT EXISTS leases (board_key TEXT NOT NULL, task_id TEXT NOT NULL, token TEXT NOT NULL UNIQUE, expected_revision INTEGER NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(board_key, task_id), FOREIGN KEY(board_key) REFERENCES boards(board_key))");
             execute(c, "CREATE TABLE IF NOT EXISTS attempts (token TEXT PRIMARY KEY, board_key TEXT NOT NULL REFERENCES boards(board_key), input_revision INTEGER NOT NULL, payload TEXT NOT NULL)");
+            execute(c, "CREATE INDEX IF NOT EXISTS attempts_by_board_revision ON attempts(board_key, input_revision)");
             execute(c, "CREATE TABLE IF NOT EXISTS receipts (token TEXT PRIMARY KEY, request TEXT NOT NULL, revision INTEGER NOT NULL, board_key TEXT NOT NULL REFERENCES boards(board_key))");
             execute(c, "CREATE TABLE IF NOT EXISTS projections (board_key TEXT PRIMARY KEY REFERENCES boards(board_key), desired INTEGER NOT NULL, acknowledged INTEGER NOT NULL DEFAULT 0)");
             execute(c, "PRAGMA user_version=1");
