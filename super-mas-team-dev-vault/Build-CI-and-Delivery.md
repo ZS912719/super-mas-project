@@ -2,7 +2,7 @@
 id: team-build
 type: operations
 scope: team-development
-updated: 2026-11-05
+updated: 2026-11-08
 status: active
 ---
 
@@ -54,3 +54,7 @@ Java verification runs on Linux and Windows. CI detects tracked mailbox/formal m
 PR packaging uses `--publish never`. Manual delivery uploads artifacts without releases. Stable component tags `mailbox-vX.Y.Z` or `blackboard-vX.Y.Z` must match package versions and target a commit reachable from the default branch. Tag delivery reruns checks and creates a draft release; human review precedes publication. Existing releases are not overwritten.
 
 `scripts/package-blackboard.ps1` requires the runtime implementation before it can package JAR/dependencies/launcher. The current main distribution launcher still uses the old vault name: reconcile it with the feature branch before treating a combined package as validated. Do not infer hosted CI success from a local build or push.
+
+## Grafana observation deployment
+
+See [Grafana-Blackboard-Observation](Grafana-Blackboard-Observation.md) for published prototype revision `f9151ac97f0f0654f5c215030a1627e11e55f115`. The code branch adds start-observation.ps1 and start-observation-grafana.ps1 under scripts/, with provisioning under observability/grafana/. Grafana 13.1.2 and Infinity 4.1.6 are pinned. Native launchers use same-host loopback and require an existing distribution/plugin. The 2026-11-08 Docker synthetic stack was actually started with digest-pinned images and only host-loopback Grafana publication; API loopback is shared inside the container namespace. Start it with scripts/start-observation-docker.ps1 and verify real queries with scripts/verify-observation-grafana.py --fault-tests. No native Windows startup or hosted CI result is claimed.

@@ -2,7 +2,7 @@
 id: team-project-status
 type: status
 scope: team-development
-updated: 2026-11-07
+updated: 2026-11-08
 status: active
 ---
 
@@ -37,3 +37,9 @@ Sources: local branch tips and tracked trees inspected on 2026-11-05; `docs/ci-c
 ## Prototype integration: 2026-11-07
 
 The earlier table above is historical. Prototype now contains a runnable multi-agent pipeline and opt-in mailbox connection. Merge `5504b71e925bd25765ef7462e974e4b040aad0c3` adds the independent generation workspace from `feat/generation-ui` at `4563c2a`; it was pushed to origin/prototype and verified remotely. See [Generation-UI-Integration](Generation-UI-Integration.md) for capabilities and the current validation limits. Other protocol designs in the local knowledge workspace are outside this publication; no installed knowledge automation is claimed.
+
+## Grafana observation published: 2026-11-08
+
+Prototype revision `f9151ac97f0f0654f5c215030a1627e11e55f115` adds a separate authenticated read-only observation API and provisioned Grafana dashboard through five focused commits based on 5504b71. It was pushed and the remote tip was verified at this exact revision on 2026-11-08. Synthetic Docker/browser validation passed; native Windows Grafana and real Windows-database/mailbox integration remain unverified. See [Grafana-Blackboard-Observation](Grafana-Blackboard-Observation.md). The earlier generation-workspace merge remains part of its ancestry.
+
+Documentation follow-up `2b8bba3dadc3097a651a9b315bbe7e60a1379cb8` was also pushed and remotely verified on 2026-11-08. It adds versioned English implementation prompts and moves README progress into `docs/project-progress.md`; runtime validation still applies to the unchanged feature code at f9151ac.

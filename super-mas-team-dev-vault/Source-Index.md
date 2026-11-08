@@ -2,7 +2,7 @@
 id: team-source-index
 type: index
 scope: team-development
-updated: 2026-11-07
+updated: 2026-11-08
 status: active
 ---
 
@@ -50,3 +50,9 @@ Do not switch branches just to read a source file. Branch tips and symbols may e
 ## Generation workspace on prototype
 
 See [Generation-UI-Integration](Generation-UI-Integration.md) for the exact merge revision. Entry points: `composition/CompositionService.java`, `llm/OllamaLlm.java`, `ui/MailApplication.java`, `ui/WorkspaceProvider.java`, `ui/DraftEditGuard.java`, `ui/demo/DemoWorkspace.java` under `src/main/java/org/supermas/`; usage: `docs/person3.md`; build: `pom.xml`. The existing prototype pipeline is separate.
+
+## Grafana observation sources
+
+[Grafana-Blackboard-Observation](Grafana-Blackboard-Observation.md) maps published prototype revision `f9151ac97f0f0654f5c215030a1627e11e55f115`. Entry points: ObservationSource, SqliteObservationSource, ObservationView and ObservationServer under src/main/java/org/supermas/observation/; versioned provisioning/dashboard under observability/grafana/; startup scripts, the Docker synthetic fixture server, the real Grafana query verifier and field dictionary listed in that note. These paths are present in that published revision and absent from the earlier 5504b71 baseline.
+
+Prototype documentation revision `2b8bba3dadc3097a651a9b315bbe7e60a1379cb8` adds `docs/implementation-prompts.md` for reproducible task requirements and `docs/project-progress.md` for progress outside README. These are code-branch documents, not files in this knowledge-only tree.

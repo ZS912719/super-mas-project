@@ -2,7 +2,7 @@
 id: team-validation
 type: evidence-summary
 scope: team-development
-updated: 2026-11-07
+updated: 2026-11-08
 status: historical-evidence
 ---
 
@@ -30,3 +30,7 @@ Do not publish private logs, emails, runtime boards or credentials as validation
 ## Generation workspace merge: 2026-11-07
 
 [Generation-UI-Integration](Generation-UI-Integration.md) records the actual local Java and mailbox checks, their Windows symbolic-link privilege and occupied-port limitations, and the distinction between controlled model tests and real inference. Earlier results are historical and do not certify this merge. Hosted CI remains unverified.
+
+## Grafana observation checks: 2026-11-08
+
+[Grafana-Blackboard-Observation](Grafana-Blackboard-Observation.md) records published prototype revision `f9151ac97f0f0654f5c215030a1627e11e55f115`, source paths, final test commands/results and remaining limits. Synthetic API/workflow and configuration checks remain distinct from actual UI evidence. The 2026-11-08 Docker/browser follow-up now records actual panel/filter/stale/outage/recovery validation with synthetic data; native Windows Grafana remains unverified. Published generation-UI evidence above is unchanged; this task does not certify the full test suite or hosted CI.

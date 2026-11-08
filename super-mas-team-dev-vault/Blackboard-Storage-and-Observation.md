@@ -2,7 +2,7 @@
 id: team-blackboard
 type: implementation-summary
 scope: team-development
-updated: 2026-11-05
+updated: 2026-11-08
 status: feature-branch
 source_ref: d58b69c
 ---
@@ -36,3 +36,9 @@ The application vault is `runtime/super-mas-vault`, with human-authored `knowled
 No complete coordinator, specialist runner, Java retrieval/model service, human-review implementation or mailbox connection. No exactly-once external effects, arbitrary power-loss proof, hostile-local-process defense, multi-host database deployment or bounded Obsidian UI freshness. Old generations and snapshot history currently require a future retention policy.
 
 Entry points and validation: [Source-Index](Source-Index.md), [Build-CI-and-Delivery](Build-CI-and-Delivery.md), [Validation-and-Limits](Validation-and-Limits.md).
+
+## Published prototype observation extension: 2026-11-08
+
+The feature-branch limits above are historical. Published prototype integration is described in [Generation-UI-Integration](Generation-UI-Integration.md). The separate Grafana extension published at prototype revision `f9151ac97f0f0654f5c215030a1627e11e55f115` is described in [Grafana-Blackboard-Observation](Grafana-Blackboard-Observation.md). Unlike the earlier recovery/export observer, its read-only API never recovers leases or writes projections. Application initialization owns an additive attempts lookup index; observation never migrates the database. It is not a scheduler or mailbox approval bridge.
+
+The 2026-11-08 follow-up in that note documents a read-only synthetic Docker stack and disjoint timeline intervals: contradictory recorded bounds remain explicitly marked instead of being turned into an assumed execution state. The native application and its live database are not moved into this validation stack.

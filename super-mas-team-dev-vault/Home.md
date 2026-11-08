@@ -2,7 +2,7 @@
 id: team-home
 type: index
 scope: team-development
-updated: 2026-11-07
+updated: 2026-11-08
 status: active
 ---
 
@@ -43,3 +43,7 @@ Sources: `AGENTS.md`; user decision on 2026-11-05 to adopt Obsidian + Git and pr
 ## Latest prototype integration
 
 [Generation-UI-Integration](Generation-UI-Integration.md) describes the 2026-11-07 published merge, independent JavaFX workspace, native Ollama transport, composition checks and test limitations. Earlier branch snapshots remain historical. The code merge was pushed and verified remotely; this note is included in the separate knowledge update.
+
+## Grafana observation published: 2026-11-08
+
+[Grafana-Blackboard-Observation](Grafana-Blackboard-Observation.md) records prototype revision `f9151ac97f0f0654f5c215030a1627e11e55f115`, published in five focused commits and verified remotely on 2026-11-08. It covers the read-only API boundary, native/Docker deployment pins, actual synthetic Docker/browser validation and remaining integration limits. The knowledge update remains separate from application code.
