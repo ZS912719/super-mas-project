@@ -1,0 +1,62 @@
+name: supermas-observation
+services:
+  fixtures:
+    image: eclipse-temurin@sha256:2a9eb226abb654c9d1f91b53cf638d20cb3abb726d1b18a67909c29515545469
+    command: ["java", "-cp", "/app/classes:/app/test-classes:/app/lib/*", "org.supermas.observation.ObservationWorkflowTest", "/data"]
+    volumes:
+      - ../../target/classes:/app/classes:ro
+      - ../../target/test-classes:/app/test-classes:ro
+      - ../../target/observation-container/lib:/app/lib:ro
+      - fixture-state:/data
+    network_mode: none
+    restart: "no"
+  observation:
+    image: eclipse-temurin@sha256:2a9eb226abb654c9d1f91b53cf638d20cb3abb726d1b18a67909c29515545469
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - '. /data/boards.env; export SUPERMAS_OBSERVATION_BOARDS; exec java -cp "/app/classes:/app/test-classes:/app/lib/*" org.supermas.observation.ObservationFixtureServer /data/state.db /controls'
+    environment:
+      SUPERMAS_OBSERVATION_TOKEN: ${SUPERMAS_OBSERVATION_TOKEN:?Set the observation token}
+      SUPERMAS_OBSERVATION_DIAGNOSTICS: "true"
+    depends_on:
+      fixtures:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ../../target/classes:/app/classes:ro
+      - ../../target/test-classes:/app/test-classes:ro
+      - ../../target/observation-container/lib:/app/lib:ro
+      - fixture-state:/data:ro
+      - ../../runtime/observation-controls:/controls:ro
+    read_only: true
+    tmpfs:
+      - /tmp:rw,exec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+  grafana:
+    build:
+      context: .
+    image: supermas-observation-grafana:13.1.2-infinity4.1.6
+    network_mode: service:observation
+    depends_on:
+      observation:
+        condition: service_started
+        restart: true
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:?Set the local Grafana admin password}
+      SUPERMAS_OBSERVATION_TOKEN: ${SUPERMAS_OBSERVATION_TOKEN:?Set the observation token}
+      SUPERMAS_DASHBOARD_PATH: /etc/grafana/supermas-dashboards
+      GF_SERVER_HTTP_ADDR: 0.0.0.0
+      GF_LOG_LEVEL: warn
+      GF_PATHS_DATA: /var/lib/grafana/data
+    volumes:
+      - ./grafana.ini:/etc/grafana/grafana.ini:ro
+      - ./provisioning:/etc/grafana/provisioning:ro
+      - ./dashboards:/etc/grafana/supermas-dashboards:ro
+      - grafana-data:/var/lib/grafana/data
+    restart: unless-stopped
+volumes:
+  fixture-state:
+  grafana-data:
