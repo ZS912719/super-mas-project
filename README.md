@@ -4,21 +4,6 @@
 
 A blackboard-based multi-agent email reply assistant project with a local Java blackboard runtime and a separate desktop mailbox.
 
-## Project progress
-
-| Component | Current status |
-| --- | --- |
-| Java framework | SQLite blackboard storage, fenced task leases/recovery and Markdown observations are implemented. The real coordinator, routing and scheduling remain deferred. |
-| Java agents | Metadata analysis, conversation memory, knowledge loading, discovered topics, context agents, a missing-information check and five configurable specialized agents (student, teacher, research, administration, generic) are implemented. |
-| Prototype | `PrototypeApp` takes `.eml` files through all agents to drafts awaiting review on the SQLite blackboard. Several specialists contribute to one email and a composer writes one reply; a BB1-style controller chooses each step and records why (`docs/plans/blackboard-control.md`). Drafts come from a fixed template by default, from a local model (OpenAI-compatible API), or during development from an online model (OpenRouter), all by configuration ([model setup](docs/plans/llm-setup.md)). The step 11 router stays as a baseline (`--architecture router`). |
-| Generation workspace | Independent JavaFX demonstration, native Ollama transport and structured composition validation; not wired into `PrototypeApp` or the Electron mailbox. |
-| UML | Documents the current Java packages, interfaces and selected records. |
-| Desktop mailbox | Electron opens an independent window and owns its local server; the UI provides demo mail, Gmail/Outlook adapters, history, labels and reviewed drafts. |
-| Local generation | The mailbox calls local Ollama directly; it does not implement the Java generation or agent interfaces. |
-| Integration | The Java agents run on the SQLite blackboard. With `AGENT_SERVICE_URL` set, the mailbox's **Generate reply** asks them through the loopback `AgentService` (a proposal, `docs/plans/agent-service-api.md`); approval and sending stay in the mailbox. |
-| Persistence | Java blackboards use local SQLite with immutable revision history. The independent mailbox still uses session memory. |
-| Observation | Markdown generations provide an Obsidian observation vault; Kripke models check task and projection protocols. |
-
 ## Dependencies
 
 | Module | Requirements | Dependency configuration |
@@ -105,7 +90,7 @@ The independent JavaFX demonstration also uses Gson 2.13.2 and JavaFX Controls 1
 
 The desktop entry in `mailbox/desktop/main.js` starts `mailbox/server.js` and opens the UI from `mailbox/web` in an isolated application window. Its `lib` modules handle provider calls, local generation, draft review, classification imports and demo data. This application operates independently of the Java interfaces.
 
-See [architecture details](docs/architecture.md), [current UML](docs/uml/README.md) and [mailbox documentation](mailbox/README.md) for module boundaries and API usage.
+See [project progress](docs/project-progress.md), [implementation prompts](docs/implementation-prompts.md), [architecture details](docs/architecture.md), [current UML](docs/uml/README.md) and [mailbox documentation](mailbox/README.md) for module boundaries and API usage.
 
 ## Deployment and usage
 

@@ -2,7 +2,7 @@
 
 Use English for all project-authored content, including documentation, diagrams, code identifiers, comments, prompts, user interface text, logs, test descriptions, and Git commit messages. 
 Follow the [Conventional Commits specification](https://www.conventionalcommits.org/en/v1.0.0/) to write commit messages.
-Unless explicitly instructed otherwise, limit README content to code dependencies, code structure, deployment instructions, usage and invocation instructions, and project progress.
+Unless explicitly instructed otherwise, limit README content to code dependencies, code structure, deployment instructions, usage and invocation instructions.
 Never include machine-specific local paths in README files. Use relative paths for file and directory references.
 
 ## Shared development context entry point
@@ -54,3 +54,6 @@ Apply this gate to every completed or rolled-back code task, including refactors
 
 Keep three areas separate: `super-mas-team-dev-vault/` on the knowledge branch is shared development knowledge; `super-mas-dev-vault/` is optional personal context ignored by Git; `runtime/super-mas-vault/` belongs to the application and contains runtime knowledge and generated blackboard observations. Never use the runtime vault as a development corpus or export application state into either development vault.
 
+## Implementation records
+
+Split large changes into focused Conventional Commits. After each user instruction, record its implementation requirements and reproducible approach as an English prompt in `docs/implementation-prompts.md`; summarize requirements rather than copying private conversations. Commit this record with the relevant code changes. Keep the Chinese local progress log ignored and separate from this shared record.
