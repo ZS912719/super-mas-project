@@ -5,9 +5,18 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { authorization, exchangeCode, profile, providers, providerConfig, listMail, threadMail, sendMail } from './lib/providers.js';
 import { normalizeClassification } from './lib/classification.js';
 import { generateReply } from './lib/model.js';
-import { requestAgentReply } from './lib/agents.js';
+import { requestAgentReply, requestReplyNeed } from './lib/agents.js';
 import { demoMessages } from './lib/demo.js';
 import { saveDraft, approveDraft, beginSend } from './lib/drafts.js';
+
+/** Keeps the agents' verdict on the message and the "No reply needed" label in step with it. */
+export const NO_REPLY_LABEL = 'No reply needed';
+function markReplyNeed(message, replyNeed) {
+  if (!replyNeed) return;
+  message.replyNeed = replyNeed;
+  const others = (message.labels ?? []).filter(label => label !== NO_REPLY_LABEL);
+  message.labels = replyNeed.verdict === 'NOT_NEEDED' ? [...others, NO_REPLY_LABEL] : others;
+}
 
 export function createMailboxServer({ port = Number(process.env.PORT || 4317), send = sendMail,
   externalOAuth = false, exchangeAuthorizationCode = exchangeCode, loadProfile = profile } = {}) {
@@ -129,6 +138,16 @@ export function createMailboxServer({ port = Number(process.env.PORT || 4317), s
           message.classification = result; message.labels = result.labels;
           return json({ message });
         }
+        if (path === '/api/reply-need' && request.method === 'POST') {
+          // Prototype: the agents' rules say whether the selected message needs a reply; no model, nothing stored.
+          const message = session.messages.get(body.messageId);
+          if (!message || message.direction === 'sent' || !process.env.AGENT_SERVICE_URL) return json({ replyNeed: null });
+          const messages = session.demo ? [...session.messages.values()].filter(item => item.threadId === message.threadId) : await threadMail(session.account, message);
+          const replyNeed = await requestReplyNeed(messages.sort((a, b) => a.date.localeCompare(b.date)), message.id,
+            process.env.AGENT_SERVICE_URL, process.env.AGENT_SERVICE_TOKEN);
+          markReplyNeed(message, replyNeed);
+          return json({ replyNeed, message });
+        }
         if (path === '/api/generate' && request.method === 'POST') {
           const message = session.messages.get(body.messageId);
           if (!message) throw new Error('Select a received message first.');
@@ -142,7 +161,8 @@ export function createMailboxServer({ port = Number(process.env.PORT || 4317), s
               const classification = normalizeClassification(result.classification);
               message.classification = classification; message.labels = classification.labels;
             }
-            return json({ body: result.body, origin: 'model', agent: result.agent, warnings: result.warnings });
+            markReplyNeed(message, result.replyNeed);
+            return json({ body: result.body, origin: 'model', agent: result.agent, warnings: result.warnings, replyNeed: result.replyNeed });
           }
           const reply = await generateReply(messages.sort((a, b) => a.date.localeCompare(b.date)), process.env.LOCAL_MODEL_NAME || 'llama3.2', process.env.LOCAL_MODEL_URL || 'http://127.0.0.1:11434');
           return json({ body: reply, origin: 'model' });

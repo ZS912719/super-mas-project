@@ -160,6 +160,28 @@ async function selectMessage(id) {
   const drafts = (await api('drafts')).drafts; state.drafts = drafts;
   state.draft = drafts.filter(draft => draft.messageId === id && !draft.sent).at(-1) ?? null;
   renderNav(); renderList(); renderReader(); $('.shell').classList.add('reading-open');
+  checkReplyNeed(id, sequence);
+}
+/** Asks once per message whether a reply is needed (agents' rules, no model) and shows the note next to Generate. */
+async function checkReplyNeed(id, sequence) {
+  const message = selectedMessage();
+  if (!message || message.direction === 'sent') return;
+  if (!message.replyNeed) {
+    let result; try { result = await api('reply-need', { messageId: id }); } catch { return; }
+    if (!result?.replyNeed) return;
+    message.replyNeed = result.replyNeed;
+    if (Array.isArray(result.message?.labels)) message.labels = result.message.labels;
+  }
+  if (sequence !== state.generation || state.selected !== id) return;
+  renderReplyNeed(); renderNav(); renderList();
+  // Only the tags under the subject; the editor is not re-rendered, so typing is never lost.
+  const tagBox = document.querySelector('.thread-summary > div'); if (tagBox) tagBox.innerHTML = tags(selectedMessage()?.labels);
+}
+function renderReplyNeed() {
+  const note = $('#reply-need-note'); const need = selectedMessage()?.replyNeed;
+  if (!note) return;
+  note.hidden = !need || need.verdict !== 'NOT_NEEDED';
+  note.textContent = note.hidden ? '' : `Probably no reply needed${need.reasons.length ? `: ${need.reasons.join('; ')}` : ''}. You can still generate one.`;
 }
 function renderReader() {
   const selected = selectedMessage();
@@ -171,7 +193,7 @@ function renderReader() {
   $('#reading').innerHTML = `<h1 class="subject-heading">${escapeHtml(selected?.subject ?? state.draft?.subject ?? 'A new conversation')}</h1>
     <div class="thread-summary"><div>${selected ? tags(selected.labels) : '<span class="tag">New message</span>'}</div><span class="muted">${thread.length ? `${thread.length} messages in this conversation` : 'A fresh start'}</span></div>
     ${thread.map((message, index) => `${index === 0 && thread.length > 1 ? '<div class="history-divider">CONVERSATION HISTORY</div>' : ''}<article class="thread-message"><div class="thread-person"><div class="avatar">${initials(message.sender)}</div><div><strong>${escapeHtml(name(message.sender))}${message.direction === 'sent' ? ' <span class="muted">· You</span>' : ''}</strong><small>To ${escapeHtml(message.recipient)}</small></div><time>${fullDate(message.date)}</time></div><p class="mail-body">${escapeHtml(message.body)}</p></article>`).join('')}
-    <section class="reply-card" aria-label="Reply editor"><div class="reply-head"><div><strong>${selected ? 'Your reply' : 'New message'}</strong><small>Written by you. Assisted locally.</small></div><button id="generate" ${!selected || selected.direction === 'sent' ? 'disabled' : ''}>✧ Generate reply · local model</button></div>
+    <section class="reply-card" aria-label="Reply editor"><div class="reply-head"><div><strong>${selected ? 'Your reply' : 'New message'}</strong><small>Written by you. Assisted locally.</small><small class="reply-need" id="reply-need-note" hidden></small></div><button id="generate" ${!selected || selected.direction === 'sent' ? 'disabled' : ''}>✧ Generate reply · local model</button></div>
     <div class="review-warnings" id="review-warnings" role="alert" hidden></div>
     <div class="reply-fields"><label for="reply-to">To</label><input id="reply-to" type="email" placeholder="name@example.com" required><label for="reply-subject">Subject</label><input id="reply-subject" maxlength="500" required><label for="reply-body" class="sr-only">Message</label><textarea id="reply-body" placeholder="A thoughtful reply starts here…" maxlength="32000"></textarea></div>
     <div class="reply-footer"><span id="draft-status">Your approval is required before sending.</span><div class="reply-actions"><button id="save-draft">Save draft</button><button id="approve">Approve</button><button class="primary" id="send" disabled>${state.session.demo ? 'Simulate send ↗' : 'Send ↗'}</button></div></div></section>
@@ -211,13 +233,14 @@ function renderReader() {
     if (sequence !== state.generation || state.selected !== messageId) return;
     $('#reply-body').value = result.body; state.dirty = true; state.modelOrigin = true; updateDraftStatus();
     state.warnings = { messageId, items: Array.isArray(result.warnings) ? result.warnings : [] };
-    renderWarnings();
+    if (result.replyNeed && selectedMessage()) selectedMessage().replyNeed = result.replyNeed;
+    renderWarnings(); renderReplyNeed();
     notice(state.warnings.items.length
       ? `Draft generated with ${state.warnings.items.length} review warning${state.warnings.items.length > 1 ? 's' : ''}. Check them before approving.`
       : 'Local draft generated. Review its facts before approving.');
   });
   $('#classification-inline').onclick = () => $('#classify').click();
-  renderWarnings();
+  renderWarnings(); renderReplyNeed();
   updateDraftStatus();
 }
 /** The agents' review warnings for the generated draft of the selected message; text only. */

@@ -49,7 +49,11 @@ class AgentServiceTest {
     }
 
     private HttpResponse<String> post(String body, String token) throws Exception {
-        HttpRequest.Builder request = HttpRequest.newBuilder(URI.create("http://" + service.host() + "/v1/reply"))
+        return post("/v1/reply", body, token);
+    }
+
+    private HttpResponse<String> post(String path, String body, String token) throws Exception {
+        HttpRequest.Builder request = HttpRequest.newBuilder(URI.create("http://" + service.host() + path))
                 .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(body));
         if (token != null) {
             request.header(AgentService.TOKEN_HEADER, token);
@@ -108,6 +112,23 @@ class AgentServiceTest {
         assertTrue(body.get("notes").get(0).asText().startsWith("Sent messages are not stored"));
         // Asking again is harmless: the identical history record is ignored.
         assertEquals(200, post(request("m1", earlier, STUDENT), TOKEN).statusCode());
+    }
+
+    @Test
+    void replyNeedIsJudgedWithoutAModelAndAlsoComesWithEveryDraft() throws Exception {
+        HttpResponse<String> asks = post(AgentService.REPLY_NEED_PATH, request("m1", STUDENT), TOKEN);
+        assertEquals(200, asks.statusCode(), asks.body());
+        assertEquals("NEEDED", JSON.readTree(asks.body()).get("replyNeed").get("verdict").asText());
+        String thanks = STUDENT.replaceAll("\"body\": \"[^\"]*\"", "\"body\": \"Thank you very much, that helps.\"");
+        JsonNode judged = JSON.readTree(post(AgentService.REPLY_NEED_PATH, request("m1", thanks), TOKEN).body());
+        assertEquals("NOT_NEEDED", judged.get("replyNeed").get("verdict").asText());
+        assertEquals("only thanks or an acknowledgement", judged.get("replyNeed").get("reasons").get(0).asText());
+        assertTrue(judged.get("draft") == null, "no board, no draft");
+        // A person asked for a draft: the service still writes one, and says that no reply seemed needed.
+        JsonNode drafted = JSON.readTree(post(request("m1", thanks), TOKEN).body());
+        assertEquals("AWAITING_REVIEW", drafted.get("status").asText(), drafted.toString());
+        assertEquals("NOT_NEEDED", drafted.get("replyNeed").get("verdict").asText());
+        assertEquals(401, post(AgentService.REPLY_NEED_PATH, request("m1", STUDENT), null).statusCode());
     }
 
     @Test

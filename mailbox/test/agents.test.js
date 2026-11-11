@@ -1,11 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { agentServiceEndpoint, requestAgentReply } from '../lib/agents.js';
+import { agentServiceEndpoint, requestAgentReply, requestReplyNeed, normalizeReplyNeed } from '../lib/agents.js';
 import { createMailboxServer } from '../server.js';
 
 const TOKEN = 't'.repeat(40);
 const reply = (body, extra = {}) => ({ ok: true, status: 200, json: async () => ({ draft: { body, agentId: 'student' }, ...extra }) });
+
+test('the reply-need verdict is validated as untrusted data', async () => {
+  assert.deepEqual(normalizeReplyNeed({ verdict: 'NOT_NEEDED', reasons: [' broadcast ', 3, 'x'.repeat(300), 'a', 'b', 'c', 'd'] }),
+    { verdict: 'NOT_NEEDED', reasons: ['broadcast', 'x'.repeat(200), 'a', 'b', 'c'] });
+  assert.equal(normalizeReplyNeed({ verdict: 'MAYBE' }), null);
+  assert.equal(normalizeReplyNeed(null), null);
+  let target;
+  const need = await requestReplyNeed([], 'm1', 'http://127.0.0.1:4318', TOKEN, async url => {
+    target = String(url); return { ok: true, status: 200, json: async () => ({ replyNeed: { verdict: 'NEEDED', reasons: ['asks a question'] } }) };
+  });
+  assert.equal(target, 'http://127.0.0.1:4318/v1/reply-need');
+  assert.deepEqual(need, { verdict: 'NEEDED', reasons: ['asks a question'] });
+  assert.equal(await requestReplyNeed([], 'm1', 'http://127.0.0.1:4318', TOKEN, async () => { throw new TypeError('down'); }), null,
+    'an unreachable agent service gives no note, not an error');
+});
 
 test('agent service accepts only literal HTTP loopback origins', () => {
   for (const endpoint of ['https://127.0.0.1:4318', 'http://localhost:4318', 'http://127.0.0.1.evil.example', 'http://user:pw@127.0.0.1:4318', 'http://127.0.0.1:4318/path']) assert.throws(() => agentServiceEndpoint(endpoint));
@@ -20,7 +35,7 @@ test('agent requests send the token and only conversation fields, and reject unu
       sent = JSON.parse(options.body);
       return reply(' A reply. ', { classification: { labels: ['Student requests'], confidence: 0.8 } });
     });
-  assert.deepEqual(result, { body: 'A reply.', agent: 'student', classification: { labels: ['Student requests'], confidence: 0.8 }, warnings: [] });
+  assert.deepEqual(result, { body: 'A reply.', agent: 'student', classification: { labels: ['Student requests'], confidence: 0.8 }, warnings: [], replyNeed: null });
   const warned = await requestAgentReply([], 'm1', 'http://127.0.0.1:4318', TOKEN, async () => ({ ok: true, status: 200, json: async () =>
     ({ draft: { body: 'Hi', agentId: 'student', warnings: [' the reply decides: "approved" ', 42, '', 'x'.repeat(500), ...Array(12).fill('w')] } }) }));
   assert.equal(warned.warnings[0], 'the reply decides: "approved"', 'trimmed strings only');
@@ -48,6 +63,11 @@ test('with the agent service configured, Generate fills the draft and labels the
     let data = '';
     request.on('data', chunk => { data += chunk; });
     request.on('end', () => {
+      if (request.url === '/v1/reply-need') {
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ replyNeed: { verdict: 'NOT_NEEDED', reasons: ['broadcast: sent to a group address'] } }));
+        return;
+      }
       received = { token: request.headers['x-supermas-token'], body: JSON.parse(data) };
       response.writeHead(200, { 'Content-Type': 'application/json' });
       response.end(JSON.stringify({ status: 'AWAITING_REVIEW', draft: { body: 'Hello,\n\nThank you for your message.', agentId: 'research',
@@ -78,6 +98,11 @@ test('with the agent service configured, Generate fills the draft and labels the
     return { status: response.status, ...await response.json() };
   };
   await post('demo', {});
+
+  const judged = await post('reply-need', { messageId: 'demo-0' });
+  assert.equal(judged.status, 200);
+  assert.deepEqual(judged.replyNeed, { verdict: 'NOT_NEEDED', reasons: ['broadcast: sent to a group address'] });
+  assert.ok(judged.message.labels.includes('No reply needed'), 'the message is labelled');
 
   const generated = await post('generate', { messageId: 'demo-0' });
 

@@ -40,11 +40,12 @@ import org.supermas.model.Domain.Scope;
 // PROTOTYPE-WIRING: a proposal for the mailbox-to-coordinator integration, which is an open team question.
 // The contract is in docs/plans/agent-service-api.md. Replace it with the protocol the team agrees on.
 /**
- * Lets the desktop mailbox ask the agents for a reply. One loopback endpoint, {@code POST /v1/reply}, takes the
+ * Lets the desktop mailbox ask the agents for a reply. The loopback endpoint {@code POST /v1/reply} takes the
  * conversation the mailbox shows and returns the specialist's draft, the routing decision and a classification
- * in the mailbox's own JSON shape. Nothing is approved or sent here: approval and sending stay in the mailbox.
+ * in the mailbox's own JSON shape; {@code POST /v1/reply-need} takes the same request and only says, by the metadata
+ * rules and without a model, whether the selected message needs a reply. Nothing is approved or sent here: approval and sending stay in the mailbox.
  *
- * <p>Usage: {@code AgentService [--knowledge DIR] [--data DIR] [--project ID] [--port N] [--architecture A]
+ * <p>Usage: {@code AgentService [--knowledge DIR] [--data DIR] [--project ID] [--port N] [--architecture A] [--owner ADDRESS,...]
  * [--llm-provider P] [--llm-endpoint URL] [--llm-model NAME]}, with the shared secret in the environment variable
  * {@code AGENT_SERVICE_TOKEN} (at least 32 characters). The model settings are also read from the
  * {@code SUPERMAS_LLM_*} variables ({@link LlmSettings}).
@@ -75,7 +76,9 @@ public final class AgentService implements AutoCloseable {
     private final ProjectIndexes indexes;
     private final PrototypeApp.Wiring wiring;
     private final String project;
-    private final MetadataAgent metadata = MetadataAgent.rulesOnly();
+    private final MetadataAgent metadata;
+    /** Model-free: whether the selected message needs a reply, for the mailbox's note before Generate. */
+    static final String REPLY_NEED_PATH = "/v1/reply-need";
     private final PrototypeApp.Architecture architecture;
 
     /** A request the service refuses, with the HTTP status and a message safe to show. */
@@ -99,6 +102,7 @@ public final class AgentService implements AutoCloseable {
         this.token = token.getBytes(StandardCharsets.UTF_8);
         this.project = options.project();
         this.architecture = options.architecture();
+        this.metadata = MetadataAgent.rulesOnly().withOwners(options.owners());
         Files.createDirectories(options.data());
         this.indexes = ProjectIndexes.onDisk(options.data().resolve("index"));
         // A person asked for this draft, so a board is never stopped for needing no reply (plan reply-needed).
@@ -128,6 +132,7 @@ public final class AgentService implements AutoCloseable {
         int port = DEFAULT_PORT;
         PrototypeApp.Architecture architecture = PrototypeApp.Architecture.BLACKBOARD;
         java.util.Map<String, String> llmFlags = new java.util.HashMap<>();
+        String ownerFlag = null;
         for (int i = 0; i < args.length; i += 2) {
             if (i + 1 >= args.length) {
                 throw new IllegalArgumentException("Missing value for " + args[i]);
@@ -138,6 +143,7 @@ public final class AgentService implements AutoCloseable {
                 case "--project" -> project = args[i + 1];
                 case "--port" -> port = Integer.parseInt(args[i + 1]);
                 case "--architecture" -> architecture = PrototypeApp.Architecture.valueOf(args[i + 1].toUpperCase(java.util.Locale.ROOT));
+                case "--owner" -> ownerFlag = args[i + 1];
                 default -> {
                     if (!LlmSettings.isFlag(args[i])) {
                         throw new IllegalArgumentException("Unknown option " + args[i]);
@@ -148,7 +154,8 @@ public final class AgentService implements AutoCloseable {
         }
         LlmSettings llm = LlmSettings.from(System.getenv(), llmFlags);
         AgentService service = new AgentService(new PrototypeApp.Options(null, knowledge, data, project, architecture,
-                org.supermas.control.AgendaStrategy.Settings.defaults().minContribution(), llm), port,
+                org.supermas.control.AgendaStrategy.Settings.defaults().minContribution(), llm,
+                PrototypeApp.Wiring.owners(ownerFlag != null ? ownerFlag : System.getenv().getOrDefault("SUPERMAS_OWNER", ""))), port,
                 System.getenv("AGENT_SERVICE_TOKEN"));
         Runtime.getRuntime().addShutdownHook(new Thread(service::close));
         service.start();
@@ -181,7 +188,8 @@ public final class AgentService implements AutoCloseable {
             int status = 200;
             JsonNode body;
             try {
-                body = reply(read(exchange));
+                JsonNode request = read(exchange);
+                body = exchange.getRequestURI().getPath().equals(REPLY_NEED_PATH) ? replyNeed(request) : reply(request);
             } catch (Refused e) {
                 status = e.status;
                 body = error(e.getMessage());
@@ -208,7 +216,8 @@ public final class AgentService implements AutoCloseable {
         if (supplied == null || !MessageDigest.isEqual(token, supplied.getBytes(StandardCharsets.UTF_8))) {
             throw new Refused(401, "Missing or wrong " + TOKEN_HEADER);
         }
-        if (!exchange.getRequestURI().getPath().equals("/v1/reply")) {
+        String path = exchange.getRequestURI().getPath();
+        if (!path.equals("/v1/reply") && !path.equals(REPLY_NEED_PATH)) {
             throw new Refused(404, "Unknown path");
         }
         if (!"POST".equals(exchange.getRequestMethod())) {
@@ -241,7 +250,33 @@ public final class AgentService implements AutoCloseable {
         }
     }
 
-    JsonNode reply(JsonNode request) {
+    /**
+     * Whether the selected received message needs a reply, by the metadata agent's rules alone: no model, no board,
+     * nothing stored. Same request as {@code /v1/reply}; the mailbox asks when a message is opened.
+     */
+    JsonNode replyNeed(JsonNode request) {
+        Message selected = selected(request);
+        org.supermas.model.Domain.Analysis analysis = metadata.analyze(selected.email(project));
+        ObjectNode out = JSON.createObjectNode();
+        out.put("schemaVersion", "1");
+        ObjectNode need = out.putObject("replyNeed").put("verdict", analysis.metadata().get(MetadataAgent.KEY_REPLY_NEED));
+        var reasons = need.putArray("reasons");
+        try {
+            JSON.readTree(analysis.metadata().getOrDefault(MetadataAgent.KEY_REPLY_NEED_REASONS, "[]"))
+                    .forEach(reason -> reasons.add(reason.asText()));
+        } catch (IOException e) {
+            // Written by the metadata agent as JSON; an unreadable list leaves the reasons empty.
+        }
+        return out;
+    }
+
+    /** The validated selected message of a request (the checks of {@code /v1/reply}). */
+    private Message selected(JsonNode request) {
+        return validated(request).get(0);
+    }
+
+    /** The selected message first, then the whole conversation, after every check on the request's shape. */
+    private List<Message> validated(JsonNode request) {
         if (request == null || !request.isObject()) {
             throw new Refused(400, "The body must be a JSON object");
         }
@@ -262,6 +297,15 @@ public final class AgentService implements AutoCloseable {
         if (messages.stream().anyMatch(message -> !message.threadId().equals(selected.threadId()))) {
             throw new Refused(400, "All messages must belong to the selected message's thread");
         }
+        List<Message> result = new ArrayList<>(List.of(selected));
+        result.addAll(messages);
+        return result;
+    }
+
+    JsonNode reply(JsonNode request) {
+        List<Message> checked = validated(request);
+        Message selected = checked.get(0);
+        List<Message> messages = checked.subList(1, checked.size());
         List<String> notes = new ArrayList<>();
         // Earlier received mail of the thread becomes history. Sent mail does not: SENT is recorded only after a
         // version-specific approval on this side, and the mailbox's approval does not reach the agents yet.
