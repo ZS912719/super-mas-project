@@ -55,3 +55,6 @@ Thumbs.db
 
 # Copyrighted papers of the bibliography: kept locally, cited in docs/references/README.md
 /docs/references/bibliography/*.pdf
+
+# Python bytecode (labelling scripts)
+__pycache__/

@@ -14,7 +14,14 @@ only once a person has marked them `"_reviewed": true`.
     python3 -I scripts/labeling/build_prelabels.py finalize-test AUDIT_DIR TEST_DIR
 
 `audit-compare` reports agreement between hand labels and LLM labels on the audit emails.
-`finalize-test` writes the test set's `.gold.json`, using the person's label where one exists.
+`finalize-test` writes the test set's `.gold.json`: the person's audit label for audited emails, the
+reviewed label (`.gold.reviewed.json`, from the labelling page's test review) where one exists, and
+the LLM draft otherwise. Since the audit found low agreement (benchmark protocol B27) it refuses while
+any non-audited email lacks a review, unless `--allow-unreviewed` is given.
+
+    python3 -I scripts/labeling/build_prelabels.py review-stats AUDIT_DIR TEST_DIR
+
+`review-stats` counts what the review changed against the LLM drafts (no files written).
 """
 import argparse
 import email
@@ -28,6 +35,7 @@ ENTITY_TYPES = {"PERSON", "COURSE", "DATE", "DEADLINE", "ID"}
 ACTS = {"request", "propose", "commit", "deliver"}
 ROLES = {"student", "teacher", "administration", "researcher"}
 DRAFT_SUFFIX = ".gold.draft.json"
+REVIEWED_SUFFIX = ".gold.reviewed.json"
 
 
 def flexible(text):
@@ -209,29 +217,74 @@ def audit_compare(args):
     print(json.dumps(report, indent=2))
 
 
+def strip_private(label):
+    return {key: value for key, value in label.items() if not key.startswith("_")}
+
+
 def finalize_test(args):
     audit_dir, test_dir = Path(args.audit_dir), Path(args.test_dir)
     ids, pairs = load_audit_pairs(audit_dir, test_dir)
-    written = 0
-    for path in sorted(test_dir.glob(f"*{DRAFT_SUFFIX}")):
-        draft = json.loads(path.read_text(encoding="utf-8"))
-        gold = {key: value for key, value in draft.items() if not key.startswith("_")}
-        stem = path.name.replace(DRAFT_SUFFIX, "")
+    stems = [path.name.replace(DRAFT_SUFFIX, "") for path in sorted(test_dir.glob(f"*{DRAFT_SUFFIX}"))]
+    unreviewed = [s for s in stems if s not in ids and not (test_dir / f"{s}{REVIEWED_SUFFIX}").exists()]
+    if unreviewed and not args.allow_unreviewed:
+        raise SystemExit(f"{len(unreviewed)} of {len(stems) - len(ids)} non-audited emails are not reviewed yet; "
+                         "review them or pass --allow-unreviewed to keep their LLM labels")
+    counts = {"human": 0, "reviewed": 0, "llm": 0}
+    for stem in stems:
         if stem in ids:  # The person's label is final for audited emails.
-            gold = json.loads((audit_dir / f"{stem}.gold.json").read_text(encoding="utf-8"))
+            gold, source = json.loads((audit_dir / f"{stem}.gold.json").read_text(encoding="utf-8")), "human"
+        elif (test_dir / f"{stem}{REVIEWED_SUFFIX}").exists():
+            gold, source = json.loads((test_dir / f"{stem}{REVIEWED_SUFFIX}").read_text(encoding="utf-8")), "reviewed"
+        else:
+            gold, source = json.loads((test_dir / f"{stem}{DRAFT_SUFFIX}").read_text(encoding="utf-8")), "llm"
         (test_dir / f"{stem}.gold.json").write_text(
-            json.dumps(gold, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-        written += 1
-    print(json.dumps({"written": written, "humanLabels": len(ids), "llmLabels": written - len(ids)}))
+            json.dumps(strip_private(gold), indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        counts[source] += 1
+    print(json.dumps({"written": sum(counts.values()), **{f"{k}Labels": v for k, v in counts.items()}}))
+
+
+def review_stats(args):
+    audit_dir, test_dir = Path(args.audit_dir), Path(args.test_dir)
+    ids = set(json.loads((audit_dir / "audit-ids.json").read_text()))
+    report = Counter()
+    for path in sorted(test_dir.glob(f"*{REVIEWED_SUFFIX}")):
+        stem = path.name.replace(REVIEWED_SUFFIX, "")
+        if stem in ids:
+            continue
+        reviewed = strip_private(json.loads(path.read_text(encoding="utf-8")))
+        draft = strip_private(json.loads((test_dir / f"{stem}{DRAFT_SUFFIX}").read_text(encoding="utf-8")))
+        report["reviewed"] += 1
+        report["unchanged"] += reviewed == draft
+        for key in reviewed:
+            if reviewed[key] != draft.get(key):
+                report[f"changed:{key}"] += 1
+        r = {(e["type"], normalized(e["text"])) for e in reviewed["entities"]}
+        d = {(e["type"], normalized(e["text"])) for e in draft["entities"]}
+        r_types, d_types = {t: k for k, t in r}, {t: k for k, t in d}
+        for text, kind in d_types.items():
+            if text in r_types and r_types[text] != kind:
+                report[f"entity retyped {kind}->{r_types[text]}"] += 1
+            elif text not in r_types:
+                report[f"entity removed {kind}"] += 1
+        for text, kind in r_types.items():
+            if text not in d_types:
+                report[f"entity added {kind}"] += 1
+        for act in ACTS:
+            if (act in reviewed["speechActs"]) != (act in draft["speechActs"]):
+                report[f"act {'added' if act in reviewed['speechActs'] else 'removed'} {act}"] += 1
+    total = len([p for p in test_dir.glob(f"*{DRAFT_SUFFIX}") if p.name.replace(DRAFT_SUFFIX, "") not in ids])
+    print(json.dumps({"toReview": total, **dict(sorted(report.items()))}, indent=2))
 
 
 def main():
     parser = argparse.ArgumentParser()
     commands = parser.add_subparsers(required=True)
-    for name, run in (("audit-compare", audit_compare), ("finalize-test", finalize_test)):
+    for name, run in (("audit-compare", audit_compare), ("finalize-test", finalize_test), ("review-stats", review_stats)):
         p = commands.add_parser(name)
         p.add_argument("audit_dir")
         p.add_argument("test_dir")
+        if name == "finalize-test":
+            p.add_argument("--allow-unreviewed", action="store_true")
         p.set_defaults(run=run)
     p = commands.add_parser("build")
     p.add_argument("dev_dir")

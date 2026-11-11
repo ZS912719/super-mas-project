@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SuperMAS Labelling</title>
+<style>
+:root {
+  --bg: #f7f7f5; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6b66; --line: #deded8;
+  --accent: #2f5fb3; --accent-ink: #ffffff; --ok: #2d7a46; --warn: #9a6400; --err: #b3261e;
+  --ok-bg: #e6f3ea; --warn-bg: #fbf1dc; --err-bg: #fbe7e5; --mark: #fff1a8; --chip: #eef1f7;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161615; --panel: #1f1f1d; --ink: #ecece8; --muted: #a2a29b; --line: #34342f;
+    --accent: #7ea6ef; --accent-ink: #10131a; --ok: #7fcf96; --warn: #e8b85c; --err: #f08b82;
+    --ok-bg: #1d3325; --warn-bg: #3a2f17; --err-bg: #3d1f1c; --mark: #5a4d12; --chip: #2a2f3a;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); height: 100vh; display: flex; flex-direction: column; }
+header { display: flex; gap: 16px; align-items: center; padding: 8px 16px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+.tabs button { border: 1px solid var(--line); background: transparent; color: var(--ink); padding: 5px 12px; border-radius: 6px; cursor: pointer; }
+.tabs button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.progress { color: var(--muted); margin-left: auto; }
+main { flex: 1; display: grid; grid-template-columns: 170px minmax(0, 1fr) minmax(0, 1fr); min-height: 0; }
+nav { border-right: 1px solid var(--line); overflow-y: auto; background: var(--panel); }
+nav button.item { display: flex; justify-content: space-between; width: 100%; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); padding: 7px 10px; text-align: left; cursor: pointer; font: inherit; font-size: 13px; }
+nav button.item.on { background: var(--chip); font-weight: 600; }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-top: 4px; flex: none; }
+.s-todo { background: var(--line); } .s-done, .s-ok { background: var(--ok); } .s-changed { background: var(--accent); }
+.s-unsure { background: var(--warn); } .s-invalid { background: var(--err); }
+section { overflow-y: auto; padding: 14px 16px; min-width: 0; }
+section + section { border-left: 1px solid var(--line); }
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 16px 0 6px; }
+h2:first-child { margin-top: 0; }
+.headers { display: grid; grid-template-columns: 90px 1fr; gap: 2px 8px; font-size: 13px; margin-bottom: 10px; }
+.headers dt { color: var(--muted); } .headers dd { margin: 0; overflow-wrap: anywhere; }
+pre.body { white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px; margin: 0; }
+label.field { display: block; margin: 8px 0 3px; font-weight: 600; font-size: 13px; }
+.hint { color: var(--muted); font-size: 12px; font-weight: normal; }
+input[type=text], input[type=number], textarea, select { width: 100%; font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 5px; padding: 5px 7px; }
+textarea { font: 13px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; resize: vertical; }
+textarea#currentText { min-height: 180px; }
+.row { display: flex; gap: 6px; align-items: center; margin: 4px 0; }
+.row select { width: 120px; flex: none; } .row input { flex: 1; }
+.choices { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.choices label { display: flex; gap: 5px; align-items: center; cursor: pointer; }
+button.small, button.act { font: inherit; font-size: 12px; padding: 3px 9px; border-radius: 5px; border: 1px solid var(--line); background: var(--chip); color: var(--ink); cursor: pointer; }
+button.primary { font: inherit; font-weight: 600; padding: 7px 16px; border-radius: 6px; border: 0; background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+button.x { border: 0; background: transparent; color: var(--err); cursor: pointer; font-size: 16px; padding: 0 4px; }
+.bar { position: sticky; bottom: -14px; background: var(--bg); padding: 10px 0 14px; display: flex; gap: 10px; align-items: center; border-top: 1px solid var(--line); margin-top: 14px; flex-wrap: wrap; }
+.msgs div { padding: 4px 8px; border-radius: 4px; margin: 3px 0; font-size: 13px; }
+.msgs .e { background: var(--err-bg); color: var(--err); } .msgs .w { background: var(--warn-bg); color: var(--warn); }
+.msgs .o { background: var(--ok-bg); color: var(--ok); }
+.note { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+.diff { border-left: 3px solid var(--accent); padding-left: 6px; }
+.group { border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; margin: 5px 0; background: var(--panel); }
+.group .row input { font-weight: 600; }
+details { margin-top: 10px; } summary { cursor: pointer; color: var(--muted); }
+.doc { border: 1px solid var(--line); border-radius: 6px; margin: 6px 0; background: var(--panel); }
+.doc summary { padding: 6px 8px; color: var(--ink); } .doc pre { margin: 0; padding: 8px; white-space: pre-wrap; font-size: 12px; border-top: 1px solid var(--line); }
+.cheat { font-size: 12px; color: var(--muted); line-height: 1.5; } .cheat b { color: var(--ink); }
+mark { background: var(--mark); color: inherit; }
+button.act.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.act.suggest { border-color: var(--accent); font-weight: 600; }
+.group.cand { border-style: dashed; }
+.ctx { font-size: 12.5px; color: var(--muted); } .ctx mark, .ctx b { color: var(--ink); }
+.actline { margin: 5px 0; } .actline label { display: flex; gap: 6px; align-items: baseline; cursor: pointer; }
+.filter { display: flex; gap: 4px; padding: 6px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.checklist { padding: 6px 9px; border-radius: 5px; font-weight: 600; margin-bottom: 6px; }
+.checklist.open { background: var(--warn-bg); color: var(--warn); } .checklist.closed { background: var(--ok-bg); color: var(--ok); }
+button.act.tick.on { background: var(--ok-bg); color: var(--ok); border-color: var(--ok); }
+.evidence { margin: 2px 0 0 24px; font-size: 12.5px; color: var(--muted); font-style: italic; }
+.empty { color: var(--muted); padding: 30px; }
+@media (max-width: 900px) { main { grid-template-columns: 1fr; } nav { max-height: 160px; } section + section { border-left: 0; border-top: 1px solid var(--line); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>SuperMAS labelling</h1>
+  <div class="tabs" id="tabs">
+    <button data-set="audit">Enron audit (blind)</button>
+    <button data-set="reply">Reply checks</button>
+    <button data-set="multi">Multi-request gold</button>
+    <button data-set="test">Enron test review</button>
+  </div>
+  <span class="progress" id="progress"></span>
+</header>
+<main>
+  <nav id="list"></nav>
+  <section id="mail"><div class="empty">Choose a set and an email.</div></section>
+  <section id="form"></section>
+</main>
+<script>
+"use strict";
+const TOKEN = "__TOKEN__";
+const ENTITY_TYPES = ["PERSON", "COURSE", "DATE", "DEADLINE", "ID"];
+const ACTS = {request: "asks the recipient to do or provide something", propose: "suggests a joint action or time",
+  commit: "the sender undertakes to do something", deliver: "provides requested info or a file (FYI above a forward too)"};
+const ROLES = ["student", "teacher", "administration", "researcher"];
+const CONTRIBUTORS = ["student", "teacher", "research", "administration", "generic"];
+const METADATA_FIELDS = ["sender", "recipients", "date", "threadId", "currentText", "entities", "speechActs", "roleHint", "language"];
+const state = {set: null, items: [], visible: [], filter: "look", id: null, item: null, dirty: false, knowledge: null};
+const CHECK_ACTS = ["deliver", "commit", "propose"];
+
+// ---------- small helpers (text only, never innerHTML with data) ----------
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") node.className = v;
+    else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+    else if (k === "checked" || k === "value" || k === "disabled") node[k] = v;
+    else node.setAttribute(k, v);
+  }
+  for (const c of children.flat()) if (c != null) node.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  return node;
+}
+async function api(path, body) {
+  const options = {headers: {"X-Label-Token": TOKEN}};
+  if (body !== undefined) { options.method = "POST"; options.body = JSON.stringify(body); options.headers["Content-Type"] = "application/json"; }
+  const response = await fetch(path, options);
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || response.statusText);
+  return data;
+}
+const norm = s => (s || "").split(/\s+/).filter(Boolean).join(" ").toLowerCase();
+const lines = s => (s || "").split("\n").map(x => x.trim()).filter(Boolean);
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+function markDirty() { state.dirty = true; scheduleCheck(); }
+function confirmLeave() { return !state.dirty || confirm("This email has unsaved changes. Leave without saving?"); }
+window.addEventListener("beforeunload", e => { if (state.dirty) { e.preventDefault(); e.returnValue = ""; } });
+
+// ---------- set and list ----------
+document.getElementById("tabs").addEventListener("click", e => { if (e.target.dataset.set) openSet(e.target.dataset.set); });
+async function openSet(name) {
+  if (!confirmLeave()) return;
+  state.set = name; state.id = null; state.item = null; state.dirty = false;
+  for (const b of document.querySelectorAll("#tabs button")) b.classList.toggle("on", b.dataset.set === name);
+  try { localStorage.setItem("label-set", name); } catch (_) {}
+  await refreshList();
+  document.getElementById("mail").replaceChildren(el("div", {class: "empty"}, "Choose an email on the left."));
+  document.getElementById("form").replaceChildren();
+  const first = state.visible.find(i => i.status === "todo") || state.visible[0];
+  if (first) openItem(first.id);
+}
+async function refreshList() {
+  state.items = await api(`/api/items?set=${state.set}`);
+  const isDone = i => i.status !== "todo" && i.status !== "invalid";
+  const needs = state.items.filter(i => (i.reasons || []).length);
+  state.visible = state.set === "test" && state.filter === "look" ? needs : state.items;
+  const list = document.getElementById("list");
+  const filterBar = state.set !== "test" ? [] : [el("div", {class: "filter"},
+    ...[["look", `Needs a look (${needs.length})`], ["all", `All (${state.items.length})`]].map(([value, text]) =>
+      el("button", {class: "act" + (state.filter === value ? " on" : ""), onclick: () => { state.filter = value; refreshList(); }}, text)))];
+  list.replaceChildren(...filterBar, ...state.visible.map(i => el("button", {class: "item" + (i.id === state.id ? " on" : ""),
+    title: (i.reasons || []).join("\n") || "nothing the audit found unreliable", onclick: () => openItem(i.id)},
+    el("span", {}, i.id), el("span", {class: `dot s-${i.status}`, title: i.status}))));
+  const progress = state.set === "test"
+    ? `needs a look: ${needs.filter(isDone).length} of ${needs.length} done · all: ${state.items.filter(isDone).length} of ${state.items.length}`
+    : `${state.items.filter(isDone).length} of ${state.items.length} done`;
+  document.getElementById("progress").textContent = progress;
+}
+function nextTodo() {
+  const at = state.visible.findIndex(i => i.id === state.id);
+  const after = [...state.visible.slice(at + 1), ...state.visible.slice(0, at)];
+  return (after.find(i => i.status === "todo") || state.visible[at + 1] || {}).id;
+}
+
+// ---------- one item ----------
+async function openItem(id) {
+  if (id !== state.id && !confirmLeave()) return;
+  state.id = id; state.dirty = false; state.pending = null; state.openedAt = Date.now();
+  for (const b of document.querySelectorAll("#list button.item")) b.classList.toggle("on", b.firstChild.textContent === id);
+  state.item = await api(`/api/item?set=${state.set}&id=${encodeURIComponent(id)}`);
+  if ((state.set === "reply" || state.set === "multi") && !state.knowledge) state.knowledge = await api("/api/knowledge");
+  renderMail();
+  if (state.set === "audit" || state.set === "test") renderAudit(state.set === "test"); else if (state.set === "reply") renderReply(); else renderMulti();
+  scheduleCheck();
+}
+function renderMail(highlights = []) {
+  const {headers, body} = state.item.email;
+  const head = el("dl", {class: "headers"});
+  for (const [k, v] of Object.entries(headers)) if (v) head.append(el("dt", {}, k), el("dd", {}, v));
+  const pre = el("pre", {class: "body", id: "body"});
+  pre.append(...highlight(body, highlights));
+  const parts = [el("h2", {}, state.id), head, pre];
+  if (state.set === "audit" || state.set === "test") parts.splice(1, 0, el("div", {class: "note"}, state.set === "test" ? "Review of the LLM draft: entities are highlighted in the email." : "Blind audit: label from the email alone. Select text here or in currentText, then use the entity buttons."));
+  if ((state.set === "reply" || state.set === "multi") && state.knowledge) {
+    parts.push(el("h2", {}, "Knowledge documents"), el("div", {class: "note"}, "What the system may know. Readers = which agents may read the source."),
+      ...state.knowledge.map(d => el("details", {class: "doc"}, el("summary", {}, `${d.source}/${d.file}`, el("span", {class: "hint"}, `  readers: ${d.readers.join(", ")}`)), el("pre", {}, d.text))));
+  }
+  document.getElementById("mail").replaceChildren(...parts);
+}
+function highlight(text, terms) {
+  const wanted = terms.map(t => t.trim()).filter(t => t.length > 1).sort((a, b) => b.length - a.length);
+  if (!wanted.length) return [text];
+  const escaped = wanted.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"));
+  const pattern = new RegExp(`(${escaped.join("|")})`, "gi");
+  const out = []; let last = 0;
+  for (const m of text.matchAll(pattern)) { out.push(text.slice(last, m.index), el("mark", {}, m[0])); last = m.index + m[0].length; }
+  out.push(text.slice(last));
+  return out;
+}
+
+// ---------- metadata form: blind audit, or quick review of an LLM draft ----------
+const MONTHS = "January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept|Sep|Oct|Nov|Dec";
+const DAYS = "Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday";
+const DATE_PATTERNS = [
+  new RegExp(`\\b(?:(?:next|this|last)\\s+)?(?:${DAYS})\\b`, "gi"),
+  new RegExp(`\\b(?:${MONTHS})\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?\\b`, "gi"),
+  new RegExp(`\\b\\d{1,2}(?:st|nd|rd|th)?\\s+(?:of\\s+)?(?:${MONTHS})\\.?(?:,?\\s+\\d{4})?\\b`, "gi"),
+  new RegExp(`\\b(?:${MONTHS})\\.?\\s+\\d{4}\\b`, "gi"),
+  /\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g,
+  /\b(?:this|next|last)\s+(?:week|weekend|month|year)\b|\bend of (?:the )?(?:day|week|month|year)\b/gi,
+];
+// Words just before a date that make it a deadline ("due Friday", "by 6/1").
+const DEADLINE_CUE = /\b(?:by|due|before|deadline|no later than|prior to|cut-?off|expires?|latest)\b[^.?!\n]{0,20}$/i;
+
+function findSpan(text, needle) {
+  if (!needle || !needle.trim()) return null;
+  const pattern = new RegExp(needle.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"), "i");
+  const m = pattern.exec(text);
+  return m ? [m.index, m.index + m[0].length] : null;
+}
+function dateCandidates(text) {
+  const spans = [];
+  for (const p of DATE_PATTERNS) for (const m of text.matchAll(p)) spans.push([m.index, m.index + m[0].length]);
+  spans.sort((a, b) => a[0] - b[0]);
+  const merged = [];
+  for (const s of spans) {
+    const last = merged[merged.length - 1];
+    if (last && s[0] <= last[1] + 2 && /^[\s,]*$/.test(text.slice(last[1], s[0]))) last[1] = Math.max(last[1], s[1]);
+    else merged.push([...s]);
+  }
+  return merged.map(([a, b]) => ({span: [a, b], text: text.slice(a, b).replace(/\s+/g, " "),
+    suggest: DEADLINE_CUE.test(text.slice(Math.max(0, a - 40), a)) ? "DEADLINE" : "DATE"}));
+}
+function context(text, span) {
+  if (!span) return el("span", {class: "hint"}, "(not found in currentText)");
+  const [a, b] = span, from = Math.max(0, a - 60), to = Math.min(text.length, b + 60);
+  const before = text.slice(from, a).replace(/\s+/g, " "), after = text.slice(b, to).replace(/\s+/g, " ");
+  const cue = DEADLINE_CUE.exec(before);
+  const beforeNodes = cue ? [before.slice(0, cue.index), el("b", {}, before.slice(cue.index))] : [before];
+  return el("span", {class: "ctx"}, from > 0 ? "…" : "", ...beforeNodes, el("mark", {}, text.slice(a, b)), after, to < text.length ? "…" : "");
+}
+
+function renderAudit(review = false) {
+  const label = structuredClone(state.item.label);
+  label.entities = Array.isArray(label.entities) ? label.entities : [];
+  label.speechActs = Array.isArray(label.speechActs) ? label.speechActs : [];
+  label.recipients = Array.isArray(label.recipients) ? label.recipients : [];
+  const original = state.item.original;
+  const facts = state.item.email.facts;
+  const evidence = state.item.evidence || {};
+  state.read = () => label;
+  const form = document.getElementById("form");
+  const factInput = (key, hint) => {
+    const input = el("input", {type: "text", value: label[key] || "", oninput: e => { label[key] = e.target.value; markDirty(); }});
+    return [el("label", {class: "field"}, key, " ", el("span", {class: "hint"}, hint)), input];
+  };
+  const recipients = el("textarea", {rows: 3, oninput: e => { label.recipients = lines(e.target.value).map(s => s.toLowerCase()); markDirty(); }});
+  recipients.value = (label.recipients || []).join("\n");
+  const text = el("textarea", {id: "currentText", oninput: e => { label.currentText = e.target.value; markDirty(); drawFocus(); renderMail(entityTexts()); }});
+  text.value = label.currentText || "";
+  const entityTexts = () => label.entities.map(e => e.text);
+  const entities = el("div");
+  const focus = el("div");
+  const changed = el("div", {class: "note"});
+  const redraw = () => { drawEntities(); drawFocus(); renderMail(entityTexts()); markDirty(); };
+  const drawEntities = () => {
+    entities.replaceChildren(...label.entities.map((entity, i) => el("div", {class: "row"},
+      el("select", {onchange: e => { entity.type = e.target.value; markDirty(); drawFocus(); }}, ...ENTITY_TYPES.map(t => el("option", {value: t, ...(t === entity.type ? {selected: ""} : {})}, t))),
+      el("input", {type: "text", value: entity.text, oninput: e => { entity.text = e.target.value; markDirty(); drawFocus(); renderMail(entityTexts()); }}),
+      el("button", {class: "x", title: "Remove", onclick: () => { label.entities.splice(i, 1); redraw(); }}, "×"))));
+  };
+  // A selection in the email body wins; otherwise the selection inside currentText.
+  const selected = () => String(window.getSelection() || "").trim()
+    || text.value.slice(text.selectionStart, text.selectionEnd).trim();
+  const addAs = type => () => { label.entities.push({type, text: selected().replace(/\s+/g, " ")}); redraw(); };
+
+  // Review mode: a checklist of every point the audit found unreliable. Each must be confirmed
+  // ("right as is") or changed before saving, so a draft cannot be accepted without a look.
+  const ticked = new Set();
+  const alreadyReviewed = state.item.loadNote === "Saved review";
+  let required = [];
+  const tick = key => { ticked.add(key); };
+  const tickButton = key => el("button", {class: "act tick" + (ticked.has(key) ? " on" : ""),
+    onclick: () => { ticked.has(key) ? ticked.delete(key) : ticked.add(key); drawFocus(); scheduleCheck(); }},
+    ticked.has(key) ? "✓ checked" : "○ right as is");
+  if (review) {
+    state.pending = () => required.filter(k => !ticked.has(k)).length;
+    state.reviewMeta = () => ({checked: [...ticked].filter(k => required.includes(k)), seconds: (Date.now() - state.openedAt) / 1000});
+  }
+  const drawFocus = () => {
+    if (!review) return;
+    const t = label.currentText || "";
+    const dated = label.entities.map((e, i) => [e, i]).filter(([e]) => e.type === "DATE" || e.type === "DEADLINE");
+    const covered = c => label.entities.some(e => { const x = norm(e.text), y = norm(c.text); return x && (x.includes(y) || y.includes(x)); });
+    const missed = dateCandidates(t).filter(c => !covered(c));
+    const draftActs = CHECK_ACTS.filter(a => (original.speechActs || []).includes(a));
+    required = [...dated.map(([e]) => "ent:" + norm(e.text)), ...missed.map(c => "cand:" + norm(c.text)), ...draftActs.map(a => "act:" + a)];
+    if (alreadyReviewed) required.forEach(tick);
+    const typeButton = (entity, type) => el("button", {class: "act" + (entity.type === type ? " on" : ""),
+      onclick: () => { entity.type = type; tick("ent:" + norm(entity.text)); redraw(); }}, type);
+    const others = label.entities.filter(e => e.type !== "DATE" && e.type !== "DEADLINE");
+    const open = required.filter(k => !ticked.has(k)).length;
+    focus.replaceChildren(
+      el("div", {class: "checklist " + (open ? "open" : "closed")}, required.length
+        ? (open ? `Checklist: ${required.length - open} of ${required.length} points checked — confirm or fix each ○` : `Checklist: all ${required.length} points checked`)
+        : "Nothing the audit found unreliable here: check quickly and save"),
+      ...(state.item.reasons || []).length ? [el("div", {class: "hint"}, "What to check: " + state.item.reasons.join(" · "))] : [],
+      el("h2", {}, "Dates and deadlines ", el("span", {class: "hint"}, "DEADLINE = something is due by then; bold = a deadline word before it")),
+      ...(dated.length ? dated.map(([entity, i]) => el("div", {class: "group"},
+        el("div", {class: "row"}, el("b", {style: "flex:1"}, entity.text), typeButton(entity, "DATE"), typeButton(entity, "DEADLINE"),
+          tickButton("ent:" + norm(entity.text)),
+          el("button", {class: "x", title: "Not an entity", onclick: () => { label.entities.splice(i, 1); redraw(); }}, "×")),
+        el("div", {}, context(t, findSpan(t, entity.text))))) : [el("div", {class: "hint"}, "The draft has no DATE or DEADLINE.")]),
+      ...(missed.length ? [el("h2", {}, "Possible dates not labelled ", el("span", {class: "hint"}, "found by a pattern; add it, or confirm it is not an entity"))] : []),
+      ...missed.map(c => el("div", {class: "group cand"},
+        el("div", {class: "row"}, el("b", {style: "flex:1"}, c.text),
+          ...["DATE", "DEADLINE"].map(type => el("button", {class: "act" + (c.suggest === type ? " suggest" : ""), title: c.suggest === type ? "suggested" : "",
+            onclick: () => { label.entities.push({type, text: c.text}); tick("ent:" + norm(c.text)); redraw(); }}, "+ " + type)),
+          el("button", {class: "act tick" + (ticked.has("cand:" + norm(c.text)) ? " on" : ""), onclick: () => {
+            const key = "cand:" + norm(c.text); ticked.has(key) ? ticked.delete(key) : ticked.add(key); drawFocus(); scheduleCheck(); }},
+            ticked.has("cand:" + norm(c.text)) ? "✓ not an entity" : "○ not an entity")),
+        el("div", {}, context(t, c.span)))),
+      ...(draftActs.length ? [el("h2", {}, "Speech acts the LLM chose ", el("span", {class: "hint"}, "the audit found deliver and commit over-used"))] : []),
+      ...draftActs.map(act => el("div", {class: "group"},
+        el("div", {class: "row"}, el("b", {style: "flex:1"}, act + (label.speechActs.includes(act) ? "" : " (removed)")),
+          label.speechActs.includes(act)
+            ? el("button", {class: "act", onclick: () => { label.speechActs = label.speechActs.filter(a => a !== act); tick("act:" + act); redraw(); }}, "remove")
+            : el("button", {class: "act", onclick: () => { label.speechActs = Object.keys(ACTS).filter(a => a === act || label.speechActs.includes(a)); tick("act:" + act); redraw(); }}, "put back"),
+          tickButton("act:" + act)),
+        evidence[act] ? el("div", {class: "evidence"}, "LLM's reason: “", evidence[act], "”") : null,
+        el("div", {class: "hint"}, act === "deliver" ? "Right only for requested information, a file, or a report of work done; not news, announcements or marketing."
+          : act === "commit" ? "Right only if the sender promises to do something (\"I will…\"); not a plan or a statement."
+          : "Right only for a joint action or time the recipient can accept."))),
+      el("h2", {}, "Other entities ", el("span", {class: "hint"}, "edit under All fields")),
+      el("div", {class: "hint"}, others.length ? others.map(e => `${e.type}: ${e.text}`).join(" · ") : "none"));
+    const diff = METADATA_FIELDS.filter(k => !same(label[k], original[k]));
+    changed.textContent = diff.length ? `Changed from the LLM draft: ${diff.join(", ")}` : "Unchanged from the LLM draft (saving accepts it as reviewed)";
+  };
+
+  const acts = el("div", {}, ...Object.entries(ACTS).map(([act, meaning]) => el("div", {class: "actline"},
+    el("label", {title: meaning}, el("input", {type: "checkbox", checked: label.speechActs.includes(act), onchange: e => {
+      label.speechActs = Object.keys(ACTS).filter(a => a === act ? e.target.checked : label.speechActs.includes(a)); ticked.add("act:" + act); markDirty(); drawFocus(); }}),
+      el("b", {}, act), el("span", {class: "hint"}, ` ${meaning}`)),
+    review && evidence[act] ? el("div", {class: "evidence"}, "LLM's reason: “", evidence[act], "”") : null)));
+  const radio = (name, values, current, set) => el("div", {class: "choices"}, ...values.map(([value, text]) => el("label", {},
+    el("input", {type: "radio", name, checked: current === value, onchange: () => { set(value); markDirty(); drawFocus(); }}), text)));
+  drawEntities();
+
+  const factsAndText = [
+    el("h2", {}, "Facts ", el("span", {class: "hint"}, "check against the headers")),
+    ...factInput("sender", `From header: ${facts.sender || "?"}`),
+    el("label", {class: "field"}, "recipients ", el("span", {class: "hint"}, "To and Cc, one per line")), recipients,
+    ...factInput("date", `UTC; Date header gives ${facts.date || "?"}`),
+    ...factInput("threadId", "Message-ID of the thread's first message"),
+    el("h2", {}, "currentText"),
+    el("div", {class: "note"}, "Keep the greeting and the new text. Remove quoted replies, forwarded content, the sign-off (\"Thanks,\", \"Best regards,\") and the signature. Keep a PS. A pure forward is empty."),
+    el("div", {class: "row"}, el("button", {class: "small", onclick: () => {
+      if (text.value.trim() && !confirm("Replace currentText with the whole email body?")) return;
+      text.value = state.item.email.body.trim(); label.currentText = text.value; markDirty(); drawFocus(); }}, "Start from the email body")),
+    text,
+    el("h2", {}, "Entities ", el("span", {class: "hint"}, "only in currentText, once each, exact words")),
+    el("div", {class: "row"}, el("span", {class: "hint"}, "Add selection as:"), ...ENTITY_TYPES.map(t => el("button", {class: "act", onclick: addAs(t)}, t))),
+    entities];
+  const actsBlock = [el("h2", {}, "Speech acts ", el("span", {class: "hint"}, "whole email, several or none")), acts];
+  if (review) actsBlock.push(el("div", {class: "note"}, "deliver needs requested information, a file or a report of work done: not news, announcements or marketing. commit needs the sender to promise an action (\"I will…\"), not a plan or a statement."));
+  const rest = [
+    el("h2", {}, "Role hint ", el("span", {class: "hint"}, "only clear evidence in the text; an address is not enough")),
+    radio("role", [[null, "none"], ...ROLES.map(r => [r, r])], label.roleHint, v => { label.roleHint = v; }),
+    el("h2", {}, "Language"), radio("lang", [["en", "en"], ["fr", "fr"]], label.language, v => { label.language = v; })];
+
+  if (review) {
+    const attention = state.item.attention || [];
+    form.replaceChildren(
+      el("div", {class: "note"}, state.item.loadNote, " · Ctrl+Enter = save and next"),
+      ...(attention.length ? [el("div", {class: "msgs"}, ...attention.map(a => el("div", {class: "w"}, "LLM flagged: " + a)))] : []),
+      changed, focus, ...actsBlock,
+      el("details", {}, el("summary", {}, "All fields (facts, currentText, every entity, role, language)"), ...factsAndText, ...rest),
+      cheatSheet(), actionBar());
+  } else {
+    form.replaceChildren(el("div", {class: "note"}, state.item.loadNote), ...factsAndText, ...actsBlock, ...rest, cheatSheet(), actionBar());
+  }
+  drawFocus();
+  renderMail(entityTexts());
+}
+function cheatSheet() {
+  return el("details", {}, el("summary", {}, "Annotation rules (field-schema.md)"), el("div", {class: "cheat"},
+    el("p", {}, el("b", {}, "PERSON"), " name without title (Martin, not Prof. Martin); several forms → the fullest once."),
+    el("p", {}, el("b", {}, "DATE / DEADLINE"), " weekdays and written dates count (Friday, next Friday, 6/1/03); not bare today/tomorrow/yesterday. A date by which something is due is a DEADLINE; never both. Copy without surrounding words: \"Friday 14 November\", not \"by Friday 14 November\"."),
+    el("p", {}, el("b", {}, "ID"), " account, order, ticket, document, tag, bill numbers, without a leading #. Phone numbers are not IDs. Course codes are COURSE."),
+    el("p", {}, el("b", {}, "Speech acts"), " follow Cohen, Carvalho & Mitchell (2004). News, announcements and marketing have no deliver unless they carry a file or a report of work done."),
+    el("p", {}, el("b", {}, "Bulk mail"), " same rules; leave out unsubscribe footers, log lines and form diagnostics.")));
+}
+
+// ---------- reply-check review ----------
+function renderReply() {
+  const original = state.item.original;
+  const review = structuredClone(state.item.label || {...original, _review: {status: "", comment: ""}});
+  delete review._review?.at;
+  state.read = () => review;
+  const changed = key => !same(review[key], original[key]);
+  const wrap = (key, ...nodes) => { const box = el("div", {"data-key": key}, ...nodes); box.classList.toggle("diff", changed(key)); return box; };
+  const refreshDiffs = () => { for (const box of document.querySelectorAll("#form [data-key]")) box.classList.toggle("diff", changed(box.dataset.key)); };
+  const touch = () => { markDirty(); refreshDiffs(); highlightTerms(); };
+  const highlightTerms = () => renderMail([...(review.greet || []), ...review.notGreet,
+    ...["mustMention", "mustAsk", "mustNotContain"].flatMap(k => review[k].flatMap(g => g.any))]);
+  const names = key => { const input = el("input", {type: "text", value: (review[key] || []).join(", "), oninput: e => {
+    review[key] = e.target.value.split(",").map(s => s.trim()).filter(Boolean); touch(); }}); return input; };
+  const anyGreeting = el("input", {type: "checkbox", checked: review.greet === null});
+  const greetInput = names("greet"); greetInput.disabled = review.greet === null;
+  anyGreeting.addEventListener("change", () => { review.greet = anyGreeting.checked ? null : []; greetInput.disabled = anyGreeting.checked; greetInput.value = ""; touch(); });
+  const bool = key => el("label", {}, el("input", {type: "checkbox", checked: review[key], onchange: e => { review[key] = e.target.checked; touch(); }}), key);
+  const groups = (key, title, hint) => {
+    const box = el("div");
+    const draw = () => box.replaceChildren(...review[key].map((g, i) => {
+      const terms = el("textarea", {rows: Math.max(2, g.any.length), oninput: e => { g.any = lines(e.target.value); touch(); }});
+      terms.value = g.any.join("\n");
+      return el("div", {class: "group"}, el("div", {class: "row"},
+        el("input", {type: "text", value: g.id, title: "id", oninput: e => { g.id = e.target.value.trim(); touch(); }}),
+        el("button", {class: "x", title: "Remove this check", onclick: () => { review[key].splice(i, 1); draw(); touch(); }}, "×")),
+        el("div", {class: "hint"}, "any of these terms (one per line)"), terms);
+    }), el("button", {class: "small", onclick: () => { review[key].push({id: "", any: []}); draw(); touch(); }}, "+ add"));
+    draw();
+    return wrap(key, el("h2", {}, title, " ", el("span", {class: "hint"}, hint)), box);
+  };
+  const note = el("textarea", {rows: 2, oninput: e => { review.note = e.target.value; touch(); }}); note.value = review.note || "";
+  document.getElementById("form").replaceChildren(
+    el("div", {class: "note"}, state.item.loadNote, " · blue bar = differs from the frozen file. Saving writes ", el("code", {}, `${state.id}.reply.review.json`), "; the frozen check is not changed."),
+    verdictBox(review),
+    el("h2", {}, "What the email asks / the checker's note"), wrap("note", note),
+    wrap("replyExpected", el("div", {class: "choices"}, bool("replyExpected"), bool("allowInternal")),
+      el("div", {class: "hint"}, "No reply expected for notices, broadcasts, thank-you notes and the owner's own sent mail. allowInternal: staff sender, may see the staff-only marking guide.")),
+    wrap("language", el("label", {class: "field"}, "language"), el("div", {class: "choices"}, ...["en", "fr"].map(l => el("label", {},
+      el("input", {type: "radio", name: "lang", checked: review.language === l, onchange: () => { review.language = l; touch(); }}), l)))),
+    wrap("greet", el("label", {class: "field"}, "greet ", el("span", {class: "hint"}, "one of these names must be in the greeting line (comma-separated)")),
+      el("label", {class: "hint"}, anyGreeting, " any greeting is fine (null)"), greetInput),
+    wrap("notGreet", el("label", {class: "field"}, "notGreet ", el("span", {class: "hint"}, "none may appear in the greeting, e.g. the owner")), names("notGreet")),
+    groups("mustMention", "mustMention", "facts from the knowledge the reply must state"),
+    groups("mustAsk", "mustAsk", "what the reply must ask the sender for"),
+    groups("mustNotContain", "mustNotContain", "promises, decisions for the owner, sender's own data, unrelated knowledge"),
+    actionBar());
+  highlightTerms();
+}
+function verdictBox(review) {
+  const comment = el("textarea", {rows: 2, placeholder: "What you changed and why, or what is unsure", oninput: e => { review._review.comment = e.target.value; markDirty(); }});
+  comment.value = review._review.comment || "";
+  return el("div", {class: "group"}, el("label", {class: "field"}, "Your verdict"),
+    el("div", {class: "choices"}, ...[["ok", "correct as it is"], ["changed", "I corrected it"], ["unsure", "needs a second reader"]].map(([v, t]) =>
+      el("label", {}, el("input", {type: "radio", name: "verdict", checked: review._review.status === v, onchange: () => { review._review.status = v; markDirty(); }}), t))),
+    comment);
+}
+
+// ---------- multi-request gold review ----------
+function renderMulti() {
+  const original = state.item.original;
+  const review = structuredClone(state.item.label || {...original, _review: {status: "", comment: ""}});
+  delete review._review?.at;
+  state.read = () => review;
+  const requests = el("input", {type: "number", min: 1, value: review.requests, oninput: e => { review.requests = parseInt(e.target.value, 10); markDirty(); }});
+  const note = el("textarea", {rows: 2, oninput: e => { review.note = e.target.value; markDirty(); }}); note.value = review.note || "";
+  document.getElementById("form").replaceChildren(
+    el("div", {class: "note"}, state.item.loadNote, ` · frozen: ${original.requests} request(s), ${original.contributors.join(", ")}. Saving writes ${state.id}.gold.review.json.`),
+    verdictBox(review),
+    el("label", {class: "field"}, "requests ", el("span", {class: "hint"}, "separate things the sender asks for")), requests,
+    el("label", {class: "field"}, "contributors ", el("span", {class: "hint"}, "the roles whose knowledge is needed to answer (see the readers of each knowledge source)")),
+    el("div", {class: "choices"}, ...CONTRIBUTORS.map(c => el("label", {}, el("input", {type: "checkbox", checked: review.contributors.includes(c), onchange: e => {
+      review.contributors = CONTRIBUTORS.filter(x => x === c ? e.target.checked : review.contributors.includes(x)); markDirty(); }}), c))),
+    el("label", {class: "field"}, "note"), note,
+    actionBar());
+}
+
+// ---------- check and save ----------
+let checkTimer = null;
+function scheduleCheck() { clearTimeout(checkTimer); checkTimer = setTimeout(runCheck, 350); }
+function clientErrors() {
+  if (state.set === "test") {
+    const open = state.pending ? state.pending() : 0;
+    return open ? [`Confirm or fix every point in the checklist first (${open} left)`] : [];
+  }
+  if (state.set === "audit") return [];
+  const r = state.read(), o = {...state.item.original};
+  const {_review, ...content} = r;
+  const differs = Object.keys({...content, ...o}).some(k => !same(content[k], o[k]));
+  return differs && _review.status === "ok" ? ["You changed the check, so the verdict is \"I corrected it\", not \"correct as it is\""] : [];
+}
+async function runCheck() {
+  if (!state.read) return;
+  try {
+    const result = await api(`/api/check?set=${state.set}&id=${encodeURIComponent(state.id)}`, state.read());
+    showMessages([...clientErrors(), ...result.errors], result.warnings);
+  } catch (e) { showMessages([e.message], []); }
+}
+function showMessages(errors, warnings, saved) {
+  const box = document.getElementById("msgs"); if (!box) return;
+  box.replaceChildren(...(saved ? [el("div", {class: "o"}, saved)] : []),
+    ...errors.map(m => el("div", {class: "e"}, m)), ...warnings.map(m => el("div", {class: "w"}, "Check: " + m)),
+    ...(!errors.length && !warnings.length && !saved ? [el("div", {class: "o"}, "No problems found")] : []));
+}
+async function save(goNext) {
+  const errors = clientErrors();
+  if (errors.length) return showMessages(errors, []);
+  const payload = state.set === "test" ? {...state.read(), _review: state.reviewMeta()} : state.read();
+  const result = await api(`/api/save?set=${state.set}&id=${encodeURIComponent(state.id)}`, payload);
+  if (!result.saved) return showMessages(result.errors, result.warnings);
+  state.dirty = false;
+  await refreshList();
+  showMessages([], result.warnings, `Saved to ${result.file}`);
+  if (goNext) { const next = nextTodo(); if (next) openItem(next); }
+}
+function actionBar() {
+  return el("div", {class: "bar"}, el("button", {class: "primary", onclick: () => save(true)}, "Save and next"),
+    el("button", {class: "small", onclick: () => save(false)}, "Save"),
+    el("span", {class: "hint"}, "Ctrl+S saves · warnings do not block saving"), el("div", {class: "msgs", id: "msgs", style: "width:100%"}));
+}
+document.addEventListener("keydown", e => {
+  if (!(e.ctrlKey || e.metaKey) || !state.read) return;
+  if (e.key === "s") { e.preventDefault(); save(false); }
+  if (e.key === "Enter") { e.preventDefault(); save(true); }
+});
+
+let start = "audit";
+try { start = localStorage.getItem("label-set") || "audit"; } catch (_) {}
+if (location.hash.length > 1) start = location.hash.slice(1);
+openSet(["audit", "reply", "multi", "test"].includes(start) ? start : "audit");
+</script>
+</body>
+</html>
