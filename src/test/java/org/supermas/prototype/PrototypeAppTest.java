@@ -36,9 +36,13 @@ class PrototypeAppTest {
         List<PrototypeApp.Outcome> outcomes = run(emails, first);
 
         assertEquals(3, outcomes.size(), "only .eml files are read");
-        assertTrue(outcomes.stream().allMatch(outcome -> outcome.state().status() == BoardStatus.AWAITING_REVIEW),
-                first.toString(StandardCharsets.UTF_8));
-        assertTrue(outcomes.stream().allMatch(outcome -> outcome.state().drafts().size() == 1));
+        // en-01 asks for an extension; en-02 (the owner's own reply, here without an owner setting) and en-04 (a
+        // broadcast) need no reply, and a
+        // batch run stops their boards without a draft (plan reply-needed).
+        assertEquals(List.of(BoardStatus.AWAITING_REVIEW, BoardStatus.STOPPED, BoardStatus.STOPPED),
+                outcomes.stream().map(outcome -> outcome.state().status()).toList(), first.toString(StandardCharsets.UTF_8));
+        assertTrue(outcomes.get(1).state().drafts().isEmpty() && outcomes.get(2).state().drafts().isEmpty());
+        assertEquals(1, outcomes.get(0).state().drafts().size());
         assertTrue(Files.exists(temp.resolve("data/blackboard.db")));
         assertTrue(Files.isDirectory(temp.resolve("data/super-mas-vault/generated")));
 

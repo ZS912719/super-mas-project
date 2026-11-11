@@ -117,7 +117,17 @@ public final class PrototypeApp {
      * @param llm             which engine writes the replies (template by default; see {@link LlmSettings})
      */
     record Options(Path emails, Path knowledge, Path data, String project, Architecture architecture,
-                   double minContribution, LlmSettings llm) {
+                   double minContribution, LlmSettings llm, java.util.Set<String> owners) {
+        Options {
+            owners = java.util.Set.copyOf(owners);
+        }
+
+        /** Without owner addresses: mail is never recognised as the owner's own. */
+        Options(Path emails, Path knowledge, Path data, String project, Architecture architecture, double minContribution,
+                LlmSettings llm) {
+            this(emails, knowledge, data, project, architecture, minContribution, llm, java.util.Set.of());
+        }
+
         Options(Path emails, Path knowledge, Path data, String project, Architecture architecture, double minContribution) {
             this(emails, knowledge, data, project, architecture, minContribution, LlmSettings.template());
         }
@@ -141,7 +151,7 @@ public final class PrototypeApp {
                 throw new IllegalArgumentException("Usage: PrototypeApp EMAILS [--knowledge DIR] [--data DIR] [--project ID]"
                         + " [--architecture blackboard|router] [--min-contribution 0..1]"
                         + " [--llm-provider template|local|online|replay] [--llm-endpoint URL] [--llm-model NAME]"
-                        + " [--llm-cache DIR]");
+                        + " [--llm-cache DIR] [--owner ADDRESS,...]");
             }
             Architecture architecture = Architecture.BLACKBOARD;
             double minContribution = AgendaStrategy.Settings.defaults().minContribution();
@@ -150,6 +160,7 @@ public final class PrototypeApp {
             Path knowledge = Path.of("src/test/resources/university/knowledge");
             Path data = Path.of("runtime");
             String project = "uni";
+            String ownerFlag = null;
             for (int i = 1; i < args.length; i += 2) {
                 if (i + 1 >= args.length) {
                     throw new IllegalArgumentException("Missing value for " + args[i]);
@@ -160,6 +171,7 @@ public final class PrototypeApp {
                     case "--project" -> project = args[i + 1];
                     case "--architecture" -> architecture = Architecture.valueOf(args[i + 1].toUpperCase(java.util.Locale.ROOT));
                     case "--min-contribution" -> minContribution = Double.parseDouble(args[i + 1]);
+                    case "--owner" -> ownerFlag = args[i + 1];
                     default -> {
                         if (!LlmSettings.isFlag(args[i])) {
                             throw new IllegalArgumentException("Unknown option " + args[i]);
@@ -168,8 +180,10 @@ public final class PrototypeApp {
                     }
                 }
             }
+            // Owner addresses: the flag wins over SUPERMAS_OWNER; mail they sent needs no reply (plan reply-needed).
+            String owners = ownerFlag != null ? ownerFlag : environment.getOrDefault("SUPERMAS_OWNER", "");
             return new Options(emails, knowledge, data, project, architecture, minContribution,
-                    LlmSettings.from(environment, llmFlags));
+                    LlmSettings.from(environment, llmFlags), Wiring.owners(owners));
         }
     }
 
@@ -285,6 +299,12 @@ public final class PrototypeApp {
             this.coordinator = coordinator;
         }
 
+        /** Owner addresses from a comma-separated list, lower-case. */
+        static java.util.Set<String> owners(String value) {
+            return java.util.Arrays.stream(value.split(",")).map(String::strip).filter(a -> !a.isEmpty())
+                    .map(a -> a.toLowerCase(java.util.Locale.ROOT)).collect(java.util.stream.Collectors.toUnmodifiableSet());
+        }
+
         /** The engine the settings name; replacing the model or the engine is configuration only. */
         static RoleServices withGeneration(RoleServices services, LlmSettings llm) {
             if (llm.provider() == LlmSettings.Provider.TEMPLATE) {
@@ -313,8 +333,17 @@ public final class PrototypeApp {
             return create(indexes, options, RoleCatalog.bundled());
         }
 
-        /** With a given role catalogue, e.g. one with a composer prompt variant (benchmarks). */
+        /** Batch wiring: a board whose email needs no reply stops without a draft (plan reply-needed). */
         static Wiring create(ProjectIndexes indexes, Options options, RoleCatalog roles) {
+            return create(indexes, options, roles, true);
+        }
+
+        /** With a given role catalogue, e.g. one with a composer prompt variant (benchmarks). */
+        /**
+         * @param batch true for runs without a person asking (the {@code .eml} prototype, benchmarks): boards of emails
+         *              that need no reply stop before any work. The agent service passes false: a person asked.
+         */
+        static Wiring create(ProjectIndexes indexes, Options options, RoleCatalog roles, boolean batch) {
             String project = options.project();
             Map<String, ContextSource> sources = new HashMap<>(new KnowledgeLoader(indexes).load(options.knowledge()).sources());
             // Every agent that should read mail is a reader of the mail source, in trusted configuration.
@@ -369,7 +398,10 @@ public final class PrototypeApp {
                 strategy = new ContextFirstCoordinationStrategy(List.of(discussion), List.of(discovered),
                         new TopicCandidateFilter(3), Optional.of(check.config().id()), new DraftFirstCoordinationStrategy(), 2);
             }
-            LeasedCoordinator coordinator = new LeasedCoordinator(MetadataAgent.rulesOnly(),
+            if (batch) {
+                strategy = new org.supermas.control.ReplyNeedGate(strategy);
+            }
+            LeasedCoordinator coordinator = new LeasedCoordinator(MetadataAgent.rulesOnly().withOwners(options.owners()),
                     new DefaultBlackboardFactory(store), registry, new ScoreRoutingStrategy(0.4, 0.1), strategy,
                     new EvidencePromotion(retriever::readers), Optional.of(recorder), Duration.ofMinutes(5));
             // Topics from mail already stored by an earlier run, before the first new email.

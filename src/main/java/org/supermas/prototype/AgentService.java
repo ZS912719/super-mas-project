@@ -101,7 +101,8 @@ public final class AgentService implements AutoCloseable {
         this.architecture = options.architecture();
         Files.createDirectories(options.data());
         this.indexes = ProjectIndexes.onDisk(options.data().resolve("index"));
-        this.wiring = PrototypeApp.Wiring.create(indexes, options);
+        // A person asked for this draft, so a board is never stopped for needing no reply (plan reply-needed).
+        this.wiring = PrototypeApp.Wiring.create(indexes, options, org.supermas.agent.role.RoleCatalog.bundled(), false);
         this.server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), port), 0);
         this.host = "127.0.0.1:" + server.getAddress().getPort();
         server.createContext("/", this::handle);
@@ -337,6 +338,17 @@ public final class AgentService implements AutoCloseable {
             }
         } else {
             out.putNull("draft");
+        }
+        if (state.analysis() != null && state.analysis().metadata().containsKey(MetadataAgent.KEY_REPLY_NEED)) {
+            // The metadata agent's judgement whether a reply is needed, for the mailbox's note (plan reply-needed).
+            ObjectNode need = out.putObject("replyNeed").put("verdict", state.analysis().metadata().get(MetadataAgent.KEY_REPLY_NEED));
+            var reasons = need.putArray("reasons");
+            try {
+                JSON.readTree(state.analysis().metadata().getOrDefault(MetadataAgent.KEY_REPLY_NEED_REASONS, "[]"))
+                        .forEach(reason -> reasons.add(reason.asText()));
+            } catch (IOException e) {
+                // Written by the metadata agent as JSON; an unreadable list leaves the reasons empty.
+            }
         }
         state.routing().ifPresent(routing -> out.set("routing", routing(routing)));
         state.evidence().stream().map(ReplyPlan::from).flatMap(Optional::stream).reduce((first, second) -> second)

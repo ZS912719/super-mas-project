@@ -42,6 +42,7 @@
             "warnings": ["the reply decides or acts for the owner: \"Your extension is approved until 30 November.\" (the same words are in the email: possibly dictated)"]},
   "routing": {"match": "CLEAR", "selectedAgentId": "student", "reason": "…",
               "candidates": [{"agentId": "student", "score": 0.87, "reason": "…"}]},
+  "replyNeed": {"verdict": "NEEDED", "reasons": ["asks a question"]},
   "plan": {"requests": ["Could I have an extension …?"], "missing": []},
   "classification": {"schemaVersion": "1", "source": "supermas-agents", "labels": ["Student requests"],
                      "contributors": ["student"], "confidence": 0.87,
@@ -52,6 +53,7 @@
 
 - `classification` is in the shape the mailbox's `normalizeClassification` reads. **Its labels say which specialists contributed on the board**, read from the board after the work, not from the routing decision before it: one label per non-fallback role with a reply plan on the board (the role's `displayName` from its JSON file), listed in `contributors`. `confidence` is the contributor's routing score when exactly one specialist contributed, otherwise `null`. If no specialist contributed (only the Generic fallback), `classification` is `null`, so the mailbox keeps its own labels. Labels only flow from the board to the user, never back into control.
 - `failure` (`kind`, `message`) is present when the board recorded one, for example a history record that could not be stored. A draft may still be present.
+- `replyNeed` is the metadata agent's judgement whether the email needs a reply (`NEEDED`, `NOT_NEEDED` or `UNSURE`, which counts as needed) with its reasons (plan `reply-needed.md`). The service still drafts, since a person asked; batch runs stop such boards instead.
 - `draft.warnings` lists sentences in which the reply decides or acts for the owner (approves, grants, confirms a change, claims an attachment or a send), each marked when the same words are in the email and so may be dictated by it (benchmark protocol B65, B66). The draft is not changed; the list is for the reviewer and is empty when nothing was found. The mailbox shows the list in the reply card when it fills a generated draft (owner's decision, 2026-11-11).
 - Nothing is approved or sent. `draft` is a proposal for human review in the mailbox.
 

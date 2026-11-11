@@ -148,7 +148,9 @@ public final class MimeEmailParser {
 
     private static Map<String, String> metadata(Message message) {
         Map<String, String> metadata = new LinkedHashMap<>();
-        for (String name : new String[] {"In-Reply-To", "References", "Content-Type"}) {
+        // List and automation headers tell whether a reply is needed (ReplyNeedClassifier).
+        for (String name : new String[] {"In-Reply-To", "References", "Content-Type", "List-Id", "List-Unsubscribe",
+                "Precedence", "Auto-Submitted"}) {
             String value = rawHeader(message, name);
             if (value != null) {
                 metadata.put(name, value);

@@ -30,6 +30,10 @@ public final class MetadataAgent implements Preprocessor {
     public static final String KEY_SPEECH_ACTS = "speechActs";
     public static final String KEY_ROLE_HINT = "roleHint";
     public static final String KEY_FAILED_STAGES = "failedStages";
+    /** {@code NEEDED}, {@code NOT_NEEDED} or {@code UNSURE}, from {@link ReplyNeedClassifier}. */
+    public static final String KEY_REPLY_NEED = "replyNeed";
+    /** The reasons for {@link #KEY_REPLY_NEED}, as a JSON list. */
+    public static final String KEY_REPLY_NEED_REASONS = "replyNeedReasons";
 
     /** Which source was stronger per type on dev: see docs/reports/step-1.6.md. */
     private static final Set<String> MODEL_TYPES = Set.of("PERSON", "COURSE", "ID");
@@ -46,14 +50,26 @@ public final class MetadataAgent implements Preprocessor {
     private final Optional<GlinerEntityExtractor> modelEntities;
     private final SpeechActClassifier ruleActs = new RuleSpeechActClassifier();
     private final Optional<SpeechActClassifier> modelActs;
+    private final ReplyNeedClassifier replyNeed;
 
     /**
      * @param modelEntities empty to use rules only for entities
      * @param modelActs empty to use rules only for speech acts
      */
     public MetadataAgent(Optional<GlinerEntityExtractor> modelEntities, Optional<SpeechActClassifier> modelActs) {
+        this(modelEntities, modelActs, Set.of());
+    }
+
+    private MetadataAgent(Optional<GlinerEntityExtractor> modelEntities, Optional<SpeechActClassifier> modelActs,
+                          Set<String> owners) {
         this.modelEntities = modelEntities;
         this.modelActs = modelActs;
+        this.replyNeed = new ReplyNeedClassifier(owners);
+    }
+
+    /** The same agent, recognising mail sent by these owner addresses as needing no reply. */
+    public MetadataAgent withOwners(Set<String> owners) {
+        return new MetadataAgent(modelEntities, modelActs, owners);
     }
 
     /** Rules only: needs no model file. */
@@ -77,11 +93,17 @@ public final class MetadataAgent implements Preprocessor {
         metadata.put(KEY_SPEECH_ACTS, toJson(acts));
         role.ifPresent(value -> metadata.put(KEY_ROLE_HINT, value));
         metadata.put(KEY_FAILED_STAGES, toJson(failed));
+        ReplyNeedClassifier.Decision need = replyNeed.classify(email, currentText, acts.stream().map(SpeechAct::act).toList());
+        metadata.put(KEY_REPLY_NEED, need.verdict().name());
+        metadata.put(KEY_REPLY_NEED_REASONS, toJson(need.reasons()));
 
         List<String> tags = new ArrayList<>();
         tags.add("lang:" + detected);
         acts.forEach(act -> tags.add("act:" + act.act()));
         role.ifPresent(value -> tags.add("role:" + value));
+        if (!need.replyNeeded()) {
+            tags.add("reply:not-needed");
+        }
         return new Analysis(keywords(email.subject(), entities), tags, metadata);
     }
 
