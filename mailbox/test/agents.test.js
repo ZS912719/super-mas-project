@@ -20,7 +20,15 @@ test('agent requests send the token and only conversation fields, and reject unu
       sent = JSON.parse(options.body);
       return reply(' A reply. ', { classification: { labels: ['Student requests'], confidence: 0.8 } });
     });
-  assert.deepEqual(result, { body: 'A reply.', agent: 'student', classification: { labels: ['Student requests'], confidence: 0.8 } });
+  assert.deepEqual(result, { body: 'A reply.', agent: 'student', classification: { labels: ['Student requests'], confidence: 0.8 }, warnings: [] });
+  const warned = await requestAgentReply([], 'm1', 'http://127.0.0.1:4318', TOKEN, async () => ({ ok: true, status: 200, json: async () =>
+    ({ draft: { body: 'Hi', agentId: 'student', warnings: [' the reply decides: "approved" ', 42, '', 'x'.repeat(500), ...Array(12).fill('w')] } }) }));
+  assert.equal(warned.warnings[0], 'the reply decides: "approved"', 'trimmed strings only');
+  assert.equal(warned.warnings[1].length, 400, 'cut to 400 characters');
+  assert.equal(warned.warnings.length, 10, 'at most 10');
+  const odd = await requestAgentReply([], 'm1', 'http://127.0.0.1:4318', TOKEN, async () => ({ ok: true, status: 200, json: async () =>
+    ({ draft: { body: 'Hi', warnings: 'not a list' } }) }));
+  assert.deepEqual(odd.warnings, []);
   assert.equal(sent.messageId, 'm1');
   assert.deepEqual(Object.keys(sent.messages[0]).sort(), ['body', 'date', 'direction', 'id', 'recipient', 'sender', 'subject', 'threadId']);
   const unrouted = await requestAgentReply([], 'm1', 'http://127.0.0.1:4318', TOKEN, async () => reply('Hello', { classification: null }));
@@ -42,7 +50,8 @@ test('with the agent service configured, Generate fills the draft and labels the
     request.on('end', () => {
       received = { token: request.headers['x-supermas-token'], body: JSON.parse(data) };
       response.writeHead(200, { 'Content-Type': 'application/json' });
-      response.end(JSON.stringify({ status: 'AWAITING_REVIEW', draft: { body: 'Hello,\n\nThank you for your message.', agentId: 'research' },
+      response.end(JSON.stringify({ status: 'AWAITING_REVIEW', draft: { body: 'Hello,\n\nThank you for your message.', agentId: 'research',
+        warnings: ['the reply decides or acts for the owner: "Your extension is approved."'] },
         classification: { schemaVersion: '1', source: 'supermas-agents', labels: ['Research and projects'], confidence: 0.9, reason: 'CLEAR: research' } }));
     });
   });
@@ -75,6 +84,7 @@ test('with the agent service configured, Generate fills the draft and labels the
   assert.equal(generated.status, 200);
   assert.equal(generated.body, 'Hello,\n\nThank you for your message.');
   assert.equal(generated.origin, 'model'); assert.equal(generated.agent, 'research');
+  assert.deepEqual(generated.warnings, ['the reply decides or acts for the owner: "Your extension is approved."'], 'warnings reach the page');
   assert.equal(received.token, TOKEN);
   assert.equal(received.body.messageId, 'demo-0');
   assert.equal(received.body.messages.length, 3, 'the whole demo thread, oldest first');

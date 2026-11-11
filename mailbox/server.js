@@ -142,7 +142,7 @@ export function createMailboxServer({ port = Number(process.env.PORT || 4317), s
               const classification = normalizeClassification(result.classification);
               message.classification = classification; message.labels = classification.labels;
             }
-            return json({ body: result.body, origin: 'model', agent: result.agent });
+            return json({ body: result.body, origin: 'model', agent: result.agent, warnings: result.warnings });
           }
           const reply = await generateReply(messages.sort((a, b) => a.date.localeCompare(b.date)), process.env.LOCAL_MODEL_NAME || 'llama3.2', process.env.LOCAL_MODEL_URL || 'http://127.0.0.1:11434');
           return json({ body: reply, origin: 'model' });

@@ -34,5 +34,10 @@ export async function requestAgentReply(messages, messageId, endpoint, token, re
   }
   const agent = typeof result.draft.agentId === 'string' ? result.draft.agentId : null;
   const classification = result.classification && typeof result.classification === 'object' ? result.classification : null;
-  return { body: body.trim(), agent, classification };
+  // Review warnings: sentences in which the draft decides or acts for the owner (docs/plans/agent-service-api.md).
+  // Untrusted text: strings only, at most 10, each cut to 400 characters; shown as text, never as HTML.
+  const warnings = Array.isArray(result.draft.warnings)
+    ? result.draft.warnings.filter(item => typeof item === 'string' && item.trim()).slice(0, 10).map(item => item.trim().slice(0, 400))
+    : [];
+  return { body: body.trim(), agent, classification, warnings };
 }

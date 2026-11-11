@@ -172,6 +172,7 @@ function renderReader() {
     <div class="thread-summary"><div>${selected ? tags(selected.labels) : '<span class="tag">New message</span>'}</div><span class="muted">${thread.length ? `${thread.length} messages in this conversation` : 'A fresh start'}</span></div>
     ${thread.map((message, index) => `${index === 0 && thread.length > 1 ? '<div class="history-divider">CONVERSATION HISTORY</div>' : ''}<article class="thread-message"><div class="thread-person"><div class="avatar">${initials(message.sender)}</div><div><strong>${escapeHtml(name(message.sender))}${message.direction === 'sent' ? ' <span class="muted">· You</span>' : ''}</strong><small>To ${escapeHtml(message.recipient)}</small></div><time>${fullDate(message.date)}</time></div><p class="mail-body">${escapeHtml(message.body)}</p></article>`).join('')}
     <section class="reply-card" aria-label="Reply editor"><div class="reply-head"><div><strong>${selected ? 'Your reply' : 'New message'}</strong><small>Written by you. Assisted locally.</small></div><button id="generate" ${!selected || selected.direction === 'sent' ? 'disabled' : ''}>✧ Generate reply · local model</button></div>
+    <div class="review-warnings" id="review-warnings" role="alert" hidden></div>
     <div class="reply-fields"><label for="reply-to">To</label><input id="reply-to" type="email" placeholder="name@example.com" required><label for="reply-subject">Subject</label><input id="reply-subject" maxlength="500" required><label for="reply-body" class="sr-only">Message</label><textarea id="reply-body" placeholder="A thoughtful reply starts here…" maxlength="32000"></textarea></div>
     <div class="reply-footer"><span id="draft-status">Your approval is required before sending.</span><div class="reply-actions"><button id="save-draft">Save draft</button><button id="approve">Approve</button><button class="primary" id="send" disabled>${state.session.demo ? 'Simulate send ↗' : 'Send ↗'}</button></div></div></section>
     <p class="muted">${state.session.demo ? 'Demo labels are sample data. ' : ''}Agent classification is awaiting integration. <button class="quiet inline-button" id="classification-inline">Import a JSON result ↗</button></p>`;
@@ -209,10 +210,22 @@ function renderReader() {
     const result = await busy('Finding the words, locally…', () => api('generate', { messageId }));
     if (sequence !== state.generation || state.selected !== messageId) return;
     $('#reply-body').value = result.body; state.dirty = true; state.modelOrigin = true; updateDraftStatus();
-    notice('Local draft generated. Review its facts before approving.');
+    state.warnings = { messageId, items: Array.isArray(result.warnings) ? result.warnings : [] };
+    renderWarnings();
+    notice(state.warnings.items.length
+      ? `Draft generated with ${state.warnings.items.length} review warning${state.warnings.items.length > 1 ? 's' : ''}. Check them before approving.`
+      : 'Local draft generated. Review its facts before approving.');
   });
   $('#classification-inline').onclick = () => $('#classify').click();
+  renderWarnings();
   updateDraftStatus();
+}
+/** The agents' review warnings for the generated draft of the selected message; text only. */
+function renderWarnings() {
+  const box = $('#review-warnings'); if (!box) return;
+  const items = state.warnings && state.warnings.messageId === state.selected ? state.warnings.items : [];
+  box.hidden = !items.length;
+  box.innerHTML = items.length ? `<strong>Check before approving: the generated draft may decide or act for you</strong><ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul><small>The draft was not changed. These warnings refer to the text as generated; edit or delete the sentence if it is not your decision.</small>` : '';
 }
 function extractAddress(value) { return value.match(/<([^<>]+)>/)?.[1] ?? value; }
 function updateDraftStatus() {
