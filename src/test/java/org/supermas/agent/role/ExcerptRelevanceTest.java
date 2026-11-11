@@ -70,4 +70,17 @@ class ExcerptRelevanceTest {
                 new ArrayList<>());
         assertTrue(ids(french).contains("extensions"), "English knowledge is kept for a French request");
     }
+
+    @Test
+    void requestsWithoutMeaningfulWordsKeepOnlyTheThread() throws Exception {
+        Evidence thread = new Evidence("<earlier@x>", new Scope("uni", "t"), EvidenceKind.RETRIEVED_EVIDENCE,
+                new Provenance("mail", "Thread message of kind RECEIVED", Instant.EPOCH), "Lunch next week?", Set.of("student"));
+        Evidence english = document("extensions", "student-faq/extensions.md", "x");
+        ContextSelection all = new ContextSelection(List.of(thread, english), 0, List.of());
+        List<String> notes = new ArrayList<>();
+        assertEquals(List.of("<earlier@x>"), ids(ExcerptRelevance.related(all, List.of("9", ""), notes)));
+        assertEquals(List.of("1 excerpts unrelated to the requests were left out"), notes);
+        assertEquals(List.of(), ids(ExcerptRelevance.related(new ContextSelection(List.of(english), 0, List.of()),
+                List.of("Could you please?"), new ArrayList<>())), "asking words alone are not a subject");
+    }
 }

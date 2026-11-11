@@ -149,6 +149,7 @@ This file links to the detailed results and does not replace them: each number h
 ### B59
 **W1: main result, all three runs** · 2026-11-11 · status `development`
 - Question and configuration as B54, three runs per model (B58 explains the gap; the added runs used the same code and options, `src/main`, `benchmark/` and the harness unchanged since `14ea40e`). Supersedes B54. The hosting provider chosen by OpenRouter is not recorded and may differ between requests.
+- Java runtime: a Java 25 runtime became the system default at 13:59 during the first main runs (installed with other packages), so runs finished after 13:59 ran on Java 25, the earlier ones on Java 17 (the classes were compiled once, with JDK 17). Check: the composer prompt fingerprints of 868 email-repeat pairs that were drafted in both r1 and a later run are identical (0 different), so the runtime did not change the model input; differences between runs come from the model.
 
 | Model | Facts (21) | Asks (6) | Drafted | Clean | Greeting right |
 | --- | --- | --- | --- | --- | --- |

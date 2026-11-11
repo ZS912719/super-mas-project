@@ -46,13 +46,15 @@ final class ExcerptRelevance {
         String joined = String.join(" ", requests);
         String language = LANGUAGES.detect(joined);
         Set<String> wanted = stems(joined, language);
-        if (wanted.isEmpty()) {
-            return selection;
-        }
-        // Shared stems cannot judge an excerpt in another language (a French email, English knowledge): kept.
-        List<Evidence> kept = selection.evidence().stream().filter(item -> ownThread(item)
-                || !LANGUAGES.detect(item.text()).equals(language)
-                || stems(item.text(), language).stream().anyMatch(wanted::contains)).toList();
+        // Requests without a meaningful word ("9", "Here is all the contact info") give no reason to quote any
+        // knowledge: only the thread history is kept (W9 on real mail, protocol B51: such an email was answered with
+        // the office hours and the facilities portal, because every excerpt used to be kept).
+        List<Evidence> kept = wanted.isEmpty()
+                ? selection.evidence().stream().filter(ExcerptRelevance::ownThread).toList()
+                // Shared stems cannot judge an excerpt in another language (a French email, English knowledge): kept.
+                : selection.evidence().stream().filter(item -> ownThread(item)
+                        || !LANGUAGES.detect(item.text()).equals(language)
+                        || stems(item.text(), language).stream().anyMatch(wanted::contains)).toList();
         if (kept.size() == selection.evidence().size()) {
             return selection;
         }
