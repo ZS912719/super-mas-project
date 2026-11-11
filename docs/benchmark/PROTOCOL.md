@@ -22,6 +22,7 @@ This file links to the detailed results and does not replace them: each number h
 
 | # | Date | Benchmark | Part | Data | Configuration | Commit | Headline | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [B57](#b57) | 2026-11-11 | P2 Input budget on real and synthetic mail | Context / generation | Enron 100 + 20 longest, synthetic 36 | Fake local model | `5dd7bd5` + server | 0 requests over budget; largest exactly 12,000 (truncation); 3 of the 20 longest emails refused: the plan alone exceeds the budget | `valid` |
 | [B56](#b56) | 2026-11-11 | W2 Single agent vs the system | Whole system | synthetic 24 + 12 | Online 3 B (1 run), 8 B (1 run) | `14ea40e` | 3 B: more facts (+0.18), fewer clean replies (−0.26); 8 B: no difference shown | `development` |
 | [B55](#b55) | 2026-11-11 | W3 Ablations: knowledge, composer prompt, router | Whole system | synthetic 24 + 12 | Online 3 B (2 runs), 8 B (1 run) | `14ea40e` | Without knowledge: fewer facts (8 B −0.26); router (3 B): more facts, more rule violations | `development` |
 | [B54](#b54) | 2026-11-11 | W1 Main result on the reviewed checks | Whole system | synthetic 24 + 12 | Online 3 B (2 runs), 8 B (1 run) | `14ea40e` | 3 B: facts 0.20, clean 0.81, drafted 1.00; 8 B: facts 0.36, clean 0.66; 8 B − 3 B facts +0.15 (0.01 to 0.33) | `development` |
@@ -108,6 +109,15 @@ This file links to the detailed results and does not replace them: each number h
 - Command: `java -cp … org.supermas.benchmark.C1Benchmark benchmark/data/enron-raw/maildir 10000 200 docs/benchmark/results/c1-baseline-enron-2026-11-11.md runtime/bench-2026-11-11/c1-index`. Commit `2b8bba3` + working tree.
 - Result: identical to B08 in every quality measure (R@10 0.338 vs recency 0.601, MRR 0.358); retrieval p50 2.8 ms (B08: 2.3 ms).
 - Details: `docs/benchmark/results/c1-baseline-enron-2026-11-11.md`.
+
+### B57
+**P2: the model input never exceeds the budget** · 2026-11-11 · status `valid`
+- Question: is the invariant "budgets: total input limit enforced, current email text not exempt" (CLAUDE.md) kept on real mail, including very long messages?
+- Method: the system (blackboard, university knowledge) answered each email through its local-model adapter talking to a fake OpenAI-compatible server on 127.0.0.1 (`scripts/benchmark/fake_llm_server.py`, new), which returns one fixed reply and logs the size of each request (sizes only). The adapter refuses over-budget requests before sending, so they would appear as budget failures. No real model, no email leaves the machine. Harness: `RealMailBenchmark` with `--llm-provider local --llm-endpoint http://127.0.0.1:8788 --llm-model fake-budget-probe`.
+- Data: Enron frozen test (100), `synthetic-dev` (24), `synthetic-multi` (12), and a stress set of the 20 longest messages of the Enron maildir (226-400 KB; Git-ignored copies in `runtime/p2/longest20`).
+- Result: 156 emails; **no request over the budget** of 12,000 characters. Ordinary mail stays well below it (largest 9,692 on Enron, median about 4,100). On the 20 longest messages the email text is cut so that the request is **exactly 12,000** characters at most (17 requests); **3 emails were refused** with "the system prompt and the plan exceed the input budget of composer", because the reply plan, which is never cut, does not fit beside the system prompt.
+- Reading: the budget holds without exception, and truncation applies to the email text, not to the trusted prompt or the plan. On extreme inputs the system fails visibly instead of sending a cut plan; why the plan grows that large on these messages (many quoted requests or facts) was not examined.
+- Details: `docs/benchmark/results/input-budget-2026-11-11.md`; logs `runtime/p2/` (Git-ignored).
 
 ### B56
 **W2: single agent vs the multi-agent system** · 2026-11-11 · status `development`

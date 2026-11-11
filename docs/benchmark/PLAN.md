@@ -43,7 +43,7 @@ Legend: **done B-nn** = a protocol entry exists; **re-run** = the code or the da
 | ID | Part | Question and metric | Status |
 | --- | --- | --- | --- |
 | P1 | MetadataAgent (C01-C07 together) | Macro F1 rules-only vs recommended; latency; on the Enron test set | done B33 (test); B07 on dev |
-| P2 | Context and retrieval | Retrieval quality end to end; model input never over budget | re-run; budget check new |
+| P2 | Context and retrieval | Retrieval quality end to end; model input never over budget | done: retrieval B38, B39; budget B57 |
 | P3 | Memory | Replies to follow-up emails with vs without stored history | model; new (needs follow-up threads) |
 | P4 | Specialists and routing | Confusion matrix over the statement's email types (student, lecturer, administration, project, ambiguous); plans cite only permitted evidence | B11; extend |
 | P5 | Blackboard collaboration and control | Router vs blackboard; request coverage; rounds; threshold chosen on the fresh set | done B37 (= B13); fresh set open |
