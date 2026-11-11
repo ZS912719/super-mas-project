@@ -30,7 +30,7 @@ Legend: **done B-nn** = a protocol entry exists; **re-run** = the code or the da
 | C10 | Missing-information check: rules vs LLM | Precision and recall of missing items against the gold `mustAsk` | synthetic | done B40 (rules); LLM variant: model |
 | C11 | `ExcerptRelevance` | Gold facts kept vs unrelated excerpts removed | synthetic, knowledge | done B36 |
 | C12 | `KnowledgeRequirements` | Requirements found in the documents | knowledge | not benchmarked: about 2 requirement sentences in the knowledge; unit tests (B36) |
-| C13 | Request extractors: rules vs LLM | Request count exact; over- and under-splitting | synthetic-multi | new (LLM variant: model) |
+| C13 | Request extractors: rules vs LLM | Request count exact; over- and under-splitting | synthetic-multi | done B41 (rules); LLM variant: model, harness ready |
 | C14 | Conversation history (`ConversationRecorder`, repository) | Own-thread recall after a restart; zero cross-project leaks | synthetic, Enron | partly B12 |
 | C15 | `AutoTopicMaintainer` | Topic stability across runs, coverage | Enron | new |
 | C16 | Routing score (`ScoreRoutingStrategy`) | Accuracy, ambiguity rate | synthetic | B11 |

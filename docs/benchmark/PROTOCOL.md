@@ -22,6 +22,7 @@ This file links to the detailed results and does not replace them: each number h
 
 | # | Date | Benchmark | Part | Data | Configuration | Commit | Headline | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [B41](#b41) | 2026-11-11 | C13 Request extraction, rules | Specialists | synthetic-multi 12 | Rules | `a75f33a` + harness | Count exact 11/12; 22 of 23 requests | `development` |
 | [B40](#b40) | 2026-11-11 | C10 Missing information in the reply plans | Context / specialists | synthetic 24 + 12 | Rules + knowledge requirements, template | `596152d` + harness | Gold asks found 3/6; over-asking 5 of 17 emails (COURSE) | `development` |
 | [B39](#b39) | 2026-11-11 | C09 Topic agents and discovered topics, re-run | Retrieval | Enron, 7 mailboxes | Lucene | `2b8bba3` + working tree | Identical to B10 | `proxy` |
 | [B38](#b38) | 2026-11-11 | C08 C1 baseline, re-run | Retrieval | Enron, 7 mailboxes | Lucene | `2b8bba3` + working tree | Identical to B08 | `proxy` |
@@ -92,6 +93,15 @@ This file links to the detailed results and does not replace them: each number h
 - Command: `java -cp … org.supermas.benchmark.C1Benchmark benchmark/data/enron-raw/maildir 10000 200 docs/benchmark/results/c1-baseline-enron-2026-11-11.md runtime/bench-2026-11-11/c1-index`. Commit `2b8bba3` + working tree.
 - Result: identical to B08 in every quality measure (R@10 0.338 vs recency 0.601, MRR 0.358); retrieval p50 2.8 ms (B08: 2.3 ms).
 - Details: `docs/benchmark/results/c1-baseline-enron-2026-11-11.md`.
+
+### B41
+**C13: request extraction, rules** · 2026-11-11 · status `development`
+- Question: does the request extractor find as many requests as the gold says? (The LLM extractor is the second variant, still to run with the model.)
+- Data: synthetic-multi 12, gold request counts (`multi-gold/v1`, 23 requests). `currentText` from the stripper. New harness `RequestExtractionBenchmark` (test scope), which also runs the LLM extractor when a model is configured.
+- Command: `java -cp … org.supermas.prototype.RequestExtractionBenchmark docs/benchmark/results/request-extraction-rules-2026-11-11.md`
+- Result: count exact **11 / 12**, too few 1, too many 0; 22 of 23 requests. Agrees with B37, where the blackboard's request splitter (the same rules) gets 11/12.
+- Details: `docs/benchmark/results/request-extraction-rules-2026-11-11.md`.
+- Caveats: self-authored set; counts only, not whether each quote is the right sentence.
 
 ### B40
 **C10: missing information in the reply plans** · 2026-11-11 · status `development`
