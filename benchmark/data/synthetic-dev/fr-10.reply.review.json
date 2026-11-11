@@ -1,0 +1,32 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "fr",
+  "replyExpected": true,
+  "greet": [
+    "Yanis",
+    "Benali"
+  ],
+  "notGreet": [],
+  "mustMention": [],
+  "mustAsk": [],
+  "mustNotContain": [
+    {
+      "id": "noise",
+      "any": [
+        "facilities portal",
+        "portail",
+        "certificat médical",
+        "sept jours",
+        "rattrapage"
+      ]
+    }
+  ],
+  "allowInternal": false,
+  "note": "French version of en-10",
+  "revision": 2,
+  "_review": {
+    "status": "ok",
+    "comment": "",
+    "at": "2026-11-11T12:28:38Z"
+  }
+}

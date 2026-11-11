@@ -1,0 +1,42 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "fr",
+  "replyExpected": true,
+  "greet": [
+    "Hugo",
+    "Lefèvre",
+    "Lefevre"
+  ],
+  "notGreet": [
+    "Nadia"
+  ],
+  "mustMention": [
+    {
+      "id": "meeting",
+      "any": [
+        "jeudi",
+        "12 novembre"
+      ]
+    }
+  ],
+  "mustAsk": [],
+  "mustNotContain": [
+    {
+      "id": "confirms-for-owner",
+      "any": [
+        "jeudi me convient",
+        "je serai là",
+        "je confirme",
+        "à jeudi"
+      ]
+    }
+  ],
+  "allowInternal": false,
+  "note": "French version of en-05",
+  "revision": 2,
+  "_review": {
+    "status": "ok",
+    "comment": "",
+    "at": "2026-11-11T12:27:35Z"
+  }
+}

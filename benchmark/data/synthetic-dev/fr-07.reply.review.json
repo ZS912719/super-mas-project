@@ -1,0 +1,18 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "fr",
+  "replyExpected": false,
+  "greet": null,
+  "notGreet": [],
+  "mustMention": [],
+  "mustAsk": [],
+  "mustNotContain": [],
+  "allowInternal": false,
+  "note": "IT notification",
+  "revision": 2,
+  "_review": {
+    "status": "ok",
+    "comment": "",
+    "at": "2026-11-11T12:28:02Z"
+  }
+}

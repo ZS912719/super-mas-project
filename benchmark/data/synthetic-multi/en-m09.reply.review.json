@@ -1,0 +1,41 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "en",
+  "replyExpected": true,
+  "greet": [
+    "Mark",
+    "Ruiz"
+  ],
+  "notGreet": [
+    "Martin"
+  ],
+  "mustMention": [
+    {
+      "id": "research-office",
+      "any": [
+        "research office"
+      ]
+    }
+  ],
+  "mustAsk": [],
+  "mustNotContain": [
+    {
+      "id": "decides-for-owner",
+      "any": [
+        "we will join",
+        "happy to join",
+        "I have signed",
+        "I will sign",
+        "we would be glad to join"
+      ]
+    }
+  ],
+  "allowInternal": false,
+  "note": "Industry partner: funding call (research office first) and an NDA",
+  "revision": 2,
+  "_review": {
+    "status": "ok",
+    "comment": "",
+    "at": "2026-11-11T12:39:36Z"
+  }
+}

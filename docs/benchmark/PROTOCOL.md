@@ -22,6 +22,7 @@ This file links to the detailed results and does not replace them: each number h
 
 | # | Date | Benchmark | Part | Data | Configuration | Commit | Headline | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [B52](#b52) | 2026-11-11 | Human review of the 36 reply checks | Generation (gold) | synthetic 24 + 12 | Owner, label page | `a233d83` | 36 of 36 confirmed unchanged | `valid` (one reader) |
 | [B51](#b51) | 2026-11-11 | W9 Replies on real mail, 3 B and 8 B | Whole system | Enron test 100 | Online 3 B / 8 B | `b78d2f9` | Drafted 100 / 95; sender greeted 84 / 64; verified problems: 1 invented confirmation, 2 replies with university knowledge, 0 leaks | `development` |
 | [B50](#b50) | 2026-11-11 | P7 Revision after feedback, 3 B and 8 B | Review loop | synthetic 22 | Online 3 B / 8 B | `b78d2f9` | Fact feedback applied 3/9 (3 B), 5/7 (8 B); "shorter" 7/12, 4/12 | `development` |
 | [B49](#b49) | 2026-11-11 | C13 Request extraction, LLM, 3 B and 8 B | Specialists | synthetic-multi 12 | Online 3 B / 8 B, 3 repeats | `b78d2f9` | Count exact 12/12 in all 6 runs (rules 11/12); fell back to rules 4-5 (3 B), 1-2 (8 B) of 12 | `development` |
@@ -103,6 +104,14 @@ This file links to the detailed results and does not replace them: each number h
 - Command: `java -cp … org.supermas.benchmark.C1Benchmark benchmark/data/enron-raw/maildir 10000 200 docs/benchmark/results/c1-baseline-enron-2026-11-11.md runtime/bench-2026-11-11/c1-index`. Commit `2b8bba3` + working tree.
 - Result: identical to B08 in every quality measure (R@10 0.338 vs recency 0.601, MRR 0.358); retrieval p50 2.8 ms (B08: 2.3 ms).
 - Details: `docs/benchmark/results/c1-baseline-enron-2026-11-11.md`.
+
+### B52
+**Human review of the 36 frozen reply checks** · 2026-11-11 · status `valid` (one reader)
+- Question: are the AI-written reply checks (`reply-gold/v1`, revision 2) right, so that reply-quality results can be reported (to-do 3.10)?
+- Method: the owner read each `<email>.reply.json` against its email and the six knowledge documents in the label page's "Reply checks" tab and gave a verdict (ok / changed / unsure), saved as `<email>.reply.review.json` next to the check.
+- Result: **36 of 36 "ok"**, no check changed, none marked unsure. Pace: 40 minutes for 36 checks, median 31 s between saves (the 14 no-reply emails need little).
+- Consequence: the frozen checks stay as committed in `451a654` and revised in `aed8d59`; earlier results scored with revision 2 (B17-B24, B42) were scored with the reviewed checks. Their remaining limits are those of keyword checks (`reply-quality.md`, "Limits").
+- Caveats: one reader; to-do 3.10 also asks for a second reader on a sample.
 
 ### B51
 **W9: replies on real mail with the 3 B and 8 B models** · 2026-11-11 · status `development`

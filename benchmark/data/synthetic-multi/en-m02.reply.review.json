@@ -1,0 +1,54 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "en",
+  "replyExpected": true,
+  "greet": [
+    "Paul",
+    "Leroy"
+  ],
+  "notGreet": [
+    "Emma"
+  ],
+  "mustMention": [
+    {
+      "id": "rooms",
+      "any": [
+        "facilities portal"
+      ]
+    },
+    {
+      "id": "research-office",
+      "any": [
+        "research office"
+      ]
+    },
+    {
+      "id": "ten-days",
+      "any": [
+        "ten days",
+        "10 days"
+      ]
+    }
+  ],
+  "mustAsk": [],
+  "mustNotContain": [
+    {
+      "id": "decides-for-owner",
+      "any": [
+        "I will co-author",
+        "happy to co-author",
+        "I agree to co-author",
+        "let's swap",
+        "I can swap"
+      ]
+    }
+  ],
+  "allowInternal": true,
+  "note": "Colleague: room swap (facilities portal) and a grant (research office reviews budgets ten days before the deadline)",
+  "revision": 2,
+  "_review": {
+    "status": "ok",
+    "comment": "",
+    "at": "2026-11-11T12:34:24Z"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "en",
+  "replyExpected": true,
+  "greet": [
+    "Julia"
+  ],
+  "notGreet": [
+    "Emma"
+  ],
+  "mustMention": [],
+  "mustAsk": [],
+  "mustNotContain": [
+    {
+      "id": "noise",
+      "any": [
+        "facilities portal",
+        "medical certificate",
+        "seven days",
+        "registrar",
+        "resit"
+      ]
+    },
+    {
+      "id": "accepts-for-owner",
+      "any": [
+        "see you on Friday",
+        "I would love to",
+        "I'd love to",
+        "sounds great"
+      ]
+    }
+  ],
+  "allowInternal": false,
+  "note": "Personal lunch invitation; the system cannot accept for the owner",
+  "revision": 2,
+  "_review": {
+    "status": "ok",
+    "comment": "",
+    "at": "2026-11-11T12:40:36Z"
+  }
+}

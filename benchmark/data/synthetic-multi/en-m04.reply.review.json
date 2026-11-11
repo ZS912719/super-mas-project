@@ -1,0 +1,41 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "en",
+  "replyExpected": true,
+  "greet": [
+    "Tom",
+    "Becker"
+  ],
+  "notGreet": [
+    "Martin",
+    "Professor"
+  ],
+  "mustMention": [
+    {
+      "id": "faculty-page",
+      "any": [
+        "faculty page"
+      ]
+    }
+  ],
+  "mustAsk": [],
+  "mustNotContain": [
+    {
+      "id": "confirms-for-owner",
+      "any": [
+        "is still on 14 December",
+        "yes, the exam is",
+        "see you next week",
+        "let's meet"
+      ]
+    }
+  ],
+  "allowInternal": false,
+  "note": "Exam date (published on the faculty page; not confirmed by the data) and a thesis meeting",
+  "revision": 2,
+  "_review": {
+    "status": "ok",
+    "comment": "",
+    "at": "2026-11-11T12:36:02Z"
+  }
+}

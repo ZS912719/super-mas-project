@@ -1,0 +1,31 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "en",
+  "replyExpected": false,
+  "greet": [
+    "Sarah",
+    "Klein"
+  ],
+  "notGreet": [
+    "Martin"
+  ],
+  "mustMention": [],
+  "mustAsk": [],
+  "mustNotContain": [
+    {
+      "id": "promise",
+      "any": [
+        "extension is granted",
+        "I grant you"
+      ]
+    }
+  ],
+  "allowInternal": false,
+  "note": "A thank-you; no reply needed",
+  "revision": 2,
+  "_review": {
+    "status": "ok",
+    "comment": "",
+    "at": "2026-11-11T12:18:19Z"
+  }
+}

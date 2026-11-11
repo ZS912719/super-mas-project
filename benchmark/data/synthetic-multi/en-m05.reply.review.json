@@ -1,0 +1,31 @@
+{
+  "schema": "reply-gold/v1",
+  "language": "en",
+  "replyExpected": true,
+  "greet": null,
+  "notGreet": [
+    "Martin"
+  ],
+  "mustMention": [],
+  "mustAsk": [],
+  "mustNotContain": [
+    {
+      "id": "decides-for-owner",
+      "any": [
+        "I have signed",
+        "I signed",
+        "I will sign",
+        "I confirm my timetable",
+        "my timetable is confirmed"
+      ]
+    }
+  ],
+  "allowInternal": false,
+  "note": "Registrar: contract amendment and timetable; no knowledge, nothing to decide for the owner",
+  "revision": 2,
+  "_review": {
+    "status": "ok",
+    "comment": "",
+    "at": "2026-11-11T12:36:50Z"
+  }
+}
