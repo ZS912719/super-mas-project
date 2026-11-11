@@ -22,6 +22,7 @@ This file links to the detailed results and does not replace them: each number h
 
 | # | Date | Benchmark | Part | Data | Configuration | Commit | Headline | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [B42](#b42) | 2026-11-11 | W1 Paired comparisons of runs A-D (derived, no new run) | Generation | B15-B24 | — | `5117196` + script | 8 B vs 3 B: facts and asks not significant; clean and greeting significantly worse | `development` |
 | [B41](#b41) | 2026-11-11 | C13 Request extraction, rules | Specialists | synthetic-multi 12 | Rules | `a75f33a` + harness | Count exact 11/12; 22 of 23 requests | `development` |
 | [B40](#b40) | 2026-11-11 | C10 Missing information in the reply plans | Context / specialists | synthetic 24 + 12 | Rules + knowledge requirements, template | `596152d` + harness | Gold asks found 3/6; over-asking 5 of 17 emails (COURSE) | `development` |
 | [B39](#b39) | 2026-11-11 | C09 Topic agents and discovered topics, re-run | Retrieval | Enron, 7 mailboxes | Lucene | `2b8bba3` + working tree | Identical to B10 | `proxy` |
@@ -93,6 +94,24 @@ This file links to the detailed results and does not replace them: each number h
 - Command: `java -cp … org.supermas.benchmark.C1Benchmark benchmark/data/enron-raw/maildir 10000 200 docs/benchmark/results/c1-baseline-enron-2026-11-11.md runtime/bench-2026-11-11/c1-index`. Commit `2b8bba3` + working tree.
 - Result: identical to B08 in every quality measure (R@10 0.338 vs recency 0.601, MRR 0.358); retrieval p50 2.8 ms (B08: 2.3 ms).
 - Details: `docs/benchmark/results/c1-baseline-enron-2026-11-11.md`.
+
+### B42
+**W1: paired comparisons of the existing reply-quality runs (derived, no new run)** · 2026-11-11 · status `development`
+- Question: which differences between A-D survive the run-to-run noise (B25)?
+- Method: new script `scripts/benchmark/compare_runs.py`. For each of the 22 reply-expected emails, each measure is averaged over all runs and repeats of a configuration; the two configurations are compared on the same emails (summed difference, 95 % bootstrap interval over emails, 10,000 resamples, seed 20261111). Totals count each email once (21 gold facts, 6 gold asks), unlike the earlier tables, which counted the two multi repeats separately (32 and 10).
+- Commands: `python3 -I scripts/benchmark/compare_runs.py --a <runs> --b <runs> --names … --out docs/benchmark/results/compare-<x>-2026-11-11.md` with C×3 vs D×3, A vs C×3, B vs D×3 (A and B with checks revision 2).
+- Result:
+
+| Comparison | Facts (21) | Asks (6) | Drafted (22) | Clean (22) | Greeting right (22) |
+| --- | --- | --- | --- | --- | --- |
+| 8 B (D×3) − 3 B (C×3) | +1.3 (−3.5 to +6.5) | +1.0 (−0.2 to +2.7) | −2.3 (−5.0 to 0.0) | **−6.2 (−10.7 to −1.7)** | **−6.7 (−10.3 to −3.2)** |
+| 3 B: after fixes (C×3) − before (A) | +1.2 (−3.2 to +5.8) | +2.2 (0.0 to +5.2) | **+4.0 (+1.0 to +7.5)** | **+14.3 (+10.2 to +18.0)** | +3.5 (−0.7 to +7.7) |
+| 8 B: after fixes (D×3) − before (B) | −2.5 (−6.3 to +0.5) | +0.2 (−1.2 to +1.8) | −2.3 (−5.0 to 0.0) | **+10.7 (+6.7 to +14.7)** | **−4.7 (−8.7 to −1.0)** |
+
+  Bold: the interval excludes 0.
+- Reading: the claim of B16-B20 that the 8 B model "states more facts and asks more" is **not supported** once noise is accounted for; what is supported is that it follows the form worse (more replies with a violation, more wrong greetings, fewer drafts because of the echo guard). The system fixes clearly raised clean replies for both models; the fall in facts after the fixes (B20 reading) is not significant either. The 8 B greeting got worse after the fixes, a regression to look into.
+- Details: `docs/benchmark/results/compare-C-vs-D-2026-11-11.md`, `docs/benchmark/results/compare-A-vs-C-2026-11-11.md`, `docs/benchmark/results/compare-B-vs-D-2026-11-11.md`.
+- Caveats: A and B are single runs, so their side is noisier; 22 emails give wide intervals; checks not yet reviewed by a person (to-do 3.10); online models; the fixes were designed on these emails (to-do 3.6).
 
 ### B41
 **C13: request extraction, rules** · 2026-11-11 · status `development`
