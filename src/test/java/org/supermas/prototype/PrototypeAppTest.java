@@ -36,13 +36,13 @@ class PrototypeAppTest {
         List<PrototypeApp.Outcome> outcomes = run(emails, first);
 
         assertEquals(3, outcomes.size(), "only .eml files are read");
-        // en-01 asks for an extension; en-02 (the owner's own reply, here without an owner setting) and en-04 (a
-        // broadcast) need no reply, and a
-        // batch run stops their boards without a draft (plan reply-needed).
-        assertEquals(List.of(BoardStatus.AWAITING_REVIEW, BoardStatus.STOPPED, BoardStatus.STOPPED),
-                outcomes.stream().map(outcome -> outcome.state().status()).toList(), first.toString(StandardCharsets.UTF_8));
-        assertTrue(outcomes.get(1).state().drafts().isEmpty() && outcomes.get(2).state().drafts().isEmpty());
-        assertEquals(1, outcomes.get(0).state().drafts().size());
+        // Note-only (since B70): en-02 and en-04 need no reply and are noted, but every email still gets a draft.
+        assertTrue(outcomes.stream().allMatch(outcome -> outcome.state().status() == BoardStatus.AWAITING_REVIEW),
+                first.toString(StandardCharsets.UTF_8));
+        assertTrue(outcomes.stream().allMatch(outcome -> outcome.state().drafts().size() == 1));
+        assertEquals(List.of("NEEDED", "NOT_NEEDED", "NOT_NEEDED"), outcomes.stream()
+                .map(outcome -> outcome.state().analysis().metadata().get(org.supermas.metadata.MetadataAgent.KEY_REPLY_NEED)).toList());
+        assertEquals(2, first.toString(StandardCharsets.UTF_8).split("Note: probably no reply needed", -1).length - 1);
         assertTrue(Files.exists(temp.resolve("data/blackboard.db")));
         assertTrue(Files.isDirectory(temp.resolve("data/super-mas-vault/generated")));
 
@@ -52,6 +52,20 @@ class PrototypeAppTest {
         assertEquals(BoardStatus.AWAITING_REVIEW, again.get(0).state().status());
         assertTrue(again.get(0).state().evidence().size() > outcomes.get(0).state().evidence().size(),
                 second.toString(StandardCharsets.UTF_8));
+    }
+
+    @Test
+    void theStopForEmailsThatNeedNoReplyIsOffByDefaultAndWorksWhenSwitchedOn() throws Exception {
+        org.supermas.model.Domain.Email broadcast = new org.supermas.metadata.MimeEmailParser()
+                .parse(Files.readAllBytes(Path.of("benchmark/data/synthetic-dev/en-04.eml")), "uni");
+        try (org.supermas.context.ProjectIndexes indexes = org.supermas.context.ProjectIndexes.inMemory()) {
+            PrototypeApp.Wiring stopping = PrototypeApp.Wiring.create(indexes, new PrototypeApp.Options(null,
+                    Path.of("src/test/resources/university/knowledge"), temp.resolve("on"), "uni"),
+                    org.supermas.agent.role.RoleCatalog.bundled(), true);
+            var state = stopping.coordinator.run(stopping.coordinator.receive(broadcast), PrototypeApp.BLACKBOARD_LIMITS);
+            assertEquals(BoardStatus.STOPPED, state.status());
+            assertTrue(state.drafts().isEmpty());
+        }
     }
 
     @Test

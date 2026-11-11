@@ -242,6 +242,10 @@ public final class PrototypeApp {
 
     private static void print(PrintStream out, Path file, BlackboardSnapshot state) {
         out.println("\n== " + file.getFileName() + ": " + state.email().subject());
+        String need = state.analysis() == null ? null : state.analysis().metadata().get(MetadataAgent.KEY_REPLY_NEED);
+        if ("NOT_NEEDED".equals(need)) {
+            out.println("Note: probably no reply needed " + state.analysis().metadata().getOrDefault(MetadataAgent.KEY_REPLY_NEED_REASONS, "[]"));
+        }
         out.println("Status: " + state.status() + state.failure().map(failure -> " (" + failure.kind() + ": "
                 + failure.message() + ")").orElse(""));
         state.routing().ifPresent(routing -> out.println("Routing: " + describe(routing)));
@@ -333,17 +337,21 @@ public final class PrototypeApp {
             return create(indexes, options, RoleCatalog.bundled());
         }
 
-        /** Batch wiring: a board whose email needs no reply stops without a draft (plan reply-needed). */
+        /**
+         * Note-only wiring (owner's decision, 2026-11-11, after B70): the reply-need verdict is recorded and shown,
+         * but no board is stopped, because the rules would suppress about a third of the needed replies on real mail.
+         */
         static Wiring create(ProjectIndexes indexes, Options options, RoleCatalog roles) {
-            return create(indexes, options, roles, true);
+            return create(indexes, options, roles, false);
         }
 
         /** With a given role catalogue, e.g. one with a composer prompt variant (benchmarks). */
         /**
-         * @param batch true for runs without a person asking (the {@code .eml} prototype, benchmarks): boards of emails
-         *              that need no reply stop before any work. The agent service passes false: a person asked.
+         * @param stopWhenNoReplyNeeded true to stop boards of emails that need no reply before any work
+         *                              ({@link org.supermas.control.ReplyNeedGate}); off everywhere since B70, kept for
+         *                              measuring improved rules
          */
-        static Wiring create(ProjectIndexes indexes, Options options, RoleCatalog roles, boolean batch) {
+        static Wiring create(ProjectIndexes indexes, Options options, RoleCatalog roles, boolean stopWhenNoReplyNeeded) {
             String project = options.project();
             Map<String, ContextSource> sources = new HashMap<>(new KnowledgeLoader(indexes).load(options.knowledge()).sources());
             // Every agent that should read mail is a reader of the mail source, in trusted configuration.
@@ -398,7 +406,7 @@ public final class PrototypeApp {
                 strategy = new ContextFirstCoordinationStrategy(List.of(discussion), List.of(discovered),
                         new TopicCandidateFilter(3), Optional.of(check.config().id()), new DraftFirstCoordinationStrategy(), 2);
             }
-            if (batch) {
+            if (stopWhenNoReplyNeeded) {
                 strategy = new org.supermas.control.ReplyNeedGate(strategy);
             }
             LeasedCoordinator coordinator = new LeasedCoordinator(MetadataAgent.rulesOnly().withOwners(options.owners()),

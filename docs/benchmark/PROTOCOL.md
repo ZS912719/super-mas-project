@@ -135,6 +135,7 @@ This file links to the detailed results and does not replace them: each number h
 - Effect in batch runs, derived exactly (the stop comes before any model call): of the 100 Enron emails 67 would be stopped, avoiding 50 drafts the owner judged unneeded and losing 7 that the owner judged needed (and 10 judged unsure). On the synthetic main configuration, one reply-expected email (fr-12, B69) would be stopped.
 - Reading: the rules are a useful filter, clearly better than the base rate, but in batch mode they suppress about a third of the needed replies on real mail. For the mailbox, where they only add a note and a label and drafting stays possible, this costs nothing; for unattended batch use it is too aggressive. Proposed next step (not done, needs fresh data to measure without bias): a broadcast that contains a request or "please reply" counts as unsure; forwards with no own text count as unsure.
 - Caveats: one labeller; the definitions on the labelling page and the rules share the same idea of "information only"; 84 judged emails give the intervals above.
+- Consequence (owner's decision, 2026-11-11): batch runs are note-only; no board is stopped for needing no reply (commit after `4347317`). The stop stays behind an explicit switch, off by default.
 
 ### B69
 **Reply needed? Development measurement of the rules** · 2026-11-11 · status `development`

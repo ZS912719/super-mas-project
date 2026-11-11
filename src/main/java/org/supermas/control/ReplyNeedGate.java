@@ -11,8 +11,9 @@ import org.supermas.model.Domain.NextAction;
 
 /**
  * Stops a board before any work when the metadata agent found that the email needs no reply (plan
- * {@code docs/plans/reply-needed.md}). Used in batch runs only: when a person asks for a draft in the mailbox, the
- * agent service does not install it. Every other decision, and the control record of the wrapped strategy, is passed
+ * {@code docs/plans/reply-needed.md}). Off by default since the test on real mail (protocol B70), where the rules would
+ * have suppressed 7 of 22 needed replies; kept behind {@code PrototypeApp.Wiring.create(…, true)} to measure improved
+ * rules. The agent service never installs it, since a person asked for the draft. Every other decision, and the control record of the wrapped strategy, is passed
  * through unchanged.
  */
 public final class ReplyNeedGate implements CoordinationStrategy, ControlRecording {
