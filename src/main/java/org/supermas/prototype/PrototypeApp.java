@@ -245,6 +245,11 @@ public final class PrototypeApp {
         if (!state.drafts().isEmpty()) {
             Draft draft = state.drafts().get(state.drafts().size() - 1);
             out.println("Draft v" + draft.version() + " by " + draft.agentId() + " (" + draft.review() + "):");
+            for (String part : String.valueOf(draft.explanation()).split("; ")) {
+                if (part.startsWith(org.supermas.llm.DecisionPhrases.WARNING_PREFIX)) {
+                    out.println("  ! " + part);
+                }
+            }
             draft.body().lines().forEach(line -> out.println("  | " + line));
         }
     }

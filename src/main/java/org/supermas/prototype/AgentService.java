@@ -325,9 +325,16 @@ public final class AgentService implements AutoCloseable {
         Optional<Draft> draft = state.drafts().isEmpty() ? Optional.empty()
                 : Optional.of(state.drafts().get(state.drafts().size() - 1));
         if (draft.isPresent()) {
-            out.putObject("draft").put("version", draft.get().version()).put("subject", draft.get().subject())
+            ObjectNode node = out.putObject("draft").put("version", draft.get().version()).put("subject", draft.get().subject())
                     .put("body", draft.get().body()).put("agentId", draft.get().agentId())
                     .put("explanation", draft.get().explanation());
+            // Review warnings (decisions or actions for the owner), also inside the explanation; for the reviewer.
+            var warnings = node.putArray("warnings");
+            for (String part : String.valueOf(draft.get().explanation()).split("; ")) {
+                if (part.startsWith(org.supermas.llm.DecisionPhrases.WARNING_PREFIX)) {
+                    warnings.add(part.substring(org.supermas.llm.DecisionPhrases.WARNING_PREFIX.length()));
+                }
+            }
         } else {
             out.putNull("draft");
         }

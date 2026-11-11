@@ -20,7 +20,8 @@ import org.supermas.model.Domain.ModelResponse;
  * empty so the agent derives it from the email, and nothing internal (plans, evidence) is concatenated into the
  * reply. Output that still carries one of the prompt's block labels is refused, because it means the model echoed its
  * input instead of writing a reply. A bracketed placeholder at the very end ("[Your Name]") is removed and noted in
- * the rationale, because the person who sends the reply signs it.
+ * the rationale, because the person who sends the reply signs it. Sentences in which the reply decides or acts for
+ * the owner are kept, with a review warning appended to the rationale ({@link DecisionPhrases}).
  *
  * <p>The agents build their own requests (prompt management stays with the specialized agents and the composer),
  * so {@link #prepare} is not supported, as in the template stand-in.
@@ -95,7 +96,23 @@ public final class LlmGenerationService implements GenerationService {
             return failed(new Failure(FailureKind.INVALID_OUTPUT, "The model returned no reply text, only a greeting or "
                     + "a closing", true));
         }
+        // Warn mode: the reply is kept, the reviewer is told where it decides or acts for the owner (W4, B65-B66).
+        for (String warning : DecisionPhrases.warnings(body, emailText(request.untrustedData()))) {
+            rationale += "; " + warning;
+        }
         return new GenerationResult(Optional.of(new DraftProposal("", body, request.agentId(), rationale)), Optional.empty());
+    }
+
+    /** The email block of a request built by {@code RolePromptBuilder}; empty when there is none. */
+    static String emailText(String untrustedData) {
+        String label = "<<EMAIL TEXT>>\n";
+        int start = untrustedData == null ? -1 : untrustedData.indexOf(label);
+        if (start < 0) {
+            return "";
+        }
+        start += label.length();
+        int end = untrustedData.indexOf("\n<<", start);
+        return untrustedData.substring(start, end < 0 ? untrustedData.length() : end);
     }
 
     private static final Pattern GREETING_OR_CLOSING = Pattern.compile("(?i)^(?:(?:dear|hello|hi|bonjour|madame|monsieur|cher|"
