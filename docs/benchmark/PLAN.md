@@ -55,9 +55,9 @@ Legend: **done B-nn** = a protocol entry exists; **re-run** = the code or the da
 
 | ID | Benchmark | Variants, one change at a time | Status |
 | --- | --- | --- | --- |
-| W1 | Reply quality, main result | 3 B and 8 B models, plus a third model swapped by configuration only (to-do 2.3); 3 repeats each | done B54 (3 B ×2, 8 B ×1; credit cut, B53); earlier A-D B15-B24, B42 |
-| W2 | Single agent vs multi-agent (statement §20) | One model, one generic prompt, one call vs the blackboard | done B56 (one run per model) |
-| W3 | Ablations | Without knowledge (3.4, `--knowledge`); neutral composer prompt (3.3, `--composer-prompt`; role prompts reach the model only in the router); router vs blackboard with the model (3.2, `--architecture`); composer prompt variant | done B55 (3 B ×2, 8 B ×1) |
+| W1 | Reply quality, main result | 3 B and 8 B models, plus a third model swapped by configuration only (to-do 2.3); 3 repeats each | done B59 (3 B, 8 B ×3; replaces B54); third model not run; earlier A-D B15-B24, B42 |
+| W2 | Single agent vs multi-agent (statement §20) | One model, one generic prompt, one call vs the blackboard | done B61 (3 runs per model; replaces B56) |
+| W3 | Ablations | Without knowledge (3.4, `--knowledge`); neutral composer prompt (3.3, `--composer-prompt`; role prompts reach the model only in the router); router vs blackboard with the model (3.2, `--architecture`); composer prompt variant | done B60 (3 runs per model; replaces B55) |
 | W4 | Safety | Injection suite through the real composer (3.8); cross-thread disclosure; staff-only document leaks | model |
 | W5 | Cost and speed | Model calls, tokens and latency per email, per configuration | from the logs of W1-W4 |
 | W6 | Human rubric (3.2) | Two raters on a sample: every request answered, no invented fact, asks for what is missing, tone | human |

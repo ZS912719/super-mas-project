@@ -22,11 +22,14 @@ This file links to the detailed results and does not replace them: each number h
 
 | # | Date | Benchmark | Part | Data | Configuration | Commit | Headline | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [B61](#b61) | 2026-11-11 | W2 Single agent vs the system, complete | Whole system | synthetic 24 + 12 | Online 3 B, 8 B, 3 runs each | `14ea40e` (r1-r2) / `83044eb` (r3, same code) | 3 B: more facts (+0.16); 8 B: drafts more (+0.11) and greets right more often (+0.27) than the system | `development` |
+| [B60](#b60) | 2026-11-11 | W3 Ablations, complete | Whole system | synthetic 24 + 12 | Online 3 B, 8 B, 3 runs each | `14ea40e` / `83044eb` (same code) | Without knowledge fewer facts (3 B −0.12, 8 B −0.22); neutral prompt (3 B) worse greeting; router: no difference shown | `development` |
+| [B59](#b59) | 2026-11-11 | W1 Main result, complete | Whole system | synthetic 24 + 12 | Online 3 B, 8 B, 3 runs each | `14ea40e` / `83044eb` (same code) | 3 B facts 0.21, clean 0.75; 8 B facts 0.30, clean 0.53; 8 B − 3 B: facts n.s., clean −0.22, greeting −0.21, drafted −0.11 | `development` |
 | [B58](#b58) | 2026-11-11 | Retry of the missing main runs, credit still insufficient | Whole system | — | Online | `3a7f6f0` | 48 of 48 requests rejected (HTTP 402) in `M-base-3b-r3`; stopped, no run kept | `invalid` |
 | [B57](#b57) | 2026-11-11 | P2 Input budget on real and synthetic mail | Context / generation | Enron 100 + 20 longest, synthetic 36 | Fake local model | `5dd7bd5` + server | 0 requests over budget; largest exactly 12,000 (truncation); 3 of the 20 longest emails refused: the plan alone exceeds the budget | `valid` |
-| [B56](#b56) | 2026-11-11 | W2 Single agent vs the system | Whole system | synthetic 24 + 12 | Online 3 B (1 run), 8 B (1 run) | `14ea40e` | 3 B: more facts (+0.18), fewer clean replies (−0.26); 8 B: no difference shown | `development` |
-| [B55](#b55) | 2026-11-11 | W3 Ablations: knowledge, composer prompt, router | Whole system | synthetic 24 + 12 | Online 3 B (2 runs), 8 B (1 run) | `14ea40e` | Without knowledge: fewer facts (8 B −0.26); router (3 B): more facts, more rule violations | `development` |
-| [B54](#b54) | 2026-11-11 | W1 Main result on the reviewed checks | Whole system | synthetic 24 + 12 | Online 3 B (2 runs), 8 B (1 run) | `14ea40e` | 3 B: facts 0.20, clean 0.81, drafted 1.00; 8 B: facts 0.36, clean 0.66; 8 B − 3 B facts +0.15 (0.01 to 0.33) | `development` |
+| [B56](#b56) | 2026-11-11 | W2 Single agent vs the system | Whole system | synthetic 24 + 12 | Online 3 B (1 run), 8 B (1 run) | `14ea40e` | 3 B: more facts (+0.18), fewer clean replies (−0.26); 8 B: no difference shown | `superseded` (B61) |
+| [B55](#b55) | 2026-11-11 | W3 Ablations: knowledge, composer prompt, router | Whole system | synthetic 24 + 12 | Online 3 B (2 runs), 8 B (1 run) | `14ea40e` | Without knowledge: fewer facts (8 B −0.26); router (3 B): more facts, more rule violations | `superseded` (B60) |
+| [B54](#b54) | 2026-11-11 | W1 Main result on the reviewed checks | Whole system | synthetic 24 + 12 | Online 3 B (2 runs), 8 B (1 run) | `14ea40e` | 3 B: facts 0.20, clean 0.81, drafted 1.00; 8 B: facts 0.36, clean 0.66; 8 B − 3 B facts +0.15 (0.01 to 0.33) | `superseded` (B59) |
 | [B53](#b53) | 2026-11-11 | Main runs cut short by exhausted credit | Whole system | — | Online | `14ea40e` | 8 runs invalid (HTTP 402), 3 B r3 and 8 B r2-r3 missing | `invalid` |
 | [B52](#b52) | 2026-11-11 | Human review of the 36 reply checks | Generation (gold) | synthetic 24 + 12 | Owner, label page | `a233d83` | 36 of 36 confirmed unchanged | `valid` (one reader) |
 | [B51](#b51) | 2026-11-11 | W9 Replies on real mail, 3 B and 8 B | Whole system | Enron test 100 | Online 3 B / 8 B | `b78d2f9` | Drafted 100 / 95; sender greeted 84 / 64; verified problems: 1 invented confirmation, 2 replies with university knowledge, 0 leaks | `development` |
@@ -110,6 +113,51 @@ This file links to the detailed results and does not replace them: each number h
 - Command: `java -cp … org.supermas.benchmark.C1Benchmark benchmark/data/enron-raw/maildir 10000 200 docs/benchmark/results/c1-baseline-enron-2026-11-11.md runtime/bench-2026-11-11/c1-index`. Commit `2b8bba3` + working tree.
 - Result: identical to B08 in every quality measure (R@10 0.338 vs recency 0.601, MRR 0.358); retrieval p50 2.8 ms (B08: 2.3 ms).
 - Details: `docs/benchmark/results/c1-baseline-enron-2026-11-11.md`.
+
+### B61
+**W2: single agent against the system, all three runs** · 2026-11-11 · status `development`
+- Question and configuration as B56; now three runs per model (3 B r2 and r3, 8 B r2 and r3 added after the credit was restored, B58). Supersedes B56.
+- Result (single agent − system, 22 reply-expected emails, 95 % bootstrap interval; bold: excludes 0):
+
+| Model | Facts | Asks | Drafted | Clean | Greeting |
+| --- | --- | --- | --- | --- | --- |
+| 3 B | **+0.16 (+0.02 to +0.34)** | +0.14 (−0.22 to +0.50) | −0.08 (−0.20 to 0.00) | −0.16 (−0.34 to +0.01) | −0.02 (−0.17 to +0.13) |
+| 8 B | −0.04 (−0.23 to +0.13) | −0.17 (−0.44 to +0.06) | **+0.11 (+0.04 to +0.21)** | +0.12 (−0.10 to +0.34) | **+0.27 (+0.10 to +0.43)** |
+
+- Failures and violations (reply-expected drafts of three runs): 3 B single agent 97 drafts, 5 refused for echoing the prompt, wrong greeting 10, decides for the owner 7, wrong language 8; 8 B single agent 102 drafts, no failure, wrong greeting 15, wrong language 13. The 8 B system: 92 drafts, 10 failures (5 echoed prompt blocks, all French: fr-05, fr-10, fr-12; 5 greeting-only replies, all multi-request: en-m04, en-m06, en-m10), wrong greeting 30, of which 11 greet the mailbox owner ("Prof./Dr. Martin").
+- Reading: with the 3 B model the single agent states more facts and the system keeps the form better (clean, interval just reaching 0). With the 8 B model the system shows no advantage: the single agent drafts every email and greets the right person significantly more often. The B56 result for 8 B ("no difference") was a single run.
+- Details: `runtime/reply-benchmark/M-single-*`, `M-base-*`.
+
+### B60
+**W3: ablations, all three runs** · 2026-11-11 · status `development`
+- Question and configuration as B55, three runs per configuration and model. Supersedes B55.
+- Result (variant − system; bold: interval excludes 0):
+
+| Variant | 3 B facts | 3 B clean | 3 B greeting | 8 B facts | 8 B clean | other intervals excluding 0 |
+| --- | --- | --- | --- | --- | --- | --- |
+| Without knowledge | **−0.12 (−0.25 to −0.01)** | −0.05 (−0.17 to +0.08) | −0.02 (−0.11 to +0.06) | **−0.22 (−0.44 to −0.05)** | +0.05 (−0.10 to +0.19) | — |
+| Neutral composer prompt | +0.10 (−0.05 to +0.26) | −0.17 (−0.36 to +0.02) | **−0.17 (−0.33 to −0.01)** | −0.03 (−0.13 to +0.06) | +0.08 (−0.11 to +0.27) | — |
+| Without "only the facts" | +0.05 (−0.01 to +0.13) | +0.02 (−0.05 to +0.10) | **+0.09 (+0.04 to +0.15)** | +0.12 (0.00 to +0.25) | +0.08 (−0.05 to +0.20) | 8 B drafted **+0.08 (+0.02 to +0.15)** |
+| Router instead of blackboard | +0.16 (−0.05 to +0.38) | −0.13 (−0.32 to +0.06) | −0.08 (−0.27 to +0.10) | −0.04 (−0.24 to +0.13) | +0.08 (−0.09 to +0.24) | — |
+
+  Violations behind "clean" (3 B, reply-expected drafts of three runs; wrong greeting / decides or confirms for the owner / unrelated knowledge ("noise")): system 102 drafts, 16 / 2 / 5; without knowledge 101, 16 / 6 / 0; neutral prompt 98, 28 / 9 / 0; without "only the facts" 102, 8 / 3 / 7; router 102, 24 / 12 / 6. The 8 B router lost 9 drafts to the generation limit, all on French emails.
+- Reading: removing the knowledge lowers the facts for both models, as it must (a check of the benchmark). The composer's instructions protect the 3 B greeting and nothing measurable for 8 B. The router's apparent fact gain for 3 B in B55 (two runs) did not hold with three; it still takes more decisions for the owner (12 vs 2). Removing the "only the facts" sentence did no harm and improved two measures slightly; that it helps is not supported.
+- Multiple comparisons: of the 50 intervals (5 variants incl. the single agent of B61, 2 models, 5 measures) 8 exclude 0, against about 2.5 expected by chance; single significant results are indications.
+- Noise: run-to-run spread is large (clean share of the system 0.85 / 0.82 / 0.68 for 3 B, 0.68 / 0.44 / 0.53 for 8 B, per generation); later runs were not consistently worse (7 of 12 configuration-model pairs lower, 5 higher), so no shift between the sessions is visible.
+- Details: `runtime/reply-benchmark/M-*` (Git-ignored).
+
+### B59
+**W1: main result, all three runs** · 2026-11-11 · status `development`
+- Question and configuration as B54, three runs per model (B58 explains the gap; the added runs used the same code and options, `src/main`, `benchmark/` and the harness unchanged since `14ea40e`). Supersedes B54. The hosting provider chosen by OpenRouter is not recorded and may differ between requests.
+
+| Model | Facts (21) | Asks (6) | Drafted | Clean | Greeting right |
+| --- | --- | --- | --- | --- | --- |
+| 3 B (3 runs) | 0.21 | 0.36 | 1.00 | 0.75 | 0.80 |
+| 8 B (3 runs) | 0.30 | 0.61 | 0.89 | 0.53 | 0.58 |
+
+  8 B − 3 B: facts +0.09 (−0.08 to +0.28), asks +0.25 (0.00 to +0.56), drafted **−0.11 (−0.21 to −0.04)**, clean **−0.22 (−0.40 to −0.04)**, greeting **−0.21 (−0.39 to −0.03)**.
+- Reading: the B54 fact advantage of 8 B (one run) is not confirmed; the 3 B model is significantly better on drafted, clean and greeting, as in B42 on the earlier code. The 8 B failures are echoed prompts on French emails and greeting-only replies on multi-request emails (B61).
+- Details: `runtime/reply-benchmark/M-base-*`.
 
 ### B58
 **Retry of the missing main runs: credit still insufficient** · 2026-11-11 · status `invalid`
