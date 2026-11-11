@@ -52,6 +52,14 @@ public final class IndexConversationRepository implements ConversationRepository
      * @return true if the message was stored now, false if it was already there
      */
     public boolean appendIfAbsent(ConversationMessage message, Set<String> topicTags) {
+        return appendIfAbsent(message, topicTags, Set.of());
+    }
+
+    /**
+     * As {@link #appendIfAbsent(ConversationMessage, Set)}, also keeping the lower-case addresses of the message's
+     * sender and recipients, by which {@link SubjectThreadFallback} recognises a reply without reply headers.
+     */
+    public boolean appendIfAbsent(ConversationMessage message, Set<String> topicTags, Set<String> participants) {
         Scope scope = message.scope();
         ContextSource source = conversationSource.apply(scope.projectId())
                 .filter(found -> found.projectId().equals(scope.projectId()))
@@ -70,7 +78,7 @@ public final class IndexConversationRepository implements ConversationRepository
         }
         index.add(new IndexedDocument(message.id(), scope, source.id(), Optional.of(message.kind()),
                 languages.detect(text(message)), message.subject() == null ? "" : message.subject(), text(message),
-                source.permittedAgentIds(), topicTags, message.recordedAt()));
+                source.permittedAgentIds(), topicTags, message.recordedAt(), participants));
         index.commit();
         return true;
     }

@@ -77,7 +77,8 @@ public final class ConversationRecorder {
         ConversationMessage message = new ConversationMessage(email.id(), email.scope(), MessageKind.RECEIVED,
                 email.subject(), text, new Provenance(email.id(), "Received email", email.receivedAt()),
                 email.receivedAt());
-        return store(message, tagger.tags(email.scope(), MessageKind.RECEIVED, email.subject(), text, Optional.of(email)));
+        return store(message, tagger.tags(email.scope(), MessageKind.RECEIVED, email.subject(), text, Optional.of(email)),
+                SubjectThreadFallback.participants(email));
     }
 
     /** One record per draft version, of kind generated or user-edited by the draft's origin. */
@@ -87,7 +88,7 @@ public final class ConversationRecorder {
         ConversationMessage message = new ConversationMessage(id(board, draft.version(), kind), board.scope(), kind,
                 draft.subject(), draft.body(), new Provenance(draft.agentId(), "Draft version " + draft.version(),
                 draft.createdAt()), draft.createdAt());
-        return store(message, tagger.tags(board.scope(), kind, draft.subject(), draft.body(), Optional.empty()));
+        return store(message, tagger.tags(board.scope(), kind, draft.subject(), draft.body(), Optional.empty()), Set.of());
     }
 
     /**
@@ -112,11 +113,12 @@ public final class ConversationRecorder {
                 board.scope(), MessageKind.SENT, draft.subject(), draft.body(),
                 new Provenance(confirmation.transportMessageId(), "Sent version " + draft.version()
                         + ", confirmed by the mail system", confirmation.confirmedAt()), confirmation.confirmedAt());
-        return store(message, tagger.tags(board.scope(), MessageKind.SENT, draft.subject(), draft.body(), Optional.empty()));
+        return store(message, tagger.tags(board.scope(), MessageKind.SENT, draft.subject(), draft.body(), Optional.empty()),
+                Set.of());
     }
 
-    private boolean store(ConversationMessage message, Set<String> tags) {
-        boolean stored = repository.appendIfAbsent(message, tags);
+    private boolean store(ConversationMessage message, Set<String> tags, Set<String> participants) {
+        boolean stored = repository.appendIfAbsent(message, tags, participants);
         if (stored) {
             for (Listener listener : listeners) {
                 try {

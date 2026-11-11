@@ -38,6 +38,7 @@ import org.apache.lucene.search.TermInSetQuery;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.BytesRef;
+import org.supermas.metadata.EmailThreader;
 import org.supermas.model.Domain.MessageKind;
 import org.supermas.model.Domain.Scope;
 
@@ -63,6 +64,8 @@ public final class ProjectIndex implements AutoCloseable {
     private static final String RECORDED = "recorded";
     private static final String BODY_EN = "body_en";
     private static final String BODY_FR = "body_fr";
+    private static final String PARTICIPANT = "participant";
+    private static final String BASE_SUBJECT = "base_subject";
 
     /** One search hit, with the score Lucene gave it. */
     public record Hit(IndexedDocument document, double score) { }
@@ -143,6 +146,28 @@ public final class ProjectIndex implements AutoCloseable {
     }
 
     /**
+     * Received messages whose subject, without reply and forward prefixes, is {@code baseSubject}, oldest first,
+     * at most {@code maxMessages}. Used to find the thread of a reply that lacks reply headers; callers decide by
+     * the participants and dates whether one of them is really the same conversation.
+     */
+    public List<IndexedDocument> receivedWithBaseSubject(String baseSubject, int maxMessages) {
+        if (baseSubject == null || baseSubject.isBlank() || maxMessages <= 0) {
+            return List.of();
+        }
+        BooleanQuery.Builder query = projectFilter();
+        query.add(new TermQuery(new Term(BASE_SUBJECT, baseSubject)), BooleanClause.Occur.FILTER);
+        query.add(new TermQuery(new Term(KIND, MessageKind.RECEIVED.name())), BooleanClause.Occur.FILTER);
+        List<IndexedDocument> found = new ArrayList<>();
+        Sort sort = new Sort(new SortField(RECORDED, SortField.Type.LONG, false));
+        withSearcher(searcher -> {
+            for (ScoreDoc hit : searcher.search(query.build(), maxMessages, sort).scoreDocs) {
+                found.add(fromLucene(searcher.storedFields().document(hit.doc)));
+            }
+        });
+        return found;
+    }
+
+    /**
      * Best matches among the given sources, for one agent. All three filters apply in the index itself.
      *
      * @param sourceIds sources the caller has already authorized: empty finds nothing
@@ -220,7 +245,7 @@ public final class ProjectIndex implements AutoCloseable {
         }
         IndexedDocument old = found.get(0);
         add(new IndexedDocument(old.id(), old.scope(), old.sourceId(), old.kind(), old.language(), old.subject(),
-                old.text(), old.permittedAgentIds(), topicTags, old.recordedAt()));
+                old.text(), old.permittedAgentIds(), topicTags, old.recordedAt(), old.participants()));
         return true;
     }
 
@@ -275,6 +300,11 @@ public final class ProjectIndex implements AutoCloseable {
         source.kind().ifPresent(kind -> document.add(new StringField(KIND, kind.name(), Field.Store.YES)));
         source.permittedAgentIds().forEach(agent -> document.add(new StringField(PERMITTED, agent, Field.Store.YES)));
         source.topicTags().forEach(tag -> document.add(new StringField(TOPIC, tag, Field.Store.YES)));
+        source.participants().forEach(address -> document.add(new StringField(PARTICIPANT, address, Field.Store.YES)));
+        String base = EmailThreader.baseSubject(source.subject());
+        if (!base.isEmpty()) {
+            document.add(new StringField(BASE_SUBJECT, base, Field.Store.NO));
+        }
         document.add(new StoredField(LANGUAGE, source.language()));
         document.add(new StoredField(SUBJECT, source.subject()));
         document.add(new StoredField(TEXT, source.text()));
@@ -290,7 +320,8 @@ public final class ProjectIndex implements AutoCloseable {
         return new IndexedDocument(document.get(ID), new Scope(projectId, document.get(THREAD)), document.get(SOURCE),
                 kind == null ? Optional.empty() : Optional.of(MessageKind.valueOf(kind)), document.get(LANGUAGE),
                 document.get(SUBJECT), document.get(TEXT), Set.of(document.getValues(PERMITTED)),
-                Set.of(document.getValues(TOPIC)), Instant.parse(document.get(RECORDED)));
+                Set.of(document.getValues(TOPIC)), Instant.parse(document.get(RECORDED)),
+                Set.of(document.getValues(PARTICIPANT)));
     }
 
     private interface SearcherTask {

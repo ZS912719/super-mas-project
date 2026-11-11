@@ -114,7 +114,8 @@ public final class EmailThreader {
         return ids;
     }
 
-    static String baseSubject(String subject) {
+    /** The subject without reply and forward prefixes, lower-case, spaces collapsed; empty for none. */
+    public static String baseSubject(String subject) {
         if (subject == null) {
             return "";
         }

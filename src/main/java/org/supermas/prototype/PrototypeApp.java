@@ -33,6 +33,7 @@ import org.supermas.llm.RecordedLlm;
 import org.supermas.model.Domain.ModelConfig;
 import org.supermas.control.AgendaStrategy;
 import org.supermas.coordinator.CoordinationStrategy;
+import org.supermas.coordinator.Coordinator;
 import org.supermas.context.LuceneContextRetriever;
 import org.supermas.context.MissingInformationAgent;
 import org.supermas.context.ProjectIndexes;
@@ -46,6 +47,7 @@ import org.supermas.context.TopicRegrouper;
 import org.supermas.context.TopicType;
 import org.supermas.memory.AutoTopicMaintainer;
 import org.supermas.memory.ConversationRecorder;
+import org.supermas.memory.SubjectThreadFallback;
 import org.supermas.memory.IndexConversationRepository;
 import org.supermas.memory.KnowledgeLoader;
 import org.supermas.memory.MessageTagger;
@@ -260,13 +262,13 @@ public final class PrototypeApp {
         final TopicCatalog catalog;
         final InMemoryAgentRegistry registry;
         final SqliteBlackboardStore store;
-        final LeasedCoordinator coordinator;
+        final Coordinator coordinator;
         final ConversationRecorder recorder;
         final RoleCatalog roles;
         final CoordinationStrategy strategy;
 
         private Wiring(Map<String, ContextSource> sources, TopicCatalog catalog, InMemoryAgentRegistry registry,
-                       SqliteBlackboardStore store, LeasedCoordinator coordinator, ConversationRecorder recorder,
+                       SqliteBlackboardStore store, Coordinator coordinator, ConversationRecorder recorder,
                        RoleCatalog roles, CoordinationStrategy strategy) {
             this.strategy = strategy;
             this.sources = sources;
@@ -367,7 +369,9 @@ public final class PrototypeApp {
                     new EvidencePromotion(retriever::readers), Optional.of(recorder), Duration.ofMinutes(5));
             // Topics from mail already stored by an earlier run, before the first new email.
             maintainer.refreshNow(project);
-            return new Wiring(sources, catalog, registry, store, coordinator, recorder, roles, strategy);
+            // A reply without reply headers joins its earlier thread only within the same participants (B47).
+            Coordinator receiving = new ThreadResolvingCoordinator(coordinator, new SubjectThreadFallback(indexes));
+            return new Wiring(sources, catalog, registry, store, receiving, recorder, roles, strategy);
         }
     }
 }
