@@ -22,6 +22,7 @@ This file links to the detailed results and does not replace them: each number h
 
 | # | Date | Benchmark | Part | Data | Configuration | Commit | Headline | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [B69](#b69) | 2026-11-11 | Reply needed? Development measurement | Metadata | synthetic-dev 24 + multi 12 | `ReplyNeedClassifier` (rules) | `f852349` | 35/36; "no reply needed" precision 14/15, recall 14/14; the error is fr-12 (French request not detected) | `development` |
 | [B68](#b68) | 2026-11-11 | W6 Human rubric on 20 real-mail replies | Whole system (human) | Enron test, 20 sampled replies (3 B, B62) | Owner, blind, labelling page | `93a1c23` (page) | Polite 20/20; invents nothing 18/20 full; answers mean 0.55, low mainly because 10 of 20 emails needed no reply (rater's notes) | `valid` (one rater) |
 | [B67](#b67) | 2026-11-11 | Decision-phrase warnings on existing drafts | Generation (review aid) | W4 drafts 328, main runs 273, real mail 197 | `DecisionPhrases`, warn mode | `bad18da` + harness | Injection compliances warned 19/19; main runs 6 of 273 drafts warned, 0 of 6 reply-check decide/confirm prohibitions; real mail 3/3 claimed actions (v2, in-sample) | `development` |
 | [B66](#b66) | 2026-11-11 | W4 Prompt injection, complete 3 B run | Whole system (safety) | synthetic-dev 24 × 7 variants | Online 3 B | `544cd9b` | Approval/send, prompt and cross-thread leaks 0; dictated decision copied in 8/24; forged grade confirmed in 2/24 (one found later, B67) | `development` |
@@ -120,6 +121,14 @@ This file links to the detailed results and does not replace them: each number h
 - Command: `java -cp … org.supermas.benchmark.C1Benchmark benchmark/data/enron-raw/maildir 10000 200 docs/benchmark/results/c1-baseline-enron-2026-11-11.md runtime/bench-2026-11-11/c1-index`. Commit `2b8bba3` + working tree.
 - Result: identical to B08 in every quality measure (R@10 0.338 vs recency 0.601, MRR 0.358); retrieval p50 2.8 ms (B08: 2.3 ms).
 - Details: `docs/benchmark/results/c1-baseline-enron-2026-11-11.md`.
+
+### B69
+**Reply needed? Development measurement of the rules** · 2026-11-11 · status `development`
+- Question: does the new reply-need classifier (plan `docs/plans/reply-needed.md`, commit `f852349`) agree with the frozen reply checks' `replyExpected` on the synthetic sets, the data it was developed on?
+- Command: `java -cp … org.supermas.benchmark.ReplyNeedBenchmark synthetic e.martin@example.edu,c.dubois@example.fr docs/benchmark/results/reply-need-synthetic-2026-11-11.md benchmark/data/synthetic-dev benchmark/data/synthetic-multi`
+- Result: 35 of 36 right. "No reply needed" (the decision that suppresses a draft in batch runs): precision 14 / 15 (0.93, 95 % CI 0.78-1.00), recall 14 / 14. Deciding rules: question 20, request 1, owner's own mail 2, thanks 2, broadcast 2, information only 9 (8 right). The same result without the owner setting: the two own replies are then caught as information only.
+- The error: fr-12 (a supplier's invoice, gold "reply expected") was judged information only. Its English twin en-12 was judged right only because the rule speech-act classifier reads "Please find the invoice … attached" as a request (its courtesy exception matches only "please find attached"); the speech-act rules are English-only, so French requests are found only through question marks. Not tuned on this email; recorded as a limitation.
+- Reading: on the development set the rules separate the cases cleanly; it says little about real mail, where automated mail, forwards and short replies are common. The test is the owner's 100 labels (next entry). Rules frozen in `f852349` before that run.
 
 ### B68
 **W6: human rubric on 20 real-mail replies** · 2026-11-11 · status `valid` (one rater)
