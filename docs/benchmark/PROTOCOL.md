@@ -22,6 +22,7 @@ This file links to the detailed results and does not replace them: each number h
 
 | # | Date | Benchmark | Part | Data | Configuration | Commit | Headline | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [B68](#b68) | 2026-11-11 | W6 Human rubric on 20 real-mail replies | Whole system (human) | Enron test, 20 sampled replies (3 B, B62) | Owner, blind, labelling page | `93a1c23` (page) | Polite 20/20; invents nothing 18/20 full; answers mean 0.55, low mainly because 10 of 20 emails needed no reply (rater's notes) | `valid` (one rater) |
 | [B67](#b67) | 2026-11-11 | Decision-phrase warnings on existing drafts | Generation (review aid) | W4 drafts 328, main runs 273, real mail 197 | `DecisionPhrases`, warn mode | `bad18da` + harness | Injection compliances warned 19/19; main runs 6 of 273 drafts warned, 0 of 6 reply-check decide/confirm prohibitions; real mail 3/3 claimed actions (v2, in-sample) | `development` |
 | [B66](#b66) | 2026-11-11 | W4 Prompt injection, complete 3 B run | Whole system (safety) | synthetic-dev 24 × 7 variants | Online 3 B | `544cd9b` | Approval/send, prompt and cross-thread leaks 0; dictated decision copied in 8/24; forged grade confirmed in 2/24 (one found later, B67) | `development` |
 | [B65](#b65) | 2026-11-11 | W4 Prompt injection through the system | Whole system (safety) | synthetic-dev 24 × 7 variants | Online 8 B (all), 3 B (4 of 7 variants valid) | `544cd9b` | 8 B: approval/send, prompt and cross-thread leaks 0; dictated decision copied in 9/24. 3 B part superseded by B66 | `development` (8 B); 3 B `superseded` (B66) |
@@ -119,6 +120,15 @@ This file links to the detailed results and does not replace them: each number h
 - Command: `java -cp … org.supermas.benchmark.C1Benchmark benchmark/data/enron-raw/maildir 10000 200 docs/benchmark/results/c1-baseline-enron-2026-11-11.md runtime/bench-2026-11-11/c1-index`. Commit `2b8bba3` + working tree.
 - Result: identical to B08 in every quality measure (R@10 0.338 vs recency 0.601, MRR 0.358); retrieval p50 2.8 ms (B08: 2.3 ms).
 - Details: `docs/benchmark/results/c1-baseline-enron-2026-11-11.md`.
+
+### B68
+**W6: human rubric on 20 real-mail replies** · 2026-11-11 · status `valid` (one rater)
+- Question: how good are the system's replies to real mail by a person's judgement, beyond what phrase checks can see (plan W6; W9 rubric sample)?
+- Data and procedure: the 20 emails of `rubric-sample.md` (drawn by `RealMailBenchmark` with seed 20261111, before any result was known), replies of the 3 B run after the excerpt fix (B62). The owner scored them on the labelling page (set `rubric`, commit `93a1c23`), blind: email and reply only, no automatic flags, model or run. Four criteria, 0-2 with fixed anchors, n/a allowed for "admits limits" only; a free note. Summary: `python3 -I scripts/benchmark/rubric_stats.py runtime/real-mail/3b-excerpt-fix-2026-11-11`.
+- Result (`docs/benchmark/results/rubric-real-mail-2026-11-11.md`): polite and appropriate 2 in **20 / 20**; invents no fact 2 in **18 / 20** (one 1, one 0: the sender's commitment restated as the owner's); admits limits n/a in 15, otherwise 2, 1, 0, 0, 2 (mean 1.00); answers or acknowledges **mean 0.55** (14 × 0, 1 × 1, 5 × 2).
+- Notes behind the low "answers": in 10 of 20 the rater noted that **no reply was needed** (FYI mail, notices), and 9 of these got 0; in 3 the reply only repeats or rewrites the email. On the 10 emails without the "no reply needed" note, "answers" averages 1.00. Two zeros carry no note.
+- Reading: the replies are polite and rarely invent facts, consistent with the automatic checks (B62). The main weakness a person sees is one the checks do not measure: the system drafts a reply to every email, including the half of this real-mail sample that needed none, and some replies just repeat the email. A "reply needed?" decision before drafting is not part of the system (the synthetic reply checks know `replyExpected`, the system does not use it); it would be the most useful next step for real mail.
+- Caveats: one rater, 20 emails; the criterion "answers" mixed two things for this rater (a reply that should not exist, and a reply that misses the point), which the anchors did not separate; a second reader (`--rater R2`) would give agreement figures. One inconsistency: t0169 has the "no reply needed" note and "answers" 2.
 
 ### B67
 **Decision-phrase warnings measured on existing drafts** · 2026-11-11 · status `development`
