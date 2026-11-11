@@ -22,6 +22,7 @@ This file links to the detailed results and does not replace them: each number h
 
 | # | Date | Benchmark | Part | Data | Configuration | Commit | Headline | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [B58](#b58) | 2026-11-11 | Retry of the missing main runs, credit still insufficient | Whole system | — | Online | `3a7f6f0` | 48 of 48 requests rejected (HTTP 402) in `M-base-3b-r3`; stopped, no run kept | `invalid` |
 | [B57](#b57) | 2026-11-11 | P2 Input budget on real and synthetic mail | Context / generation | Enron 100 + 20 longest, synthetic 36 | Fake local model | `5dd7bd5` + server | 0 requests over budget; largest exactly 12,000 (truncation); 3 of the 20 longest emails refused: the plan alone exceeds the budget | `valid` |
 | [B56](#b56) | 2026-11-11 | W2 Single agent vs the system | Whole system | synthetic 24 + 12 | Online 3 B (1 run), 8 B (1 run) | `14ea40e` | 3 B: more facts (+0.18), fewer clean replies (−0.26); 8 B: no difference shown | `development` |
 | [B55](#b55) | 2026-11-11 | W3 Ablations: knowledge, composer prompt, router | Whole system | synthetic 24 + 12 | Online 3 B (2 runs), 8 B (1 run) | `14ea40e` | Without knowledge: fewer facts (8 B −0.26); router (3 B): more facts, more rule violations | `development` |
@@ -109,6 +110,13 @@ This file links to the detailed results and does not replace them: each number h
 - Command: `java -cp … org.supermas.benchmark.C1Benchmark benchmark/data/enron-raw/maildir 10000 200 docs/benchmark/results/c1-baseline-enron-2026-11-11.md runtime/bench-2026-11-11/c1-index`. Commit `2b8bba3` + working tree.
 - Result: identical to B08 in every quality measure (R@10 0.338 vs recency 0.601, MRR 0.358); retrieval p50 2.8 ms (B08: 2.3 ms).
 - Details: `docs/benchmark/results/c1-baseline-enron-2026-11-11.md`.
+
+### B58
+**Retry of the missing main runs: credit still insufficient** · 2026-11-11 · status `invalid`
+- What happened: after a reported credit top-up, the 19 missing main runs of B53 were started at 18:17 (same code as B54-B56: no change to `src/main`, `benchmark/` or the harness since `14ea40e`; same options). Beforehand a request with `max_tokens` 5 succeeded for both models. The first 3 B run (`M-base-3b-r3`) had all 48 requests rejected with HTTP 402 ("You requested up to about 116,000 tokens, but can only afford 68,940"): the system sends no `max_tokens`, so the service reserves the model's whole context against the balance. The account's credit endpoint reported `total_credits` 0. The runner's stop check (any connection error in `scores.jsonl`) ended the 3 B stream; the 8 B stream was stopped by hand in its first run.
+- Set aside (renamed `…-INVALID-credit-402-retry`): `M-base-3b-r3`, the unfinished `M-base-8b-r2`.
+- Note: the hosting provider chosen by OpenRouter is not recorded in any run (earlier ones included); the test request was served by Cloudflare.
+- Consequence: unchanged from B53; the missing repeats wait for credit on the account the key belongs to. Setting `max_tokens` would let requests pass on a small balance, but it changes the requests and so the measured system; not done.
 
 ### B57
 **P2: the model input never exceeds the budget** · 2026-11-11 · status `valid`
