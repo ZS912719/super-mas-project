@@ -32,7 +32,7 @@ Legend: **done B-nn** = a protocol entry exists; **re-run** = the code or the da
 | C12 | `KnowledgeRequirements` | Requirements found in the documents | knowledge | not benchmarked: about 2 requirement sentences in the knowledge; unit tests (B36) |
 | C13 | Request extractors: rules vs LLM | Request count exact; over- and under-splitting | synthetic-multi | done B41 (rules); LLM variant: model, harness ready |
 | C14 | Conversation history (`ConversationRecorder`, repository) | Own-thread recall after a restart; zero cross-project leaks | synthetic, Enron | done B45 (synthetic); B12 |
-| C15 | `AutoTopicMaintainer` | Topic stability across runs, coverage | Enron | new |
+| C15 | `AutoTopicMaintainer` | Topic stability across runs, coverage | Enron | covered: re-run identical, 214 topics (B39 = B10); coverage 7,162 of 8,215 threads (B10) |
 | C16 | Routing score (`ScoreRoutingStrategy`) | Accuracy, ambiguity rate | synthetic | B11 |
 | C17 | Output guards: echo, placeholder, signature, greeting-only | What the guards removed and what got past them, no model | replies of runs C-D | done B35 |
 | C18 | LLM adapter | Latency p50 / p95; failure, timeout and retry rates | every model run | model (logged) |
