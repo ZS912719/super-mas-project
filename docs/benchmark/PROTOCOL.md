@@ -22,6 +22,10 @@ This file links to the detailed results and does not replace them: each number h
 
 | # | Date | Benchmark | Part | Data | Configuration | Commit | Headline | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [B56](#b56) | 2026-11-11 | W2 Single agent vs the system | Whole system | synthetic 24 + 12 | Online 3 B (1 run), 8 B (1 run) | `14ea40e` | 3 B: more facts (+0.18), fewer clean replies (−0.26); 8 B: no difference shown | `development` |
+| [B55](#b55) | 2026-11-11 | W3 Ablations: knowledge, composer prompt, router | Whole system | synthetic 24 + 12 | Online 3 B (2 runs), 8 B (1 run) | `14ea40e` | Without knowledge: fewer facts (8 B −0.26); router (3 B): more facts, more rule violations | `development` |
+| [B54](#b54) | 2026-11-11 | W1 Main result on the reviewed checks | Whole system | synthetic 24 + 12 | Online 3 B (2 runs), 8 B (1 run) | `14ea40e` | 3 B: facts 0.20, clean 0.81, drafted 1.00; 8 B: facts 0.36, clean 0.66; 8 B − 3 B facts +0.15 (0.01 to 0.33) | `development` |
+| [B53](#b53) | 2026-11-11 | Main runs cut short by exhausted credit | Whole system | — | Online | `14ea40e` | 8 runs invalid (HTTP 402), 3 B r3 and 8 B r2-r3 missing | `invalid` |
 | [B52](#b52) | 2026-11-11 | Human review of the 36 reply checks | Generation (gold) | synthetic 24 + 12 | Owner, label page | `a233d83` | 36 of 36 confirmed unchanged | `valid` (one reader) |
 | [B51](#b51) | 2026-11-11 | W9 Replies on real mail, 3 B and 8 B | Whole system | Enron test 100 | Online 3 B / 8 B | `b78d2f9` | Drafted 100 / 95; sender greeted 84 / 64; verified problems: 1 invented confirmation, 2 replies with university knowledge, 0 leaks | `development` |
 | [B50](#b50) | 2026-11-11 | P7 Revision after feedback, 3 B and 8 B | Review loop | synthetic 22 | Online 3 B / 8 B | `b78d2f9` | Fact feedback applied 3/9 (3 B), 5/7 (8 B); "shorter" 7/12, 4/12 | `development` |
@@ -104,6 +108,54 @@ This file links to the detailed results and does not replace them: each number h
 - Command: `java -cp … org.supermas.benchmark.C1Benchmark benchmark/data/enron-raw/maildir 10000 200 docs/benchmark/results/c1-baseline-enron-2026-11-11.md runtime/bench-2026-11-11/c1-index`. Commit `2b8bba3` + working tree.
 - Result: identical to B08 in every quality measure (R@10 0.338 vs recency 0.601, MRR 0.358); retrieval p50 2.8 ms (B08: 2.3 ms).
 - Details: `docs/benchmark/results/c1-baseline-enron-2026-11-11.md`.
+
+### B56
+**W2: single agent vs the multi-agent system** · 2026-11-11 · status `development`
+- Question: does the multi-agent system answer better than one model with one generic prompt, given the email and every knowledge document (statement §20)?
+- Configuration: `ReplyQualityBenchmark --single-agent benchmark/prompt-variants/single-agent.txt` (`common.txt` plus a one-line generic task, the email and all six documents, no metadata, routing, retrieval or access control; same guards and checks), against the system runs of B54. Valid runs: 3 B r1, 8 B r1 (3 B r2 was cut by the credit error, B53). Commit `14ea40e`.
+- Result (difference single − system, share of gold, 95 % bootstrap interval over the 22 reply-expected emails): 3 B facts **+0.18 (+0.01 to +0.38)**, asks −0.13 (−0.46 to +0.17), drafted −0.09 (−0.23 to 0.00), clean **−0.26 (−0.48 to −0.07)**; 8 B facts −0.10 (−0.33 to +0.14), asks −0.33 (−0.92 to +0.08), clean −0.05 (−0.30 to +0.20).
+- Reading: with the small model the single agent states more of the gold facts (it sees whole documents) but breaks more rules; with the 8 B model no difference can be shown from one run. Neither direction is established for both models.
+- Details: `runtime/reply-benchmark/M-single-*-r1/` (Git-ignored); analysis `tmp/report/make_data.py` → `main_diffs.csv` (local), method `scripts/benchmark/compare_runs.py`.
+- Caveats: one run per model; the single agent can read the staff-only marking guide (no access control), but no reply quoted it.
+
+### B55
+**W3: ablations (knowledge, composer prompt, architecture)** · 2026-11-11 · status `development`
+- Question: what does each part contribute? One change at a time against the system (B54): without knowledge documents (`--knowledge benchmark/knowledge-variants/none`, to-do 3.4); a neutral composer prompt (`--composer-prompt …/composer-neutral.txt`, to-do 3.3); the composer without the "use only the facts" sentence; the step 11 router instead of the blackboard (`--architecture router`, to-do 3.2). Valid runs: 3 B r1 and r2, 8 B r1. Commit `14ea40e`.
+- Result (difference variant − system, share of gold, 95 % interval; bold where it excludes 0):
+
+| Variant | 3 B facts | 3 B clean | 8 B facts | 8 B clean |
+| --- | --- | --- | --- | --- |
+| Without knowledge | −0.11 (−0.24 to 0.00) | −0.02 (−0.14 to +0.11) | **−0.26 (−0.52 to −0.02)** | −0.07 (−0.34 to +0.20) |
+| Neutral composer prompt | +0.10 (−0.06 to +0.26) | −0.20 (−0.40 to 0.00) | **−0.12 (−0.24 to −0.02)** | −0.02 (−0.30 to +0.25) |
+| Without "only the facts" | +0.02 (−0.02 to +0.08) | −0.03 (−0.10 to +0.03) | +0.05 (−0.14 to +0.24) | −0.11 (−0.36 to +0.14) |
+| Router instead of blackboard | **+0.19 (+0.01 to +0.43)** | −0.22 (−0.42 to 0.00) | −0.10 (−0.29 to +0.10) | −0.09 (−0.32 to +0.14) |
+
+  Violations behind "clean" (3 B, drafted reply-expected replies of both runs): system 68 replies with wrong greeting 6, noise 4; router wrong greeting 17, decides for the owner 7; neutral prompt wrong greeting 18, confirms or decides for the owner 6.
+- Reading: removing the knowledge lowers the facts stated, as it must if facts come from the knowledge (a check of the benchmark itself); the effect is clear for 8 B and borderline for 3 B. The composer prompt's instructions mainly keep the form: without them the 3 B model greets the wrong person three times as often. The router lets the 3 B specialist state more facts but with more wrong greetings and decisions taken for the owner. The "only the facts" sentence has no measurable effect, which settles the open question of B20 and B25.
+- Caveats: two runs (3 B) and one run (8 B) instead of the planned three (B53); intervals touching 0 are not counted as differences.
+
+### B54
+**W1: main result on the reviewed reply checks** · 2026-11-11 · status `development`
+- Question: how good are the replies of the current system, and how much does the model matter? First runs scored with the checks the owner reviewed (B52), on the current code (generation merge `5504b71`, participation eligibility `289718f` and the fixes of step 13 included).
+- Configuration: blackboard, threshold 0.4, OpenRouter 3 B (`meta-llama/llama-3.2-3b-instruct`) and 8 B (`meta-llama/llama-3.1-8b-instruct`), temperature 0.2; each run drafts the 24 dev emails once and the 12 multi emails twice. Valid runs: 3 B r1, r2; 8 B r1 (B53). Commit `14ea40e`.
+- Command: `SUPERMAS_LLM_PROVIDER=online SUPERMAS_LLM_MODEL=<model> java -cp … org.supermas.prototype.ReplyQualityBenchmark --label M-base-<3b|8b>-r<n>` (script `main-runs.sh` in the session scratchpad; options per configuration as in B55, B56).
+- Result (share of gold over the 22 reply-expected emails, mean over runs and repeats):
+
+| Model | Facts (21) | Asks (6) | Drafted | Clean | Greeting right |
+| --- | --- | --- | --- | --- | --- |
+| 3 B (2 runs) | 0.20 | 0.38 | 1.00 | 0.81 | 0.86 |
+| 8 B (1 run) | 0.36 | 0.58 | 0.91 | 0.66 | 0.70 |
+
+  8 B − 3 B: facts **+0.15 (+0.01 to +0.33)**, asks +0.21 (−0.04 to +0.50), drafted −0.09 (−0.23 to 0.00), clean −0.15 (−0.39 to +0.08), greeting −0.16 (−0.36 to +0.02).
+- Reading: consistent with B42 on the earlier runs C/D (3 B clean 0.79, 8 B 0.51 there): the small model follows the form better; the larger states more facts, now with an interval that excludes 0. Facts remain the weak point for both: at most about a third of the gold facts appear in a reply.
+- Details: `runtime/reply-benchmark/M-base-*` (Git-ignored).
+- Caveats: fewer runs than planned (B53); development set; keyword checks.
+
+### B53
+**Main runs cut short: exhausted online credit** · 2026-11-11 · status `invalid` (the runs listed here)
+- What happened: during the main runs (W1-W3, 6 configurations × 3 repeats × 2 models, started 13:43) the OpenRouter account ran out of credit at about 14:02. From then on requests were answered with HTTP 402 ("This request requires more credits"), which the system records as failed drafts.
+- Invalid and set aside (folders renamed `…-INVALID-credit-402`, kept as evidence): all six 3 B r3 runs (35-48 of 48 requests rejected each), `M-single-3b-r2` (6 of 48 rejected), and the unfinished `M-base-8b-r2`. The 8 B stream was stopped after its first repeat; 8 B r2 and r3 were never run. Every run kept has 0 rejected requests.
+- Consequence: B54-B56 rest on two runs (3 B) and one run (8 B) instead of three. To complete them: top up the credit and run the missing repeats with the same commit and options; the excerpt-relevance fix (B51) waits until then, so that all main runs measure the same system.
 
 ### B52
 **Human review of the 36 frozen reply checks** · 2026-11-11 · status `valid` (one reader)
