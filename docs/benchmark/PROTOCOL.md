@@ -22,6 +22,8 @@ This file links to the detailed results and does not replace them: each number h
 
 | # | Date | Benchmark | Part | Data | Configuration | Commit | Headline | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [B44](#b44) | 2026-11-11 | P7 Revision after feedback, template floor | Review loop | synthetic 22 | Template | `d69430c` + harness | 22/22 revised, feedback applied 0 (template ignores feedback) | `valid` (floor) |
+| [B43](#b43) | 2026-11-11 | P6 Composer input is deterministic (derived check) | Generation | runs C-repeat, C-repeat2 | — | `46bed76` | 48 of 48 composer requests identical across two runs | `valid` |
 | [B42](#b42) | 2026-11-11 | W1 Paired comparisons of runs A-D (derived, no new run) | Generation | B15-B24 | — | `5117196` + script | 8 B vs 3 B: facts and asks not significant; clean and greeting significantly worse | `development` |
 | [B41](#b41) | 2026-11-11 | C13 Request extraction, rules | Specialists | synthetic-multi 12 | Rules | `a75f33a` + harness | Count exact 11/12; 22 of 23 requests | `development` |
 | [B40](#b40) | 2026-11-11 | C10 Missing information in the reply plans | Context / specialists | synthetic 24 + 12 | Rules + knowledge requirements, template | `596152d` + harness | Gold asks found 3/6; over-asking 5 of 17 emails (COURSE) | `development` |
@@ -94,6 +96,21 @@ This file links to the detailed results and does not replace them: each number h
 - Command: `java -cp … org.supermas.benchmark.C1Benchmark benchmark/data/enron-raw/maildir 10000 200 docs/benchmark/results/c1-baseline-enron-2026-11-11.md runtime/bench-2026-11-11/c1-index`. Commit `2b8bba3` + working tree.
 - Result: identical to B08 in every quality measure (R@10 0.338 vs recency 0.601, MRR 0.358); retrieval p50 2.8 ms (B08: 2.3 ms).
 - Details: `docs/benchmark/results/c1-baseline-enron-2026-11-11.md`.
+
+### B44
+**P7: revision after feedback, template floor** · 2026-11-11 · status `valid` (floor and wiring check)
+- Question: does a revision apply reviewer feedback without breaking what was right? This run checks the harness and gives the floor; the model runs follow.
+- Data: the 22 reply-expected synthetic emails. Feedback chosen from the frozen checks: the first gold fact v1 misses ("Please also mention: …"), else the first gold ask it misses, else "Please make the reply shorter"; in the email's language. New harness `RevisionBenchmark` (test scope) and test `RevisionBenchmarkTest`.
+- Command: `java -cp … org.supermas.prototype.RevisionBenchmark docs/benchmark/results/revision-template-2026-11-11.md runtime/bench-2026-11-11/p7-template` (add `--llm-…` flags or `SUPERMAS_LLM_*` for a model)
+- Result: v1 drafted 22/22, rejected and revised 22/22 (feedback kinds: fact 10, ask 1, shorter 11); feedback applied 0, facts lost 0, new violations 0, as expected: the template ignores feedback.
+- Details: `docs/benchmark/results/revision-template-2026-11-11.md`.
+
+### B43
+**P6: the composer's input is deterministic (derived check)** · 2026-11-11 · status `valid`
+- Question: P6 planned to compare composers on one recorded board state. Is that needed, or is the composer's input already the same in every run?
+- Method: the recording of each run names each model request by a hash of the model, system prompt and data. Compared the request sets of C-repeat and C-repeat2 (same commit `46bed76`, same model) for dev-r1, multi-r1 and multi-r2.
+- Result: **identical** in all three: 24 + 12 + 12 = 48 of 48 requests, and multi-r1 equals multi-r2. Everything before the composer (metadata, routing, retrieval, plans) is rules and gives the same input every time.
+- Consequence: all run-to-run variation of the reply results (B25) comes from the model; a model or composer-prompt comparison (W1, W3) already compares composers on identical input, so P6 needs no harness of its own.
 
 ### B42
 **W1: paired comparisons of the existing reply-quality runs (derived, no new run)** · 2026-11-11 · status `development`

@@ -47,8 +47,8 @@ Legend: **done B-nn** = a protocol entry exists; **re-run** = the code or the da
 | P3 | Memory | Replies to follow-up emails with vs without stored history | model; new (needs follow-up threads) |
 | P4 | Specialists and routing | Confusion matrix over the statement's email types (student, lecturer, administration, project, ambiguous); plans cite only permitted evidence | B11; extend |
 | P5 | Blackboard collaboration and control | Router vs blackboard; request coverage; rounds; threshold chosen on the fresh set | done B37 (= B13); fresh set open |
-| P6 | Composition in isolation | One recorded board state, different models and prompts, scored with the reply checks: separates the composer from routing | model; new |
-| P7 | Review and revision loop | After rejection with feedback: feedback applied, nothing else broken | model; new |
+| P6 | Composition in isolation | One recorded board state, different models and prompts, scored with the reply checks: separates the composer from routing | covered: the composer's input is deterministic (B43), so W1 and W3 compare composers on identical input |
+| P7 | Review and revision loop | After rejection with feedback: feedback applied, nothing else broken | harness ready, template floor B44; model runs open |
 | P8 | Agent service and mailbox | API latency, error paths, approval is not a send | new (functional) |
 
 ## Level 3: the whole system
