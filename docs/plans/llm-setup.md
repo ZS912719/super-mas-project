@@ -2,6 +2,8 @@
 
 Which engine writes the replies is configuration only (`org.supermas.llm.LlmSettings`): no code changes to move from the template to an online model during development, or to a local model on a stronger computer before delivery. The same settings work for `PrototypeApp` and `AgentService`.
 
+**Benchmarks (owner's decision, 2026-11-11):** there will be no local re-run. All model results in `docs/benchmark/PROTOCOL.md` were measured with the same open-weights models (Llama 3.2 3B and Llama 3.1 8B Instruct) hosted by OpenRouter, and are reported as such. A local deployment may differ in quantisation, sampling defaults and speed; this is a stated limitation, not a pending step.
+
 ## Providers
 
 | Provider | What writes the reply | Data leaves the computer | When to use |

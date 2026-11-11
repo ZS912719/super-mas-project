@@ -11,7 +11,7 @@ This file links to the detailed results and does not replace them: each number h
 | Status | Meaning |
 | --- | --- |
 | `valid` | Can be reported as it stands, with the caveats in its entry |
-| `development` | Online model (OpenRouter stand-in) or self-authored data or checks; must be re-run locally or on reviewed data before it counts (to-do 2.6, 3.10) |
+| `development` | Online model (OpenRouter) or self-authored data or checks. Since 2026-11-11 there is no local re-run (owner's decision): online-model results are reported as measured with the hosted models; the label marks that they rest on the hosted models and on self-authored data |
 | `provisional` | Gold labels written by an LLM and not reviewed by a person |
 | `proxy` | No relevance labels; quality measured through a proxy defined in the entry |
 | `stale` | The code it measures changed afterwards; re-run before reporting |
