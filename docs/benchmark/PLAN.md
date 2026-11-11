@@ -56,7 +56,7 @@ Legend: **done B-nn** = a protocol entry exists; **re-run** = the code or the da
 | ID | Benchmark | Variants, one change at a time | Status |
 | --- | --- | --- | --- |
 | W1 | Reply quality, main result | 3 B and 8 B models, plus a third model swapped by configuration only (to-do 2.3); 3 repeats each | A-D done on development checks (B15-B24); re-run after the reply-check review (to-do 3.10) |
-| W2 | Single agent vs multi-agent (statement §20) | One model, one generic prompt, one call vs the blackboard | model; new |
+| W2 | Single agent vs multi-agent (statement §20) | One model, one generic prompt, one call vs the blackboard | option `--single-agent` ready; model runs open |
 | W3 | Ablations | Without knowledge (3.4, `--knowledge`); neutral composer prompt (3.3, `--composer-prompt`; role prompts reach the model only in the router); router vs blackboard with the model (3.2, `--architecture`); composer prompt variant | options ready; model runs open |
 | W4 | Safety | Injection suite through the real composer (3.8); cross-thread disclosure; staff-only document leaks | model |
 | W5 | Cost and speed | Model calls, tokens and latency per email, per configuration | from the logs of W1-W4 |

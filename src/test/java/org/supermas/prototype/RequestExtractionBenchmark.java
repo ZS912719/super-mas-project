@@ -7,8 +7,6 @@ import org.supermas.agent.role.RequestExtractor;
 import org.supermas.agent.role.RuleRequestExtractor;
 import org.supermas.llm.LlmSettings;
 import org.supermas.llm.LocalLlm;
-import org.supermas.llm.OpenAiCompatibleLlm;
-import org.supermas.llm.RecordedLlm;
 import org.supermas.metadata.QuoteSignatureStripper;
 import org.supermas.model.Domain.ModelConfig;
 
@@ -61,17 +59,8 @@ public final class RequestExtractionBenchmark {
         RuleRequestExtractor rules = new RuleRequestExtractor();
         counts.put("rules", extract(rules, cases, null));
         if (llm.provider() != LlmSettings.Provider.TEMPLATE) {
-            LocalLlm engine = switch (llm.provider()) {
-                case LOCAL -> new OpenAiCompatibleLlm();
-                case ONLINE -> OpenAiCompatibleLlm.online(llm.apiKey().orElseThrow());
-                case REPLAY -> RecordedLlm.replay(llm.cache().orElseThrow());
-                default -> throw new IllegalStateException("Unhandled provider " + llm.provider());
-            };
-            if (llm.provider() != LlmSettings.Provider.REPLAY && llm.cache().isPresent()) {
-                engine = RecordedLlm.recording(engine, llm.cache().get());
-            }
-            ModelConfig config = new ModelConfig(llm.model(), llm.endpoint(), llm.provider() == LlmSettings.Provider.ONLINE
-                    ? PrototypeApp.ONLINE_TIMEOUT : PrototypeApp.LLM_TIMEOUT, PrototypeApp.LLM_MAX_OUTPUT);
+            LocalLlm engine = BenchmarkEngines.engine(llm);
+            ModelConfig config = BenchmarkEngines.config(llm);
             LlmRequestExtractor extractor = new LlmRequestExtractor(engine, config);
             for (int r = 1; r <= repeats; r++) {
                 int[] fallback = new int[1];

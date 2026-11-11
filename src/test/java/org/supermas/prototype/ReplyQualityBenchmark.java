@@ -62,10 +62,12 @@ public final class ReplyQualityBenchmark {
      * @param composerPrompt a composer prompt variant to use instead of the bundled one
      * @param architecture   blackboard (default) or the step 11 router, for the ablation W3
      * @param knowledge      the knowledge folder; a folder with an empty {@code sources.json} runs without knowledge
+     * @param singleAgent    instead of the multi-agent system: one model call per email with this prompt (after
+     *                       {@code common.txt}), the email and every knowledge document (benchmark plan W2)
      */
     record Options(String label, Path out, int devRepeats, int multiRepeats, Path dev, Path multi, LlmSettings llm,
                    java.util.Optional<Path> rescore, java.util.Optional<Path> composerPrompt,
-                   PrototypeApp.Architecture architecture, Path knowledge) { }
+                   PrototypeApp.Architecture architecture, Path knowledge, java.util.Optional<Path> singleAgent) { }
 
     public static void main(String[] args) throws Exception {
         Options options = parse(args, System.getenv());
@@ -85,6 +87,7 @@ public final class ReplyQualityBenchmark {
         java.util.Optional<Path> composerPrompt = java.util.Optional.empty();
         PrototypeApp.Architecture architecture = PrototypeApp.Architecture.BLACKBOARD;
         Path knowledge = KNOWLEDGE;
+        java.util.Optional<Path> singleAgent = java.util.Optional.empty();
         for (int i = 0; i < args.length; i += 2) {
             if (i + 1 >= args.length) {
                 throw new IllegalArgumentException("Missing value for " + args[i]);
@@ -100,6 +103,7 @@ public final class ReplyQualityBenchmark {
                 case "--composer-prompt" -> composerPrompt = java.util.Optional.of(Path.of(args[i + 1]));
                 case "--architecture" -> architecture = PrototypeApp.Architecture.valueOf(args[i + 1].toUpperCase(Locale.ROOT));
                 case "--knowledge" -> knowledge = Path.of(args[i + 1]);
+                case "--single-agent" -> singleAgent = java.util.Optional.of(Path.of(args[i + 1]));
                 default -> {
                     if (!LlmSettings.isFlag(args[i])) {
                         throw new IllegalArgumentException("Unknown option " + args[i]);
@@ -112,7 +116,7 @@ public final class ReplyQualityBenchmark {
             throw new IllegalArgumentException("Give --label NAME (letters, digits, '.', '_', '-'), e.g. --label A-3b");
         }
         return new Options(label, out, devRepeats, multiRepeats, dev, multi, LlmSettings.from(environment, llmFlags), rescore,
-                composerPrompt, architecture, knowledge);
+                composerPrompt, architecture, knowledge, singleAgent);
     }
 
     /** Runs every set and repeat, writes the results, and returns the label folder. */
@@ -136,7 +140,9 @@ public final class ReplyQualityBenchmark {
             for (int repeat = 1; repeat <= repeats; repeat++) {
                 LlmSettings llm = options.llm().withCache(cacheBase.resolve(set + "-r" + repeat));
                 System.out.println("Running " + set + " (" + items.size() + " emails), repeat " + repeat + " of " + repeats);
-                results.addAll(runSet(items, repeat, llm, folder.resolve("work").resolve(set + "-r" + repeat), roles(options),
+                results.addAll(options.singleAgent().isPresent()
+                        ? runSingleAgent(items, repeat, llm, options.knowledge(), Files.readString(options.singleAgent().get()))
+                        : runSet(items, repeat, llm, folder.resolve("work").resolve(set + "-r" + repeat), roles(options),
                         options.architecture(), options.knowledge()));
             }
         }
@@ -231,6 +237,53 @@ public final class ReplyQualityBenchmark {
         return results;
     }
 
+    /**
+     * The single-agent baseline (plan W2): no metadata, routing, retrieval or blackboard. One request per email with
+     * {@code common.txt} plus {@code prompt}, the email and every knowledge document, through the same output guards
+     * ({@link org.supermas.llm.LlmGenerationService}) and the same checks as the system.
+     */
+    private static List<Result> runSingleAgent(List<Item> items, int repeat, LlmSettings llm, Path knowledge, String prompt)
+            throws IOException {
+        String common;
+        try (var in = ReplyQualityBenchmark.class.getResourceAsStream("/prompts/common.txt")) {
+            common = new String(java.util.Objects.requireNonNull(in, "prompts/common.txt").readAllBytes(),
+                    java.nio.charset.StandardCharsets.UTF_8);
+        }
+        String systemPrompt = common.strip() + "\n\n" + prompt.strip() + "\n";
+        List<org.supermas.model.Domain.Evidence> documents = new ArrayList<>();
+        try (Stream<Path> files = Files.walk(knowledge)) {
+            for (Path file : files.filter(f -> f.toString().endsWith(".md")).sorted().toList()) {
+                String source = file.getParent().getFileName().toString();
+                documents.add(new org.supermas.model.Domain.Evidence("knowledge:" + source + "/" + file.getFileName(),
+                        null, org.supermas.model.Domain.EvidenceKind.RETRIEVED_EVIDENCE,
+                        new org.supermas.model.Domain.Provenance(source, "From knowledge source " + source, null),
+                        Files.readString(file), java.util.Set.of()));
+            }
+        }
+        org.supermas.llm.LlmGenerationService generation = new org.supermas.llm.LlmGenerationService(
+                BenchmarkEngines.engine(llm), BenchmarkEngines.label(llm));
+        org.supermas.model.Domain.ModelConfig config = BenchmarkEngines.config(llm);
+        org.supermas.metadata.QuoteSignatureStripper stripper = new org.supermas.metadata.QuoteSignatureStripper();
+        int budget = org.supermas.agent.role.RoleCatalog.bundled().roles().stream()
+                .mapToInt(org.supermas.agent.role.RoleDefinition::maxInputCharacters).max().orElse(12_000);
+        List<Result> results = new ArrayList<>();
+        for (Item item : items) {
+            long start = System.nanoTime();
+            org.supermas.model.Domain.ModelRequest request = org.supermas.agent.role.SingleAgentPrompt.request(systemPrompt,
+                    item.email(), stripper.currentText(item.email().body()), documents, budget);
+            org.supermas.model.Domain.GenerationResult generated = generation.generate(request, config);
+            double millis = (System.nanoTime() - start) / 1e6;
+            String body = generated.draft().map(org.supermas.model.Domain.DraftProposal::body).orElse("");
+            String failure = generated.failure().map(found -> "SINGLE_AGENT: " + found.message()).orElse("");
+            BoardStatus status = generated.draft().isPresent() ? BoardStatus.AWAITING_REVIEW : BoardStatus.FAILED;
+            results.add(new Result(item, repeat, status, failure, body,
+                    generated.draft().map(org.supermas.model.Domain.DraftProposal::explanation).orElse(""),
+                    ReplyChecks.score(item.gold(), body), millis));
+            System.out.println("  " + item.name() + ": " + status + String.format(Locale.ROOT, " (%.0f ms)", millis));
+        }
+        return results;
+    }
+
     // ---- reporting ----
 
     private static String render(Options options, List<Result> results) {
@@ -239,8 +292,9 @@ public final class ReplyQualityBenchmark {
                         + LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES) + " with the current checks (no model call). Model: as in that run")
                 .orElse("Run " + LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES) + ". Model: " + options.llm().describe())).append(". Prompt versions seen: ").append(promptVersions(results))
                 .append(options.composerPrompt().map(file -> ". Composer prompt variant: `" + file + "`").orElse(""))
-                .append(". ").append(options.architecture() == PrototypeApp.Architecture.BLACKBOARD ? "Blackboard" : "Router")
-                .append(" architecture").append(options.knowledge().equals(KNOWLEDGE) ? "" : ", knowledge `" + options.knowledge() + "`")
+                .append(". ").append(options.singleAgent().map(file -> "Single-agent baseline, prompt `" + file + "`")
+                        .orElse((options.architecture() == PrototypeApp.Architecture.BLACKBOARD ? "Blackboard" : "Router")
+                                + " architecture")).append(options.knowledge().equals(KNOWLEDGE) ? "" : ", knowledge `" + options.knowledge() + "`")
                 .append(", rules-only metadata, threshold ")
                 .append(org.supermas.control.AgendaStrategy.Settings.defaults().minContribution())
                 .append(". Checks: frozen `reply-gold/v1` files, keyword-based (an approximation of a human rubric; ")

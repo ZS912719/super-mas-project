@@ -140,6 +140,21 @@ class ReplyChecksTest {
     }
 
     @Test
+    void theSingleAgentBaselineAsksTheModelOncePerEmail(@TempDir Path out) throws Exception {
+        // A replay engine with an empty recording answers nothing: every email is one recorded miss, a failure.
+        Path empty = out.resolve("empty-cache");
+        Files.createDirectories(empty.resolve("multi-r1"));
+        Path single = ReplyQualityBenchmark.run(ReplyQualityBenchmark.parse(new String[] {"--label", "single", "--out", out.toString(),
+                "--dev-repeats", "0", "--multi-repeats", "1", "--single-agent", "benchmark/prompt-variants/single-agent.txt",
+                "--llm-provider", "replay", "--llm-model", "m", "--llm-cache", empty.toString()}, Map.of()));
+        String results = Files.readString(single.resolve("results.md"));
+        assertTrue(results.contains("Single-agent baseline"), results);
+        List<String> scores = Files.readAllLines(single.resolve("scores.jsonl"));
+        assertEquals(12, scores.size());
+        assertTrue(scores.stream().allMatch(line -> line.contains("\"status\":\"FAILED\"") && line.contains("SINGLE_AGENT")), scores.get(0));
+    }
+
+    @Test
     void everyEmailHasFrozenChecks() throws Exception {
         assertEquals(24, ReplyQualityBenchmark.load("dev", Path.of("benchmark/data/synthetic-dev")).size());
         assertEquals(12, ReplyQualityBenchmark.load("multi", Path.of("benchmark/data/synthetic-multi")).size());
