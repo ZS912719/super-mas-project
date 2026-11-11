@@ -22,6 +22,7 @@ This file links to the detailed results and does not replace them: each number h
 
 | # | Date | Benchmark | Part | Data | Configuration | Commit | Headline | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [B45](#b45) | 2026-11-11 | C14 Conversation memory after a restart | Memory | synthetic-dev 24 (+ leak trap) | Template | `c438594` + harness | Earlier messages found 4/8 (all misses: replies without reply headers); 0 cross-project leaks | `development` |
 | [B44](#b44) | 2026-11-11 | P7 Revision after feedback, template floor | Review loop | synthetic 22 | Template | `d69430c` + harness | 22/22 revised, feedback applied 0 (template ignores feedback) | `valid` (floor) |
 | [B43](#b43) | 2026-11-11 | P6 Composer input is deterministic (derived check) | Generation | runs C-repeat, C-repeat2 | — | `46bed76` | 48 of 48 composer requests identical across two runs | `valid` |
 | [B42](#b42) | 2026-11-11 | W1 Paired comparisons of runs A-D (derived, no new run) | Generation | B15-B24 | — | `5117196` + script | 8 B vs 3 B: facts and asks not significant; clean and greeting significantly worse | `development` |
@@ -96,6 +97,16 @@ This file links to the detailed results and does not replace them: each number h
 - Command: `java -cp … org.supermas.benchmark.C1Benchmark benchmark/data/enron-raw/maildir 10000 200 docs/benchmark/results/c1-baseline-enron-2026-11-11.md runtime/bench-2026-11-11/c1-index`. Commit `2b8bba3` + working tree.
 - Result: identical to B08 in every quality measure (R@10 0.338 vs recency 0.601, MRR 0.358); retrieval p50 2.8 ms (B08: 2.3 ms).
 - Details: `docs/benchmark/results/c1-baseline-enron-2026-11-11.md`.
+
+### B45
+**C14: conversation memory after a restart, and isolation between projects** · 2026-11-11 · status `development`
+- Question: is a thread's history found again after the system restarts, and never from another project?
+- Method: new harness `MemoryBenchmark` (test scope). Phase 1 processes all 24 `synthetic-dev` emails under a second project with the same thread identifiers (a leak trap). Phase 2 processes them under the real project, each in a freshly created wiring on the same data folder (a restart before every email). The thread messages on each board are compared with the earlier emails of its gold thread (by message id; agents' copies carry a `#…` suffix). Template generation.
+- Command: `java -cp … org.supermas.prototype.MemoryBenchmark docs/benchmark/results/memory-restart-2026-11-11.md runtime/bench-2026-11-11/c14`
+- Result: 6 emails continue a thread, with 8 earlier messages in all. **Found after the restart: 4 / 8**; from other threads: 0; **from the other project: 0** (no leak). The four found are the direct replies (en-02, en-06, fr-02, fr-06: one earlier message each). The four missed all belong to en-03 and fr-03.
+- Reading: en-03 and fr-03 are replies ("Re: …") without `In-Reply-To` or `References` headers, so the parser gives each a new thread: the same two errors as threadId 0.917 in B02 and B34. Memory works whenever threading works (4 / 4); the misses are a threading gap (plan C02: no subject fallback in the prototype's receive path), not a memory one.
+- Details: `docs/benchmark/results/memory-restart-2026-11-11.md`.
+- Caveats: 8 links only; template generation (retrieval does not depend on the model).
 
 ### B44
 **P7: revision after feedback, template floor** · 2026-11-11 · status `valid` (floor and wiring check)
