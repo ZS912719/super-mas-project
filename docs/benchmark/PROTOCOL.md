@@ -22,6 +22,7 @@ This file links to the detailed results and does not replace them: each number h
 
 | # | Date | Benchmark | Part | Data | Configuration | Commit | Headline | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [B40](#b40) | 2026-11-11 | C10 Missing information in the reply plans | Context / specialists | synthetic 24 + 12 | Rules + knowledge requirements, template | `596152d` + harness | Gold asks found 3/6; over-asking 5 of 17 emails (COURSE) | `development` |
 | [B39](#b39) | 2026-11-11 | C09 Topic agents and discovered topics, re-run | Retrieval | Enron, 7 mailboxes | Lucene | `2b8bba3` + working tree | Identical to B10 | `proxy` |
 | [B38](#b38) | 2026-11-11 | C08 C1 baseline, re-run | Retrieval | Enron, 7 mailboxes | Lucene | `2b8bba3` + working tree | Identical to B08 | `proxy` |
 | [B37](#b37) | 2026-11-11 | P5 Router vs blackboard, re-run | Control | synthetic 24 + 12 | Template, rules metadata | `2b8bba3` + working tree | Identical to B13 in every quality measure | `valid` |
@@ -91,6 +92,16 @@ This file links to the detailed results and does not replace them: each number h
 - Command: `java -cp … org.supermas.benchmark.C1Benchmark benchmark/data/enron-raw/maildir 10000 200 docs/benchmark/results/c1-baseline-enron-2026-11-11.md runtime/bench-2026-11-11/c1-index`. Commit `2b8bba3` + working tree.
 - Result: identical to B08 in every quality measure (R@10 0.338 vs recency 0.601, MRR 0.358); retrieval p50 2.8 ms (B08: 2.3 ms).
 - Details: `docs/benchmark/results/c1-baseline-enron-2026-11-11.md`.
+
+### B40
+**C10: missing information in the reply plans** · 2026-11-11 · status `development`
+- Question: do the specialists' plans list what the reply must ask the sender for (to-do 3.9), and nothing else?
+- Data: synthetic-dev 24 and synthetic-multi 12; gold = the frozen `mustAsk` checks (6 asks in 5 of the 22 reply-expected emails). Prototype: blackboard, template generation, rules-only metadata, missing-information rules plus `KnowledgeRequirements`. New harness `MissingInformationBenchmark` (test scope). Field names are read as words (ID = "student number", COURSE = "course").
+- Command: `java -cp … org.supermas.prototype.MissingInformationBenchmark docs/benchmark/results/missing-information-2026-11-11.md runtime/bench-2026-11-11/c10`
+- Result: gold asks found **3 / 6** (medical certificate in en-01, en-m01, en-m11). Missed: the medical certificate of the French twin fr-01, the student number in en-m11, and the clarification question of en-m06 (no rule can produce it). **Over-asking:** 5 of 17 reply-expected emails without a gold ask still list an item, every time COURSE (en-10, en-m02, en-m04, en-m07, en-m08); 2 of 14 no-reply emails list one too (en-02 COURSE, en-04 ID).
+- Reading: the knowledge requirement works for English mail, not for its French twin (English knowledge, French email: the requirement is not matched). COURSE is a required field of the student and teacher roles, so it is asked for even when the email does not concern a course (a thesis submission, a research question).
+- Details: `docs/benchmark/results/missing-information-2026-11-11.md` (per-email table).
+- Caveats: 6 gold asks only; checks not yet reviewed by a person (to-do 3.10); the plans are those of template runs, which match model runs because plans are built by rules before generation.
 
 ### B39
 **C09: topic agents and discovered topics, re-run** · 2026-11-11 · status `proxy`
