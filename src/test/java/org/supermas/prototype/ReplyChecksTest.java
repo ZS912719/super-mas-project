@@ -128,6 +128,18 @@ class ReplyChecksTest {
     }
 
     @Test
+    void theRouterAndAnEmptyKnowledgeFolderCanBeBenchmarked(@TempDir Path out) throws Exception {
+        Path router = ReplyQualityBenchmark.run(ReplyQualityBenchmark.parse(new String[] {"--label", "router", "--out", out.toString(),
+                "--dev-repeats", "0", "--multi-repeats", "1", "--architecture", "router"}, Map.of()));
+        Path bare = ReplyQualityBenchmark.run(ReplyQualityBenchmark.parse(new String[] {"--label", "bare", "--out", out.toString(),
+                "--dev-repeats", "0", "--multi-repeats", "1", "--knowledge", "benchmark/knowledge-variants/none"}, Map.of()));
+        assertTrue(Files.readString(router.resolve("results.md")).contains("Router architecture"));
+        String bareResults = Files.readString(bare.resolve("results.md"));
+        assertTrue(bareResults.contains("knowledge `benchmark/knowledge-variants/none`"), bareResults);
+        assertEquals(12, Files.readAllLines(bare.resolve("scores.jsonl")).size());
+    }
+
+    @Test
     void everyEmailHasFrozenChecks() throws Exception {
         assertEquals(24, ReplyQualityBenchmark.load("dev", Path.of("benchmark/data/synthetic-dev")).size());
         assertEquals(12, ReplyQualityBenchmark.load("multi", Path.of("benchmark/data/synthetic-multi")).size());

@@ -44,6 +44,8 @@ SUPERMAS_LLM_MODEL=meta-llama/llama-3.1-8b-instruct mvn -q test-compile exec:jav
 
 Defaults: dev once, multi twice (`--dev-repeats`, `--multi-repeats`), output `runtime/reply-benchmark/<label>/` (ignored by Git): `results.md` (summary, violations by kind, per email), `drafts.md` (every draft with its checks and explanation), `scores.jsonl`, `llm-cache/`. An existing label folder is refused, so runs never mix. To score a run's saved replies again with the current checks, without a model: `--label A-3b-checks2 --rescore runtime/reply-benchmark/A-3b`. To re-run the system on recorded replies (only exact prompt matches answer): `--label A-3b-replay --llm-provider replay --llm-model <same model> --llm-cache runtime/reply-benchmark/A-3b/llm-cache`.
 
+Ablation options (benchmark plan W3), one change at a time: `--composer-prompt FILE` (variants in `benchmark/prompt-variants/`), `--architecture router` (the step 11 router instead of the blackboard), `--knowledge DIR` (`benchmark/knowledge-variants/none` runs without knowledge documents). Compare configurations over repeated runs with `scripts/benchmark/compare_runs.py` (protocol B42).
+
 About 36 + 12 = 48 model calls per run with the defaults (the composer makes one call per email).
 
 ## Template floor (2026-11-07, prompt `f0fc3e8d2cac`)
