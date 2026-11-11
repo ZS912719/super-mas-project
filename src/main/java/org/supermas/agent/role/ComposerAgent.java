@@ -99,8 +99,13 @@ public final class ComposerAgent implements SpecializedAgent {
             return new AgentAssessment(config.id(), 1, true, "Contributions " + current + " are not composed yet");
         }
         if (latest.isEmpty()) {
-            // Composed, but no draft: no generation service is configured. Composing again would change nothing.
-            return new AgentAssessment(config.id(), 0, true, "Composed; no generation service wrote a draft");
+            if (services.generation().isEmpty()) {
+                // Composed, but no generation service is configured: composing again would change nothing.
+                return new AgentAssessment(config.id(), 0, true, "Composed; no generation service wrote a draft");
+            }
+            // The generation failed in a way the coordinator may retry (a non-retryable failure ends the board), so
+            // try again; the coordinator's retry and generation budgets bound this (B61: the retry was never used).
+            return new AgentAssessment(config.id(), 1, true, "Composed, but the generation failed; try again");
         }
         if (latest.get().review() == ReviewStatus.REJECTED) {
             return new AgentAssessment(config.id(), 0.5, true, "The draft was rejected; recompose if nobody revises");

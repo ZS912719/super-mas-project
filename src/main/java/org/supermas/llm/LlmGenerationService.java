@@ -72,10 +72,18 @@ public final class LlmGenerationService implements GenerationService {
             return failed(response.failure().get());
         }
         String body = response.output().get().strip();
+        String email = emailText(request.untrustedData());
+        String repaired = "";
         if (PROMPT_BLOCK.matcher(body).find()) {
-            return failed(new Failure(FailureKind.INVALID_OUTPUT, "The model echoed prompt blocks instead of a reply", true));
+            // A reply after copied header blocks is kept (8 B model, B61); anything else that echoes the input is not.
+            Optional<String> rest = ReplyRepairs.withoutEchoedHeader(body, email);
+            if (rest.isEmpty()) {
+                return failed(new Failure(FailureKind.INVALID_OUTPUT, "The model echoed prompt blocks instead of a reply", true));
+            }
+            body = rest.get();
+            repaired = "; removed header blocks copied from the input";
         }
-        String rationale = label + " " + config.model();
+        String rationale = label + " " + config.model() + repaired;
         Matcher placeholder = TRAILING_PLACEHOLDER.matcher(body);
         if (placeholder.find()) {
             // Small models sign with "[Your Name]" despite the rule; the person who sends the reply signs it.
@@ -96,8 +104,14 @@ public final class LlmGenerationService implements GenerationService {
             return failed(new Failure(FailureKind.INVALID_OUTPUT, "The model returned no reply text, only a greeting or "
                     + "a closing", true));
         }
+        // The greeting must name the sender, not the person the email was addressed to (8 B model, B59).
+        Optional<ReplyRepairs.Fixed> greeting = ReplyRepairs.withSendersGreeting(body, request.untrustedData(), email);
+        if (greeting.isPresent()) {
+            body = greeting.get().body();
+            rationale += "; " + greeting.get().note();
+        }
         // Warn mode: the reply is kept, the reviewer is told where it decides or acts for the owner (W4, B65-B66).
-        for (String warning : DecisionPhrases.warnings(body, emailText(request.untrustedData()))) {
+        for (String warning : DecisionPhrases.warnings(body, email)) {
             rationale += "; " + warning;
         }
         return new GenerationResult(Optional.of(new DraftProposal("", body, request.agentId(), rationale)), Optional.empty());

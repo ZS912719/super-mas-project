@@ -237,6 +237,45 @@ class BlackboardCollaborationTest {
         }
     }
 
+    /** A fake local engine that answers each call with the next of {@code answers} (the last one repeats). */
+    private BlackboardSnapshot draftWithAnswers(String folder, java.util.concurrent.atomic.AtomicInteger calls, String... answers)
+            throws Exception {
+        com.sun.net.httpserver.HttpServer engine = com.sun.net.httpserver.HttpServer.create(
+                new java.net.InetSocketAddress(java.net.InetAddress.getLoopbackAddress(), 0), 0);
+        engine.createContext("/v1/chat/completions", exchange -> {
+            exchange.getRequestBody().readAllBytes();
+            String answer = answers[Math.min(calls.getAndIncrement(), answers.length - 1)];
+            byte[] bytes = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsBytes(Map.of("choices",
+                    List.of(Map.of("message", Map.of("content", answer)))));
+            exchange.sendResponseHeaders(200, bytes.length);
+            exchange.getResponseBody().write(bytes);
+            exchange.close();
+        });
+        engine.start();
+        try {
+            return composeWith(org.supermas.llm.LlmSettings.from(Map.of(), Map.of("--llm-endpoint",
+                    "http://127.0.0.1:" + engine.getAddress().getPort(), "--llm-model", "fake-model")), folder);
+        } finally {
+            engine.stop(0);
+        }
+    }
+
+    @Test
+    void aRetryableGenerationFailureIsTriedOnceMore() throws Exception {
+        // B61: the 8 B model sometimes answered with only a greeting and a closing; the retry was never used.
+        java.util.concurrent.atomic.AtomicInteger calls = new java.util.concurrent.atomic.AtomicInteger();
+        BlackboardSnapshot state = draftWithAnswers("retry", calls, "Dear Sarah,\n\nBest regards,",
+                "Dear Sarah,\n\nThe extension is decided by the course leader.\n\nBest regards,");
+        assertEquals(BoardStatus.AWAITING_REVIEW, state.status(), state.failure().toString());
+        assertEquals(2, calls.get());
+        assertTrue(state.drafts().get(0).body().contains("course leader"));
+
+        java.util.concurrent.atomic.AtomicInteger again = new java.util.concurrent.atomic.AtomicInteger();
+        BlackboardSnapshot failed = draftWithAnswers("retry-twice", again, "Dear Sarah,\n\nBest regards,");
+        assertEquals(BoardStatus.FAILED, failed.status());
+        assertEquals(2, again.get(), "one retry only: the coordinator's retry budget bounds it");
+    }
+
     /** One composed email through a fresh wiring with the given model settings. */
     private BlackboardSnapshot composeWith(org.supermas.llm.LlmSettings llm, String folder) throws Exception {
         try (ProjectIndexes other = ProjectIndexes.onDisk(data.resolve(folder).resolve("index"))) {
