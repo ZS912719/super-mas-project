@@ -21,6 +21,12 @@ Three sets:
   unreliable). Opened only after `audit-compare` has run, because it shows the LLM drafts.
   Saving writes `<stem>.gold.reviewed.json`; the draft stays, so the review's changes can be
   counted, and `build_prelabels.py finalize-test` prefers the reviewed file.
+- `rubric`: human rubric (plan W6) on the 20 real-mail replies sampled by `RealMailBenchmark`
+  (`rubric-sample.md`, seed 20261111) from one W9 run (`--rubric-run`, by default the 3 B run after the
+  excerpt fix, protocol B62). Blind: the page shows the email and the reply only, never the automatic
+  flags, the model or the run. Four criteria scored 0-2 with fixed anchors (`RUBRIC`). Saving writes
+  `<run>/rubric/<email>.<rater>.json` (Git-ignored like the run); a second reader starts the server with
+  `--rater R2` and scores into separate files, so the two can be compared.
 
 Every request must carry the session token that is written into the page, and the Host header
 must be the loopback address, so other websites open in the browser cannot read or write labels.
@@ -44,6 +50,25 @@ TEST = ROOT / "benchmark/data/enron/labeling/test"
 DEV = ROOT / "benchmark/data/synthetic-dev"
 MULTI = ROOT / "benchmark/data/synthetic-multi"
 KNOWLEDGE = ROOT / "src/test/resources/university/knowledge"
+FROZEN_TEST = ROOT / "benchmark/data/enron/labeling/frozen-test"
+RUBRIC_RUN = ROOT / "runtime/real-mail/3b-excerpt-fix-2026-11-11"
+RATER = "R1"
+# Criteria of the W9 rubric sheet (fixed before any scoring); anchors added so two readers score alike.
+RUBRIC = [
+    {"id": "polite", "name": "Polite and appropriate",
+     "levels": {"2": "polite, fitting register, greets the sender", "1": "minor issue (stiff, odd or missing greeting)",
+                "0": "rude, inappropriate, or addressed to the wrong person"}},
+    {"id": "answers", "name": "Answers or acknowledges what was asked",
+     "levels": {"2": "deals with everything the email asks, or acknowledges an FYI sensibly",
+                "1": "deals with part of it", "0": "misses or misunderstands what was asked"}},
+    {"id": "inventsNothing", "name": "Invents no fact",
+     "levels": {"2": "states nothing beyond the email and what the writer can know",
+                "1": "a minor unsupported detail",
+                "0": "an invented fact, decision, promise or action (e.g. \"I have attached\", \"confirmed\")"}},
+    {"id": "admitsLimits", "name": "Admits what it cannot know",
+     "levels": {"2": "says it will check, or asks, where information is missing", "1": "partly",
+                "0": "pretends to know or decides what it cannot", "n/a": "nothing in the email needed this"}},
+]
 
 ENTITY_TYPES = ["PERSON", "COURSE", "DATE", "DEADLINE", "ID"]
 ACTS = ["request", "propose", "commit", "deliver"]
@@ -127,7 +152,25 @@ def sets():
         # Listed only once every audit email has a hand label, so the drafts cannot bias the audit.
         "test": {"folder": TEST, "ids": [s for s in stems(TEST, ".gold.draft.json") if s not in audit_ids]
                  if audit_ids and all((AUDIT / f"{a}.gold.json").exists() for a in audit_ids) else []},
+        "rubric": {"folder": FROZEN_TEST, "ids": rubric_ids()},
     }
+
+
+def rubric_ids():
+    sample = RUBRIC_RUN / "rubric-sample.md"
+    if not sample.exists():
+        return []
+    return list(dict.fromkeys(re.findall(r"^\| (enron-t\d+-m\d+) \|", sample.read_text(encoding="utf-8"), re.MULTILINE)))
+
+
+def rubric_reply(item_id):
+    """The reply text of one email from the run's drafts.md; flags and other metadata are left out (blind)."""
+    drafts = (RUBRIC_RUN / "drafts.md").read_text(encoding="utf-8")
+    section = re.search(rf"^## {re.escape(item_id)} \(.*?(?=^## |\Z)", drafts, re.MULTILINE | re.DOTALL)
+    if not section or "**Reply:**" not in section.group(0):
+        return None
+    reply = section.group(0).split("**Reply:**", 1)[1].split("**Flags:**", 1)[0]
+    return "\n".join(line[2:] if line.startswith("> ") else line.lstrip(">") for line in reply.strip().splitlines())
 
 
 def folder_of(set_name, item_id):
@@ -147,6 +190,8 @@ def folder_of(set_name, item_id):
 
 def output_path(set_name, item_id):
     folder = folder_of(set_name, item_id)
+    if set_name == "rubric":
+        return RUBRIC_RUN / "rubric" / f"{item_id}.{RATER}.json"
     suffix = {"audit": ".gold.json", "reply": ".reply.review.json", "multi": ".gold.review.json",
               "test": ".gold.reviewed.json"}[set_name]
     return folder / f"{item_id}{suffix}"
@@ -307,6 +352,11 @@ def validate_term_groups(name, groups, errors):
             errors.append(f"{name} '{group['id']}' needs at least one non-empty term")
 
 
+def validate_rubric(scores):
+    missing = [c["name"] for c in RUBRIC if str(scores.get(c["id"])) not in c["levels"]]
+    return ([f"Still to score: {', '.join(missing)}"] if missing else []), []
+
+
 def validate_review(review, set_name):
     errors, warnings = [], []
     verdict = review.get("_review", {})
@@ -353,7 +403,7 @@ def item_status(set_name, item_id):
         data = read_json(path)
     except ValueError:
         return "invalid"
-    if set_name == "audit":
+    if set_name in ("audit", "rubric"):
         return "done"
     if set_name == "test":
         return "changed" if data.get("_review", {}).get("changedFields") else "ok"
@@ -379,6 +429,13 @@ def load_item(set_name, item_id):
                                "date": mail["facts"]["date"], "threadId": mail["headers"]["Message-ID"].strip(),
                                "currentText": "", "entities": [], "speechActs": [], "roleHint": None,
                                "language": "en"}
+    elif set_name == "rubric":
+        result["reply"] = rubric_reply(item_id)
+        result["rubric"] = RUBRIC
+        result["rater"] = RATER
+        saved = read_json(out) if out.exists() else {}
+        result["label"] = {"scores": saved.get("scores", {}), "note": saved.get("note", "")}
+        result["loadNote"] = "Saved scores" if out.exists() else "Not scored yet"
     elif set_name == "test":
         draft = read_json(folder / f"{item_id}.gold.draft.json")
         result["original"] = {key: draft.get(key) for key in METADATA_KEYS}
@@ -409,7 +466,17 @@ def knowledge():
 
 def save(set_name, item_id, payload):
     folder = folder_of(set_name, item_id)
-    if set_name in ("audit", "test"):
+    if set_name == "rubric":
+        scores = payload.get("scores") if isinstance(payload.get("scores"), dict) else {}
+        errors, warnings = validate_rubric(scores)
+        data = {"schema": "rubric/v1", "email": item_id, "run": RUBRIC_RUN.name, "rater": RATER,
+                "scores": {c["id"]: str(scores.get(c["id"])) for c in RUBRIC},
+                "note": str(payload.get("note", ""))[:2000], "seconds": round(float(payload.get("seconds", 0)), 1),
+                "at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
+        path = output_path(set_name, item_id)
+        if not errors:
+            path.parent.mkdir(exist_ok=True)
+    elif set_name in ("audit", "test"):
         label = {key: payload.get(key) for key in METADATA_KEYS} if isinstance(payload, dict) else {}
         errors, warnings = validate_metadata(label, parse_email(folder / f"{item_id}.eml"))
         data = dict(label)
@@ -506,7 +573,10 @@ def make_handler(token, port):
                 if url.path == "/api/save":
                     self.send(200, save(name, item_id, payload))
                 elif url.path == "/api/check":
-                    if name in ("audit", "test"):
+                    if name == "rubric":
+                        folder_of(name, item_id)
+                        errors, warnings = validate_rubric(payload.get("scores") or {})
+                    elif name in ("audit", "test"):
                         folder = folder_of(name, item_id)
                         errors, warnings = validate_metadata(payload, parse_email(folder / f"{item_id}.eml"))
                     else:
@@ -523,9 +593,18 @@ def make_handler(token, port):
 
 
 def main():
+    global RATER, RUBRIC_RUN
     parser = argparse.ArgumentParser(description="Local labelling page (loopback only)")
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--rater", default=RATER, help="rater code for the rubric set, e.g. R1 or R2")
+    parser.add_argument("--rubric-run", default=str(RUBRIC_RUN.relative_to(ROOT)),
+                        help="W9 run folder whose rubric sample is scored")
     args = parser.parse_args()
+    if not re.fullmatch(r"[A-Za-z0-9]{1,8}", args.rater):
+        raise SystemExit("--rater must be 1-8 letters or digits")
+    RATER, RUBRIC_RUN = args.rater, (ROOT / args.rubric_run).resolve()
+    if not RUBRIC_RUN.is_relative_to((ROOT / "runtime").resolve()):
+        raise SystemExit("--rubric-run must be a folder under runtime/")
     if not (ROOT / "benchmark").is_dir():
         raise SystemExit("Run this from the project root")
     token = secrets.token_urlsafe(24)

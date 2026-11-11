@@ -75,6 +75,15 @@ button.act.suggest { border-color: var(--accent); font-weight: 600; }
 button.act.tick.on { background: var(--ok-bg); color: var(--ok); border-color: var(--ok); }
 .evidence { margin: 2px 0 0 24px; font-size: 12.5px; color: var(--muted); font-style: italic; }
 .empty { color: var(--muted); padding: 30px; }
+.reply { border-color: var(--accent); }
+.crit { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin: 8px 0; background: var(--panel); }
+.crit .name { font-weight: 600; margin-bottom: 6px; }
+.levels { display: grid; gap: 4px; }
+.levels label { display: grid; grid-template-columns: auto 34px 1fr; gap: 6px; align-items: baseline; padding: 4px 6px; border-radius: 5px; cursor: pointer; border: 1px solid transparent; }
+.levels label:hover { background: var(--chip); }
+.levels label.on { background: var(--chip); border-color: var(--accent); }
+.crit.current { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.levels kbd { font: 600 12px ui-monospace, monospace; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; text-align: center; }
 @media (max-width: 900px) { main { grid-template-columns: 1fr; } nav { max-height: 160px; } section + section { border-left: 0; border-top: 1px solid var(--line); } }
 </style>
 </head>
@@ -86,6 +95,7 @@ button.act.tick.on { background: var(--ok-bg); color: var(--ok); border-color: v
     <button data-set="reply">Reply checks</button>
     <button data-set="multi">Multi-request gold</button>
     <button data-set="test">Enron test review</button>
+    <button data-set="rubric">Real-mail rubric</button>
   </div>
   <span class="progress" id="progress"></span>
 </header>
@@ -177,7 +187,8 @@ async function openItem(id) {
   state.item = await api(`/api/item?set=${state.set}&id=${encodeURIComponent(id)}`);
   if ((state.set === "reply" || state.set === "multi") && !state.knowledge) state.knowledge = await api("/api/knowledge");
   renderMail();
-  if (state.set === "audit" || state.set === "test") renderAudit(state.set === "test"); else if (state.set === "reply") renderReply(); else renderMulti();
+  if (state.set === "audit" || state.set === "test") renderAudit(state.set === "test"); else if (state.set === "reply") renderReply();
+  else if (state.set === "rubric") renderRubric(); else renderMulti();
   scheduleCheck();
 }
 function renderMail(highlights = []) {
@@ -187,6 +198,7 @@ function renderMail(highlights = []) {
   const pre = el("pre", {class: "body", id: "body"});
   pre.append(...highlight(body, highlights));
   const parts = [el("h2", {}, state.id), head, pre];
+  if (state.set === "rubric") parts.splice(1, 0, el("div", {class: "note"}, "The email as received. The reply on the right was drafted on behalf of its recipient."));
   if (state.set === "audit" || state.set === "test") parts.splice(1, 0, el("div", {class: "note"}, state.set === "test" ? "Review of the LLM draft: entities are highlighted in the email." : "Blind audit: label from the email alone. Select text here or in currentText, then use the entity buttons."));
   if ((state.set === "reply" || state.set === "multi") && state.knowledge) {
     parts.push(el("h2", {}, "Knowledge documents"), el("div", {class: "note"}, "What the system may know. Readers = which agents may read the source."),
@@ -475,6 +487,46 @@ function renderMulti() {
     actionBar());
 }
 
+// ---------- real-mail rubric (W6/W9) ----------
+function renderRubric() {
+  const item = state.item, label = structuredClone(item.label);
+  state.read = () => ({...label, seconds: (Date.now() - state.openedAt) / 1000});
+  const boxes = [];
+  const focus = i => { state.critIndex = Math.min(i, item.rubric.length - 1); boxes.forEach((b, j) => b.classList.toggle("current", j === state.critIndex)); };
+  state.scoreKey = key => {
+    const c = item.rubric[state.critIndex], value = key === "n" ? "n/a" : key;
+    if (!c || !(value in c.levels)) return false;
+    label.scores[c.id] = value; boxes[state.critIndex].querySelector(`input[value="${CSS.escape(value)}"]`).checked = true;
+    boxes[state.critIndex].dispatchEvent(new Event("repaint")); markDirty(); focus(state.critIndex + 1); return true;
+  };
+  const criteria = item.rubric.map((c, index) => {
+    const box = el("div", {class: "crit", onclick: () => focus(index)}, el("div", {class: "name"}, `${index + 1}. ${c.name}`));
+    boxes.push(box);
+    const levels = el("div", {class: "levels"});
+    const paint = () => { for (const l of levels.children) l.classList.toggle("on", l.dataset.v === label.scores[c.id]); };
+    box.addEventListener("repaint", () => paint());
+    for (const [value, text] of Object.entries(c.levels)) {
+      levels.append(el("label", {"data-v": value}, el("input", {type: "radio", name: c.id, value, checked: label.scores[c.id] === value,
+        onchange: () => { label.scores[c.id] = value; paint(); markDirty(); }}), el("kbd", {}, value), text));
+    }
+    paint(); box.append(levels); return box;
+  });
+  const note = el("textarea", {rows: 3, placeholder: "Optional: what is wrong or notable (e.g. invents an attachment, repeats the email back)",
+    oninput: e => { label.note = e.target.value; markDirty(); }});
+  note.value = label.note || "";
+  document.getElementById("form").replaceChildren(
+    el("div", {class: "note"}, `${item.loadNote} · rater ${item.rater} · blind: no flags, model or run are shown. Saving writes rubric/${state.id}.${item.rater}.json in the run folder.`),
+    el("h2", {}, "Draft reply"),
+    item.reply == null ? el("div", {class: "msgs"}, el("div", {class: "e"}, "No reply found for this email in drafts.md"))
+      : el("pre", {class: "body reply"}, item.reply),
+    el("h2", {}, "Scores"),
+    el("div", {class: "note"}, "Judge the reply as a draft the recipient would review before sending. Keyboard: 0, 1, 2 (or n for n/a) scores the highlighted criterion and moves to the next; Ctrl+Enter saves and opens the next email."),
+    ...criteria,
+    el("label", {class: "field"}, "Note"), note,
+    actionBar());
+  focus(Math.max(0, item.rubric.findIndex(c => !label.scores[c.id])));
+}
+
 // ---------- check and save ----------
 let checkTimer = null;
 function scheduleCheck() { clearTimeout(checkTimer); checkTimer = setTimeout(runCheck, 350); }
@@ -484,6 +536,7 @@ function clientErrors() {
     return open ? [`Confirm or fix every point in the checklist first (${open} left)`] : [];
   }
   if (state.set === "audit") return [];
+  if (state.set === "rubric") return [];  // the server names the criteria still to score
   const r = state.read(), o = {...state.item.original};
   const {_review, ...content} = r;
   const differs = Object.keys({...content, ...o}).some(k => !same(content[k], o[k]));
@@ -518,7 +571,10 @@ function actionBar() {
     el("button", {class: "small", onclick: () => save(false)}, "Save"),
     el("span", {class: "hint"}, "Ctrl+S saves · warnings do not block saving"), el("div", {class: "msgs", id: "msgs", style: "width:100%"}));
 }
+const isTyping = a => a && (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" && a.type !== "radio" && a.type !== "checkbox"));
 document.addEventListener("keydown", e => {
+  if (state.set === "rubric" && state.scoreKey && !e.ctrlKey && !e.metaKey && !e.altKey
+      && !isTyping(document.activeElement) && state.scoreKey(e.key.toLowerCase())) { e.preventDefault(); return; }
   if (!(e.ctrlKey || e.metaKey) || !state.read) return;
   if (e.key === "s") { e.preventDefault(); save(false); }
   if (e.key === "Enter") { e.preventDefault(); save(true); }
@@ -527,7 +583,7 @@ document.addEventListener("keydown", e => {
 let start = "audit";
 try { start = localStorage.getItem("label-set") || "audit"; } catch (_) {}
 if (location.hash.length > 1) start = location.hash.slice(1);
-openSet(["audit", "reply", "multi", "test"].includes(start) ? start : "audit");
+openSet(["audit", "reply", "multi", "test", "rubric"].includes(start) ? start : "audit");
 </script>
 </body>
 </html>
