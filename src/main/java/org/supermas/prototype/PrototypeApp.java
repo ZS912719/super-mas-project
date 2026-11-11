@@ -303,8 +303,12 @@ public final class PrototypeApp {
         }
 
         static Wiring create(ProjectIndexes indexes, Options options) {
+            return create(indexes, options, RoleCatalog.bundled());
+        }
+
+        /** With a given role catalogue, e.g. one with a composer prompt variant (benchmarks). */
+        static Wiring create(ProjectIndexes indexes, Options options, RoleCatalog roles) {
             String project = options.project();
-            RoleCatalog roles = RoleCatalog.bundled();
             Map<String, ContextSource> sources = new HashMap<>(new KnowledgeLoader(indexes).load(options.knowledge()).sources());
             // Every agent that should read mail is a reader of the mail source, in trusted configuration.
             Set<String> mailReaders = new LinkedHashSet<>(List.of(DISCUSSION, DISCOVERED));

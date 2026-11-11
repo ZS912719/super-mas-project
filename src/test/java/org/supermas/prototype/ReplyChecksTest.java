@@ -112,6 +112,22 @@ class ReplyChecksTest {
     }
 
     @Test
+    void aComposerPromptVariantIsUsedAndNamed(@TempDir Path out) throws Exception {
+        Path plain = ReplyQualityBenchmark.run(ReplyQualityBenchmark.parse(new String[] {"--label", "plain", "--out", out.toString(),
+                "--dev-repeats", "0", "--multi-repeats", "1"}, Map.of()));
+        Path variant = ReplyQualityBenchmark.run(ReplyQualityBenchmark.parse(new String[] {"--label", "variant", "--out",
+                out.toString(), "--dev-repeats", "0", "--multi-repeats", "1", "--composer-prompt",
+                "benchmark/prompt-variants/composer-without-use-only-the-facts.txt"}, Map.of()));
+        String plainResults = Files.readString(plain.resolve("results.md"));
+        String variantResults = Files.readString(variant.resolve("results.md"));
+        assertTrue(variantResults.contains("Composer prompt variant"), variantResults);
+        String versions = "Prompt versions seen: ";
+        String plainVersions = plainResults.substring(plainResults.indexOf(versions)).split("\\.")[0];
+        String variantVersions = variantResults.substring(variantResults.indexOf(versions)).split("\\.")[0];
+        assertFalse(plainVersions.equals(variantVersions), "the composer's prompt version shows the variant: " + variantVersions);
+    }
+
+    @Test
     void everyEmailHasFrozenChecks() throws Exception {
         assertEquals(24, ReplyQualityBenchmark.load("dev", Path.of("benchmark/data/synthetic-dev")).size());
         assertEquals(12, ReplyQualityBenchmark.load("multi", Path.of("benchmark/data/synthetic-multi")).size());

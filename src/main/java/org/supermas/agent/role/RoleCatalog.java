@@ -48,11 +48,13 @@ public final class RoleCatalog implements AgentConfigRepository {
     private final Optional<Path> folder;
     private final String commonPrompt;
     private final String composerPrompt;
+    private final Function<String, Optional<String>> promptFiles;
     private final ObjectMapper json = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
     private RoleCatalog(List<RoleDefinition> definitions, Function<String, Optional<String>> promptFiles,
                         Optional<Path> folder) {
         this.folder = folder;
+        this.promptFiles = promptFiles;
         String common = promptFiles.apply(COMMON_PROMPT)
                 .orElseThrow(() -> new IllegalArgumentException("The prompt folder needs " + COMMON_PROMPT));
         this.commonPrompt = common;
@@ -211,6 +213,22 @@ public final class RoleCatalog implements AgentConfigRepository {
      * smuggle instructions into the trusted part.
      */
     public String composerSystemPrompt(List<String> contributorIds) {
+        return composerSystemPromptFrom(contributorIds);
+    }
+
+    /**
+     * The same catalogue with another composer prompt, everything else unchanged: for comparing prompt variants
+     * one change at a time (step 13, benchmark option {@code --composer-prompt}).
+     */
+    public RoleCatalog withComposerPrompt(String composerPromptText) {
+        if (composerPromptText == null || composerPromptText.isBlank()) {
+            throw new IllegalArgumentException("A composer prompt cannot be empty");
+        }
+        return new RoleCatalog(List.copyOf(roles.values()),
+                name -> name.equals(COMPOSER_PROMPT) ? Optional.of(composerPromptText) : promptFiles.apply(name), folder);
+    }
+
+    private String composerSystemPromptFrom(List<String> contributorIds) {
         StringBuilder prompt = new StringBuilder(commonPrompt.strip()).append("\n\n").append(composerPrompt.strip());
         boolean any = false;
         for (String id : contributorIds) {

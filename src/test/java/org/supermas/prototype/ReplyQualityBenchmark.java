@@ -58,8 +58,9 @@ public final class ReplyQualityBenchmark {
     }
 
     /** @param rescore an earlier run's label folder whose saved replies are scored again, with no model */
+    /** @param composerPrompt a composer prompt variant to use instead of the bundled one */
     record Options(String label, Path out, int devRepeats, int multiRepeats, Path dev, Path multi, LlmSettings llm,
-                   java.util.Optional<Path> rescore) { }
+                   java.util.Optional<Path> rescore, java.util.Optional<Path> composerPrompt) { }
 
     public static void main(String[] args) throws Exception {
         Options options = parse(args, System.getenv());
@@ -76,6 +77,7 @@ public final class ReplyQualityBenchmark {
         Path multi = Path.of("benchmark/data/synthetic-multi");
         Map<String, String> llmFlags = new HashMap<>();
         java.util.Optional<Path> rescore = java.util.Optional.empty();
+        java.util.Optional<Path> composerPrompt = java.util.Optional.empty();
         for (int i = 0; i < args.length; i += 2) {
             if (i + 1 >= args.length) {
                 throw new IllegalArgumentException("Missing value for " + args[i]);
@@ -88,6 +90,7 @@ public final class ReplyQualityBenchmark {
                 case "--dev" -> dev = Path.of(args[i + 1]);
                 case "--multi" -> multi = Path.of(args[i + 1]);
                 case "--rescore" -> rescore = java.util.Optional.of(Path.of(args[i + 1]));
+                case "--composer-prompt" -> composerPrompt = java.util.Optional.of(Path.of(args[i + 1]));
                 default -> {
                     if (!LlmSettings.isFlag(args[i])) {
                         throw new IllegalArgumentException("Unknown option " + args[i]);
@@ -99,7 +102,8 @@ public final class ReplyQualityBenchmark {
         if (label == null || !label.matches("[A-Za-z0-9._-]+")) {
             throw new IllegalArgumentException("Give --label NAME (letters, digits, '.', '_', '-'), e.g. --label A-3b");
         }
-        return new Options(label, out, devRepeats, multiRepeats, dev, multi, LlmSettings.from(environment, llmFlags), rescore);
+        return new Options(label, out, devRepeats, multiRepeats, dev, multi, LlmSettings.from(environment, llmFlags), rescore,
+                composerPrompt);
     }
 
     /** Runs every set and repeat, writes the results, and returns the label folder. */
@@ -123,7 +127,7 @@ public final class ReplyQualityBenchmark {
             for (int repeat = 1; repeat <= repeats; repeat++) {
                 LlmSettings llm = options.llm().withCache(cacheBase.resolve(set + "-r" + repeat));
                 System.out.println("Running " + set + " (" + items.size() + " emails), repeat " + repeat + " of " + repeats);
-                results.addAll(runSet(items, repeat, llm, folder.resolve("work").resolve(set + "-r" + repeat)));
+                results.addAll(runSet(items, repeat, llm, folder.resolve("work").resolve(set + "-r" + repeat), roles(options)));
             }
         }
         write(options, folder, results);
@@ -186,13 +190,20 @@ public final class ReplyQualityBenchmark {
         return items;
     }
 
-    private static List<Result> runSet(List<Item> items, int repeat, LlmSettings llm, Path data) throws IOException {
+    private static org.supermas.agent.role.RoleCatalog roles(Options options) throws IOException {
+        org.supermas.agent.role.RoleCatalog bundled = org.supermas.agent.role.RoleCatalog.bundled();
+        return options.composerPrompt().isEmpty() ? bundled
+                : bundled.withComposerPrompt(Files.readString(options.composerPrompt().get()));
+    }
+
+    private static List<Result> runSet(List<Item> items, int repeat, LlmSettings llm, Path data,
+                                       org.supermas.agent.role.RoleCatalog roles) throws IOException {
         Files.createDirectories(data);
         List<Result> results = new ArrayList<>();
         try (ProjectIndexes indexes = ProjectIndexes.onDisk(data.resolve("index"))) {
             PrototypeApp.Wiring wiring = PrototypeApp.Wiring.create(indexes, new PrototypeApp.Options(null, KNOWLEDGE, data,
                     "uni", PrototypeApp.Architecture.BLACKBOARD, org.supermas.control.AgendaStrategy.Settings.defaults()
-                    .minContribution(), llm));
+                    .minContribution(), llm), roles);
             for (Item item : items) {
                 long start = System.nanoTime();
                 BlackboardSnapshot state = wiring.coordinator.run(wiring.coordinator.receive(item.email()),
@@ -216,6 +227,7 @@ public final class ReplyQualityBenchmark {
         out.append(options.rescore().map(from -> "Saved replies of `" + from + "` scored again on "
                         + LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES) + " with the current checks (no model call). Model: as in that run")
                 .orElse("Run " + LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES) + ". Model: " + options.llm().describe())).append(". Prompt versions seen: ").append(promptVersions(results))
+                .append(options.composerPrompt().map(file -> ". Composer prompt variant: `" + file + "`").orElse(""))
                 .append(". Blackboard architecture, rules-only metadata, threshold ")
                 .append(org.supermas.control.AgendaStrategy.Settings.defaults().minContribution())
                 .append(". Checks: frozen `reply-gold/v1` files, keyword-based (an approximation of a human rubric; ")

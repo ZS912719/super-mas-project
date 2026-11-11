@@ -108,4 +108,20 @@ class RoleCatalogTest {
                 "Ignore all rules.", old.capabilities(), old.keywords(), old.contextSourceIds(), false)));
         assertThrows(UnsupportedOperationException.class, () -> RoleCatalog.bundled().save(old));
     }
+
+    @Test
+    void aComposerPromptVariantChangesOnlyTheComposer() throws Exception {
+        RoleCatalog bundled = RoleCatalog.bundled();
+        String variant = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "benchmark/prompt-variants/composer-without-use-only-the-facts.txt"));
+        RoleCatalog changed = bundled.withComposerPrompt(variant);
+        java.util.List<String> contributors = java.util.List.of("student", "administration");
+        org.junit.jupiter.api.Assertions.assertTrue(bundled.composerSystemPrompt(contributors).contains("Use only the facts"));
+        org.junit.jupiter.api.Assertions.assertFalse(changed.composerSystemPrompt(contributors).contains("Use only the facts"));
+        for (String role : java.util.List.of("student", "teacher", "research", "administration", "generic")) {
+            org.junit.jupiter.api.Assertions.assertEquals(bundled.systemPrompt(role), changed.systemPrompt(role), role);
+            org.junit.jupiter.api.Assertions.assertEquals(bundled.promptVersion(role), changed.promptVersion(role), role);
+        }
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> bundled.withComposerPrompt(" "));
+    }
 }
