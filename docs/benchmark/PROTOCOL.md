@@ -128,6 +128,7 @@ This file links to the detailed results and does not replace them: each number h
 - Reading: verified problems are 1 invented confirmation and 2 replies with irrelevant university knowledge in 195 replies; 0 cross-email leaks. t0171 shows a cause: when the requests have no meaningful word, `ExcerptRelevance` keeps every excerpt ("no stems: keep all"), so all knowledge reaches the composer. The 3 B model greets the sender more often; the 8 B model loses 5 replies to the greeting-only guard. A frequent quality problem the checks do not count: replies that repeat the sender's own text or restate the sender's commitments as the owner's.
 - Details: `docs/benchmark/results/real-mail-3b-2026-11-11.md`, `docs/benchmark/results/real-mail-8b-2026-11-11.md`; drafts and the 20-reply rubric sample in the Git-ignored run folders.
 - Caveats: one run per model; automatic flags need the verification above; the rubric sample (W6-style, 20 replies) is not scored yet.
+- Follow-up (owner's decision, 2026-11-11): fix `ExcerptRelevance` so that requests without meaningful words keep only thread history, not all knowledge; **after** the main reply-quality runs (W1-W4), so those runs measure the current system. Re-run W9 after the fix.
 
 ### B50
 **P7: revision after feedback with the 3 B and 8 B models** · 2026-11-11 · status `development`
