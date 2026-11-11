@@ -22,6 +22,8 @@ This file links to the detailed results and does not replace them: each number h
 
 | # | Date | Benchmark | Part | Data | Configuration | Commit | Headline | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [B64](#b64) | 2026-11-11 | C02 Threading on receipt with the restricted subject fallback | Metadata / memory | synthetic-dev 24; Enron 7 mailboxes, 10,206 | Parser + `SubjectThreadFallback` | `f45bff4` + harness | Synthetic 24/24 (before 22/24); Enron: 1,040 messages joined (unrestricted 1,979), 84 % of them quote the thread (unrestricted 80 %) | `development` |
+| [B63](#b63) | 2026-11-11 | C14 Conversation memory after a restart, with subject threading | Memory | synthetic-dev 24 (+ leak trap) | Template | `f45bff4` | Earlier messages found 8/8 (before 4/8); 0 from other threads; 0 cross-project leaks | `development` |
 | [B62](#b62) | 2026-11-11 | W9 Replies on real mail after the excerpt fix | Whole system | Enron test 100 | Online 3 B / 8 B, 1 run each | `4b56f03` | University knowledge in replies 3 → 0 (3 B; the two real cases fixed); verified problems 3 B 1, 8 B 3 (claimed attachments, a confirmation); 0 leaks | `development` |
 | [B61](#b61) | 2026-11-11 | W2 Single agent vs the system, complete | Whole system | synthetic 24 + 12 | Online 3 B, 8 B, 3 runs each | `14ea40e` (r1-r2) / `83044eb` (r3, same code) | 3 B: more facts (+0.16); 8 B: drafts more (+0.11) and greets right more often (+0.27) than the system | `development` |
 | [B60](#b60) | 2026-11-11 | W3 Ablations, complete | Whole system | synthetic 24 + 12 | Online 3 B, 8 B, 3 runs each | `14ea40e` / `83044eb` (same code) | Without knowledge fewer facts (3 B −0.12, 8 B −0.22); neutral prompt (3 B) worse greeting; router: no difference shown | `development` |
@@ -37,9 +39,9 @@ This file links to the detailed results and does not replace them: each number h
 | [B50](#b50) | 2026-11-11 | P7 Revision after feedback, 3 B and 8 B | Review loop | synthetic 22 | Online 3 B / 8 B | `b78d2f9` | Fact feedback applied 3/9 (3 B), 5/7 (8 B); "shorter" 7/12, 4/12 | `development` |
 | [B49](#b49) | 2026-11-11 | C13 Request extraction, LLM, 3 B and 8 B | Specialists | synthetic-multi 12 | Online 3 B / 8 B, 3 repeats | `b78d2f9` | Count exact 12/12 in all 6 runs (rules 11/12); fell back to rules 4-5 (3 B), 1-2 (8 B) of 12 | `development` |
 | [B48](#b48) | 2026-11-11 | W9 Replies on real mail, template floor | Whole system | Enron test 100 | Template | `76828c9` + harness | 100/100 drafted, all by the generic agent; greeting names the sender 0/100 | `valid` (floor) |
-| [B47](#b47) | 2026-11-11 | C02 Threading: reply headers vs subject fallback | Metadata | synthetic-dev 24 | Parser; `EmailThreader` | `cdce62a` + harness | Headers 22/24, subject fallback 24/24; the fallback is not used by the system | `development` |
+| [B47](#b47) | 2026-11-11 | C02 Threading: reply headers vs subject fallback | Metadata | synthetic-dev 24 | Parser; `EmailThreader` | `cdce62a` + harness | Headers 22/24, subject fallback 24/24; the fallback is not used by the system | `stale` (B64) |
 | [B46](#b46) | 2026-11-11 | C01 Parser robustness on all Enron mail | Metadata | Enron maildir, 517,401 | Parser + stripper + language | `cdce62a` + harness | 100 % parsed; 0 replies recognised (no reply headers in Enron); p50 0.04 ms | `valid` |
-| [B45](#b45) | 2026-11-11 | C14 Conversation memory after a restart | Memory | synthetic-dev 24 (+ leak trap) | Template | `c438594` + harness | Earlier messages found 4/8 (all misses: replies without reply headers); 0 cross-project leaks | `development` |
+| [B45](#b45) | 2026-11-11 | C14 Conversation memory after a restart | Memory | synthetic-dev 24 (+ leak trap) | Template | `c438594` + harness | Earlier messages found 4/8 (all misses: replies without reply headers); 0 cross-project leaks | `stale` (B63) |
 | [B44](#b44) | 2026-11-11 | P7 Revision after feedback, template floor | Review loop | synthetic 22 | Template | `d69430c` + harness | 22/22 revised, feedback applied 0 (template ignores feedback) | `valid` (floor) |
 | [B43](#b43) | 2026-11-11 | P6 Composer input is deterministic (derived check) | Generation | runs C-repeat, C-repeat2 | — | `46bed76` | 48 of 48 composer requests identical across two runs | `valid` |
 | [B42](#b42) | 2026-11-11 | W1 Paired comparisons of runs A-D (derived, no new run) | Generation | B15-B24 | — | `5117196` + script | 8 B vs 3 B: facts and asks not significant; clean and greeting significantly worse | `development` |
@@ -114,6 +116,24 @@ This file links to the detailed results and does not replace them: each number h
 - Command: `java -cp … org.supermas.benchmark.C1Benchmark benchmark/data/enron-raw/maildir 10000 200 docs/benchmark/results/c1-baseline-enron-2026-11-11.md runtime/bench-2026-11-11/c1-index`. Commit `2b8bba3` + working tree.
 - Result: identical to B08 in every quality measure (R@10 0.338 vs recency 0.601, MRR 0.358); retrieval p50 2.8 ms (B08: 2.3 ms).
 - Details: `docs/benchmark/results/c1-baseline-enron-2026-11-11.md`.
+
+### B64
+**C02: threading on receipt with the restricted subject fallback** · 2026-11-11 · status `development`
+- Question: does the subject fallback chosen by the owner (option b: only within the same participants and a time window, commit `f45bff4`) recover the threads lost without reply headers (B47), and how much does it merge on real mail compared with the unrestricted fallback?
+- Rule (`memory.SubjectThreadFallback`, applied in the prototype wiring before the coordinator): a received email without `In-Reply-To`/`References` joins an earlier thread only if its subject starts with `Re:`/`AW:` (forwards never), an earlier received message of the project has the same base subject, at most 30 days older, every participant of the new email took part in it, and all such messages belong to one thread.
+- Data and commands: synthetic-dev 24 with gold `threadId`: `java -cp … org.supermas.benchmark.ThreadingBenchmark docs/benchmark/results/threading-synthetic-receipt-2026-11-11.md benchmark/data/synthetic-dev` (new variant: emails in date order through `ReceiptThreading`, i.e. the real recorder and fallback). Enron, the 7 mailboxes and duplicate removal of C1 (B08), no thread gold: `java -cp … org.supermas.benchmark.EnronThreadingStats benchmark/data/enron-raw/maildir 10000 docs/benchmark/results/threading-enron-receipt-2026-11-11.md` (new harness; mailboxes numbered, counts only).
+- Result, synthetic: parser alone 22/24 (en-03, fr-03 wrong), unrestricted `EmailThreader` 24/24, **on receipt with the restricted fallback 24/24**.
+- Result, Enron (10,206 messages, all without reply headers): threads 10,206 (references only), 8,215 (unrestricted, as in B08), **9,164 (restricted)**. Messages joined to an earlier thread: unrestricted 1,979, restricted 1,040. Of these, the share whose body contains an 8-word sequence of an earlier message of the thread (quoted text; a lower bound of precision): unrestricted 1,583 / 1,979 (80 %), **restricted 874 / 1,040 (84 %)**.
+- Reading: on the synthetic set the restriction costs nothing. On Enron it joins about half as many messages as the unrestricted fallback, and those it joins quote their thread slightly more often. It leaves 709 messages separate that quote an earlier message (1,583 − 874): mostly forwards and messages with a new participant, the cases excluded on purpose because joining them could show a newcomer history they were not part of. The quoting share is a proxy: a short real reply may quote nothing, and a forward may quote without being a reply.
+- Caveats: no thread gold on Enron; the 30-day window and the reply prefixes were fixed before this run and not tuned.
+
+### B63
+**C14: conversation memory after a restart, with subject threading** · 2026-11-11 · status `development`
+- Question: does the threading change (B64) bring back the history lost in B45, without leaks?
+- Configuration and command: as B45, commit `f45bff4`: `java -cp … org.supermas.prototype.MemoryBenchmark docs/benchmark/results/memory-restart-threading-2026-11-11.md runtime/bench-2026-11-11/c14-threading`.
+- Result: emails continuing a thread 6, earlier messages **found 8 / 8** (B45: 4 / 8); from other threads of the project 0; **from the other project 0**. en-03 and fr-03 now find both earlier messages each.
+- Reading: the two replies without reply headers now get their history; the leak trap (the same emails and thread identifiers under a second project) stays empty, as the fallback searches only the project's own index.
+- Note: the main reply-quality runs (B59-B61) and W9 (B62) ran before this change; on the synthetic set it affects the history of en-03 and fr-03 only.
 
 ### B62
 **W9: replies on real mail after the excerpt-relevance fix** · 2026-11-11 · status `development`

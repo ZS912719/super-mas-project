@@ -16,7 +16,8 @@ import java.util.stream.Stream;
 
 /**
  * Benchmark plan C02: thread identifiers against the gold {@code threadId}, for the parser alone (reply headers,
- * what the prototype uses on receipt) and for {@link EmailThreader} with and without its subject fallback.
+ * what the prototype used on receipt until f45bff4), for {@link EmailThreader} with and without its subject fallback, and
+ * on receipt with the restricted fallback of {@link org.supermas.memory.SubjectThreadFallback} (the prototype since f45bff4).
  *
  * <p>Usage: {@code ThreadingBenchmark REPORT_FILE DATA_DIR} (a folder of {@code .eml} with metadata gold files)
  */
@@ -45,9 +46,10 @@ public final class ThreadingBenchmark {
         Map<String, String> headers = new LinkedHashMap<>();
         emails.forEach(e -> headers.put(e.id(), e.scope().threadId()));
         Map<String, Map<String, String>> variants = new LinkedHashMap<>();
-        variants.put("Parser on receipt (reply headers only; the prototype)", headers);
+        variants.put("Parser alone (reply headers only; the prototype before f45bff4)", headers);
         variants.put("EmailThreader, references only", new EmailThreader(false).assignThreadIds(emails));
         variants.put("EmailThreader with subject fallback", new EmailThreader(true).assignThreadIds(emails));
+        variants.put("On receipt with the restricted subject fallback (the prototype since f45bff4)", ReceiptThreading.assign(emails));
         StringBuilder out = new StringBuilder("# Threading (benchmark plan C02)\n\n")
                 .append("Run ").append(Instant.now().toString(), 0, 16).append("Z on `").append(dir).append("` (")
                 .append(emails.size()).append(" emails, gold `threadId`).\n\n| Variant | Thread right | Wrong |\n| --- | --- | --- |\n");
