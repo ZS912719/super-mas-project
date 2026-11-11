@@ -96,6 +96,7 @@ button.act.tick.on { background: var(--ok-bg); color: var(--ok); border-color: v
     <button data-set="multi">Multi-request gold</button>
     <button data-set="test">Enron test review</button>
     <button data-set="rubric">Real-mail rubric</button>
+    <button data-set="replyneed">Reply needed?</button>
   </div>
   <span class="progress" id="progress"></span>
 </header>
@@ -188,7 +189,7 @@ async function openItem(id) {
   if ((state.set === "reply" || state.set === "multi") && !state.knowledge) state.knowledge = await api("/api/knowledge");
   renderMail();
   if (state.set === "audit" || state.set === "test") renderAudit(state.set === "test"); else if (state.set === "reply") renderReply();
-  else if (state.set === "rubric") renderRubric(); else renderMulti();
+  else if (state.set === "rubric") renderRubric(); else if (state.set === "replyneed") renderReplyNeed(); else renderMulti();
   scheduleCheck();
 }
 function renderMail(highlights = []) {
@@ -198,6 +199,7 @@ function renderMail(highlights = []) {
   const pre = el("pre", {class: "body", id: "body"});
   pre.append(...highlight(body, highlights));
   const parts = [el("h2", {}, state.id), head, pre];
+  if (state.set === "replyneed") parts.splice(1, 0, el("div", {class: "note"}, "The email as received by its recipient (To). Judge from the email alone."));
   if (state.set === "rubric") parts.splice(1, 0, el("div", {class: "note"}, "The email as received. The reply on the right was drafted on behalf of its recipient."));
   if (state.set === "audit" || state.set === "test") parts.splice(1, 0, el("div", {class: "note"}, state.set === "test" ? "Review of the LLM draft: entities are highlighted in the email." : "Blind audit: label from the email alone. Select text here or in currentText, then use the entity buttons."));
   if ((state.set === "reply" || state.set === "multi") && state.knowledge) {
@@ -527,6 +529,33 @@ function renderRubric() {
   focus(Math.max(0, item.rubric.findIndex(c => !label.scores[c.id])));
 }
 
+// ---------- reply needed? (plan docs/plans/reply-needed.md) ----------
+function renderReplyNeed() {
+  const label = structuredClone(state.item.label);
+  state.read = () => ({...label, seconds: (Date.now() - state.openedAt) / 1000});
+  const options = [["yes", "y", "Yes: the sender asks or expects an answer, a decision, an action or a confirmation from the recipient"],
+    ["no", "n", "No: a notice, newsletter, automated message, broadcast, FYI, a thank-you, or the recipient's own mail"],
+    ["unsure", "u", "Unsure: it could go either way"]];
+  const note = el("textarea", {rows: 2, placeholder: "Optional: why", oninput: e => { label.note = e.target.value; markDirty(); }});
+  note.value = label.note || "";
+  state.replyNeedKey = key => {
+    const found = options.find(o => o[1] === key);
+    if (!found) return false;
+    label.replyNeeded = found[0]; markDirty(); save(true); return true;
+  };
+  document.getElementById("form").replaceChildren(
+    el("div", {class: "note"}, `${state.item.loadNote} · rater ${state.item.rater} · blind: nothing from the system is shown. Saving writes labeling/reply-need/${state.id}.${state.item.rater}.json.`),
+    el("h2", {}, "Does the recipient need to reply?"),
+    el("div", {class: "note"}, "Keyboard: y, n or u saves and opens the next email. A polite acknowledgement alone does not make a reply needed, unless the sender asks for one."),
+    el("div", {class: "levels"}, ...options.map(([value, key, text]) => el("label", {class: label.replyNeeded === value ? "on" : ""},
+      el("input", {type: "radio", name: "replyNeeded", checked: label.replyNeeded === value, onchange: e => {
+        label.replyNeeded = value; markDirty();
+        for (const l of e.target.closest(".levels").children) l.classList.toggle("on", l.contains(e.target)); }}),
+      el("kbd", {}, key), text))),
+    el("label", {class: "field"}, "Note"), note,
+    actionBar());
+}
+
 // ---------- check and save ----------
 let checkTimer = null;
 function scheduleCheck() { clearTimeout(checkTimer); checkTimer = setTimeout(runCheck, 350); }
@@ -536,7 +565,7 @@ function clientErrors() {
     return open ? [`Confirm or fix every point in the checklist first (${open} left)`] : [];
   }
   if (state.set === "audit") return [];
-  if (state.set === "rubric") return [];  // the server names the criteria still to score
+  if (state.set === "rubric" || state.set === "replyneed") return [];  // the server says what is missing
   const r = state.read(), o = {...state.item.original};
   const {_review, ...content} = r;
   const differs = Object.keys({...content, ...o}).some(k => !same(content[k], o[k]));
@@ -575,6 +604,8 @@ const isTyping = a => a && (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" &
 document.addEventListener("keydown", e => {
   if (state.set === "rubric" && state.scoreKey && !e.ctrlKey && !e.metaKey && !e.altKey
       && !isTyping(document.activeElement) && state.scoreKey(e.key.toLowerCase())) { e.preventDefault(); return; }
+  if (state.set === "replyneed" && state.replyNeedKey && !e.ctrlKey && !e.metaKey && !e.altKey
+      && !isTyping(document.activeElement) && state.replyNeedKey(e.key.toLowerCase())) { e.preventDefault(); return; }
   if (!(e.ctrlKey || e.metaKey) || !state.read) return;
   if (e.key === "s") { e.preventDefault(); save(false); }
   if (e.key === "Enter") { e.preventDefault(); save(true); }
@@ -583,7 +614,7 @@ document.addEventListener("keydown", e => {
 let start = "audit";
 try { start = localStorage.getItem("label-set") || "audit"; } catch (_) {}
 if (location.hash.length > 1) start = location.hash.slice(1);
-openSet(["audit", "reply", "multi", "test", "rubric"].includes(start) ? start : "audit");
+openSet(["audit", "reply", "multi", "test", "rubric", "replyneed"].includes(start) ? start : "audit");
 </script>
 </body>
 </html>

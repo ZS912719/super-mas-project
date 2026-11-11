@@ -27,6 +27,9 @@ Three sets:
   flags, the model or the run. Four criteria scored 0-2 with fixed anchors (`RUBRIC`). Saving writes
   `<run>/rubric/<email>.<rater>.json` (Git-ignored like the run); a second reader starts the server with
   `--rater R2` and scores into separate files, so the two can be compared.
+- `replyneed`: does the recipient need to reply? yes / no / unsure for each of the 100 frozen Enron test emails
+  (plan `docs/plans/reply-needed.md`), the test set of the reply-need classifier. Blind: the email only, nothing
+  from the system. Saving writes `labeling/reply-need/<email>.<rater>.json` (Git-ignored with all Enron data).
 
 Every request must carry the session token that is written into the page, and the Host header
 must be the loopback address, so other websites open in the browser cannot read or write labels.
@@ -53,6 +56,8 @@ KNOWLEDGE = ROOT / "src/test/resources/university/knowledge"
 FROZEN_TEST = ROOT / "benchmark/data/enron/labeling/frozen-test"
 RUBRIC_RUN = ROOT / "runtime/real-mail/3b-excerpt-fix-2026-11-11"
 RATER = "R1"
+REPLY_NEED = ROOT / "benchmark/data/enron/labeling/reply-need"
+REPLY_NEED_VALUES = ["yes", "no", "unsure"]
 # Criteria of the W9 rubric sheet (fixed before any scoring); anchors added so two readers score alike.
 RUBRIC = [
     {"id": "polite", "name": "Polite and appropriate",
@@ -153,6 +158,7 @@ def sets():
         "test": {"folder": TEST, "ids": [s for s in stems(TEST, ".gold.draft.json") if s not in audit_ids]
                  if audit_ids and all((AUDIT / f"{a}.gold.json").exists() for a in audit_ids) else []},
         "rubric": {"folder": FROZEN_TEST, "ids": rubric_ids()},
+        "replyneed": {"folder": FROZEN_TEST, "ids": stems(FROZEN_TEST, ".eml") if FROZEN_TEST.exists() else []},
     }
 
 
@@ -192,6 +198,8 @@ def output_path(set_name, item_id):
     folder = folder_of(set_name, item_id)
     if set_name == "rubric":
         return RUBRIC_RUN / "rubric" / f"{item_id}.{RATER}.json"
+    if set_name == "replyneed":
+        return REPLY_NEED / f"{item_id}.{RATER}.json"
     suffix = {"audit": ".gold.json", "reply": ".reply.review.json", "multi": ".gold.review.json",
               "test": ".gold.reviewed.json"}[set_name]
     return folder / f"{item_id}{suffix}"
@@ -403,6 +411,8 @@ def item_status(set_name, item_id):
         data = read_json(path)
     except ValueError:
         return "invalid"
+    if set_name == "replyneed":
+        return {"yes": "ok", "no": "changed", "unsure": "unsure"}.get(data.get("replyNeeded"), "invalid")
     if set_name in ("audit", "rubric"):
         return "done"
     if set_name == "test":
@@ -429,6 +439,11 @@ def load_item(set_name, item_id):
                                "date": mail["facts"]["date"], "threadId": mail["headers"]["Message-ID"].strip(),
                                "currentText": "", "entities": [], "speechActs": [], "roleHint": None,
                                "language": "en"}
+    elif set_name == "replyneed":
+        saved = read_json(out) if out.exists() else {}
+        result["label"] = {"replyNeeded": saved.get("replyNeeded"), "note": saved.get("note", "")}
+        result["rater"] = RATER
+        result["loadNote"] = "Saved" if out.exists() else "Not labelled yet"
     elif set_name == "rubric":
         result["reply"] = rubric_reply(item_id)
         result["rubric"] = RUBRIC
@@ -466,7 +481,15 @@ def knowledge():
 
 def save(set_name, item_id, payload):
     folder = folder_of(set_name, item_id)
-    if set_name == "rubric":
+    if set_name == "replyneed":
+        value = payload.get("replyNeeded")
+        errors, warnings = ([] if value in REPLY_NEED_VALUES else ["Choose yes, no or unsure"]), []
+        data = {"schema": "reply-need/v1", "email": item_id, "rater": RATER, "replyNeeded": value,
+                "note": str(payload.get("note", ""))[:1000], "seconds": round(float(payload.get("seconds", 0)), 1),
+                "at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
+        if not errors:
+            REPLY_NEED.mkdir(parents=True, exist_ok=True)
+    elif set_name == "rubric":
         scores = payload.get("scores") if isinstance(payload.get("scores"), dict) else {}
         errors, warnings = validate_rubric(scores)
         data = {"schema": "rubric/v1", "email": item_id, "run": RUBRIC_RUN.name, "rater": RATER,
@@ -573,7 +596,11 @@ def make_handler(token, port):
                 if url.path == "/api/save":
                     self.send(200, save(name, item_id, payload))
                 elif url.path == "/api/check":
-                    if name == "rubric":
+                    if name == "replyneed":
+                        folder_of(name, item_id)
+                        errors, warnings = ([] if payload.get("replyNeeded") in REPLY_NEED_VALUES
+                                            else ["Choose yes, no or unsure"]), []
+                    elif name == "rubric":
                         folder_of(name, item_id)
                         errors, warnings = validate_rubric(payload.get("scores") or {})
                     elif name in ("audit", "test"):
