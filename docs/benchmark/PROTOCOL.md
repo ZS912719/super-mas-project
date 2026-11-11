@@ -22,6 +22,7 @@ This file links to the detailed results and does not replace them: each number h
 
 | # | Date | Benchmark | Part | Data | Configuration | Commit | Headline | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [B62](#b62) | 2026-11-11 | W9 Replies on real mail after the excerpt fix | Whole system | Enron test 100 | Online 3 B / 8 B, 1 run each | `4b56f03` | University knowledge in replies 3 → 0 (3 B; the two real cases fixed); verified problems 3 B 1, 8 B 3 (claimed attachments, a confirmation); 0 leaks | `development` |
 | [B61](#b61) | 2026-11-11 | W2 Single agent vs the system, complete | Whole system | synthetic 24 + 12 | Online 3 B, 8 B, 3 runs each | `14ea40e` (r1-r2) / `83044eb` (r3, same code) | 3 B: more facts (+0.16); 8 B: drafts more (+0.11) and greets right more often (+0.27) than the system | `development` |
 | [B60](#b60) | 2026-11-11 | W3 Ablations, complete | Whole system | synthetic 24 + 12 | Online 3 B, 8 B, 3 runs each | `14ea40e` / `83044eb` (same code) | Without knowledge fewer facts (3 B −0.12, 8 B −0.22); neutral prompt (3 B) worse greeting; router: no difference shown | `development` |
 | [B59](#b59) | 2026-11-11 | W1 Main result, complete | Whole system | synthetic 24 + 12 | Online 3 B, 8 B, 3 runs each | `14ea40e` / `83044eb` (same code) | 3 B facts 0.21, clean 0.75; 8 B facts 0.30, clean 0.53; 8 B − 3 B: facts n.s., clean −0.22, greeting −0.21, drafted −0.11 | `development` |
@@ -113,6 +114,27 @@ This file links to the detailed results and does not replace them: each number h
 - Command: `java -cp … org.supermas.benchmark.C1Benchmark benchmark/data/enron-raw/maildir 10000 200 docs/benchmark/results/c1-baseline-enron-2026-11-11.md runtime/bench-2026-11-11/c1-index`. Commit `2b8bba3` + working tree.
 - Result: identical to B08 in every quality measure (R@10 0.338 vs recency 0.601, MRR 0.358); retrieval p50 2.8 ms (B08: 2.3 ms).
 - Details: `docs/benchmark/results/c1-baseline-enron-2026-11-11.md`.
+
+### B62
+**W9: replies on real mail after the excerpt-relevance fix** · 2026-11-11 · status `development`
+- Question: does the fix agreed in B51 (requests without a meaningful word keep only the thread history, commit `4b56f03`) remove the irrelevant university knowledge, and does anything else change? Run after the main runs (B59-B61), as decided.
+- Configuration: as B51 (same harness, checks fixed before B48, same models), commit `4b56f03`, Java 17. Sends the public Enron test emails to OpenRouter (owner's decision). One run per model.
+- Command: as B51, with outputs `docs/benchmark/results/real-mail-<3b|8b>-excerpt-fix-2026-11-11.md` and `runtime/real-mail/<3b|8b>-excerpt-fix-2026-11-11`.
+- Also run: C11 excerpt relevance on the synthetic sets with the fix: identical to `excerpt-relevance-2026-11-11.md` (every synthetic request has meaningful words, so the new branch is never taken there).
+- Result (before → after, B51 → B62):
+
+| Measure | 3 B | 8 B |
+| --- | --- | --- |
+| Drafted | 100 → 100 | 95 → 97 |
+| Greeting names the sender | 84 → 83 | 64 → 70 |
+| Drafts without any flag | 76 → 78 | 62 → 64 |
+| University-knowledge flag | 3 → 0 | 1 → 1 |
+| Promise or claimed-action flag | 1 → 0 | 0 → 3 |
+| Another email's content flag | 2 → 3 | 0 → 0 |
+
+- Verification of every serious flag, by reading the drafts (content kept local): the two real university cases of B51 are fixed: t0171 ("9") now gets a two-line acknowledgement, t0111 no longer cites a student-number policy. **Another email's content** (3 B: t0019, t0036, t0111): all false alarms, stock phrases that happen to occur in exactly one other test email ("please let me know if there", "I will not be able to", "let me know if you need"); t0019 and t0036 repeat the sender's own text back, and t0036 invents a statement for the owner ("I am not going to Spain"), which no check flagged. **Promise** (8 B): all three real: t0058 and t0160 claim "I have attached …" (the sender had attached the files) and t0058 restates the sender's commitments as the owner's; t0079 "is confirmed" for an automated schedule notice. **University knowledge** (8 B, t0007): the false alarm of B51 ("assignment" is in the subject). **Wrong language** (8 B, t0018, t0196): false alarms, English replies to English notices.
+- Reading: the fix removes the cause found in B51; the two real cases are gone and nothing on the synthetic sets changes. Other differences are within the noise of one run per model (B60: clean shares vary by up to 0.24 between identical runs): the 3 B invented confirmation of B51 did not recur, the 8 B model this time claimed attachments three times. Verified problems: 3 B 1 (found while verifying, not by a check), 8 B 3, in 197 drafts; 0 cross-email leaks, as in B51.
+- Caveats: one run per model; the checks see only fixed phrases, so problems such as t0036 are found only by reading.
 
 ### B61
 **W2: single agent against the system, all three runs** · 2026-11-11 · status `development`
@@ -256,7 +278,7 @@ This file links to the detailed results and does not replace them: each number h
 - Reading: verified problems are 1 invented confirmation and 2 replies with irrelevant university knowledge in 195 replies; 0 cross-email leaks. t0171 shows a cause: when the requests have no meaningful word, `ExcerptRelevance` keeps every excerpt ("no stems: keep all"), so all knowledge reaches the composer. The 3 B model greets the sender more often; the 8 B model loses 5 replies to the greeting-only guard. A frequent quality problem the checks do not count: replies that repeat the sender's own text or restate the sender's commitments as the owner's.
 - Details: `docs/benchmark/results/real-mail-3b-2026-11-11.md`, `docs/benchmark/results/real-mail-8b-2026-11-11.md`; drafts and the 20-reply rubric sample in the Git-ignored run folders.
 - Caveats: one run per model; automatic flags need the verification above; the rubric sample (W6-style, 20 replies) is not scored yet.
-- Follow-up (owner's decision, 2026-11-11): fix `ExcerptRelevance` so that requests without meaningful words keep only thread history, not all knowledge; **after** the main reply-quality runs (W1-W4), so those runs measure the current system. Re-run W9 after the fix.
+- Follow-up (owner's decision, 2026-11-11; done in `4b56f03`, re-run B62): fix `ExcerptRelevance` so that requests without meaningful words keep only thread history, not all knowledge; **after** the main reply-quality runs (W1-W4), so those runs measure the current system. Re-run W9 after the fix.
 
 ### B50
 **P7: revision after feedback with the 3 B and 8 B models** · 2026-11-11 · status `development`
