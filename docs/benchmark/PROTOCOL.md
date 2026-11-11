@@ -506,6 +506,7 @@ This file links to the detailed results and does not replace them: each number h
 **Audit agreement: human vs LLM labels on the Enron audit** · 2026-11-11 · status `valid` (25 emails only)
 - Question: are the LLM labels of the 75 unreviewed test emails good enough to use (labelling setup, to-do 3.1)?
 - Data: the 25 audit emails (random test emails, seed `20261101`), owner's hand labels (B26) vs the LLM drafts in `labeling/test/`. Commit `2b8bba3`.
+- LLM that wrote the drafts: Claude Opus 5.5 (`claude-opus-5-5`, in Claude Code, 2026-10-31; from the session log, `docs/reports/labeling-setup.md`). The same assistant was used in development and wrote the schema rules and the synthetic reply checks, so it is not independent of the system.
 - Command: `python3 -I scripts/labeling/build_prelabels.py audit-compare benchmark/data/enron/labeling/audit benchmark/data/enron/labeling/test`
 - Result:
 
