@@ -17,6 +17,7 @@ public record Dataset(List<Case> cases, String sha256) {
     private static final String EMAIL_SUFFIX = ".eml";
     private static final String GOLD_SUFFIX = ".gold.json";
     private static final String REPLY_SUFFIX = ".reply.json";
+    private static final String REVIEW_SUFFIX = ".reply.review.json";
 
     public record Case(String id, byte[] rawEmail, Extraction gold) { }
 
@@ -30,6 +31,14 @@ public record Dataset(List<Case> cases, String sha256) {
         List<Case> cases = new ArrayList<>();
         for (Path file : files) {
             String name = file.getFileName().toString();
+            if (name.endsWith(REVIEW_SUFFIX)) {
+                // A person's verdict on the reply checks (label page): allowed beside its checks, outside the fingerprint.
+                String id = name.substring(0, name.length() - REVIEW_SUFFIX.length());
+                if (!Files.exists(directory.resolve(id + REPLY_SUFFIX))) {
+                    throw new IOException("Missing reply checks for " + name);
+                }
+                continue;
+            }
             if (name.endsWith(REPLY_SUFFIX)) {
                 // Reply checks (step 13) are a separate layer of labels: allowed beside their email, and left out of
                 // the fingerprint so the metadata results stay tied to the same dataset hash.
