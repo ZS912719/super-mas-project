@@ -22,6 +22,7 @@ This file links to the detailed results and does not replace them: each number h
 
 | # | Date | Benchmark | Part | Data | Configuration | Commit | Headline | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [B70](#b70) | 2026-11-11 | Reply needed? Test on the owner's 100 Enron labels | Metadata | Enron frozen test 100 (owner: 62 no, 22 yes, 16 unsure) | `ReplyNeedClassifier` frozen at `f852349` | `fb7c756` | "No reply needed" precision 50/57 (0.88, CI 0.78-0.95), recall 50/62; 7 of 22 needed replies suppressed | `valid` (one labeller) |
 | [B69](#b69) | 2026-11-11 | Reply needed? Development measurement | Metadata | synthetic-dev 24 + multi 12 | `ReplyNeedClassifier` (rules) | `f852349` | 35/36; "no reply needed" precision 14/15, recall 14/14; the error is fr-12 (French request not detected) | `development` |
 | [B68](#b68) | 2026-11-11 | W6 Human rubric on 20 real-mail replies | Whole system (human) | Enron test, 20 sampled replies (3 B, B62) | Owner, blind, labelling page | `93a1c23` (page) | Polite 20/20; invents nothing 18/20 full; answers mean 0.55, low mainly because 10 of 20 emails needed no reply (rater's notes) | `valid` (one rater) |
 | [B67](#b67) | 2026-11-11 | Decision-phrase warnings on existing drafts | Generation (review aid) | W4 drafts 328, main runs 273, real mail 197 | `DecisionPhrases`, warn mode | `bad18da` + harness | Injection compliances warned 19/19; main runs 6 of 273 drafts warned, 0 of 6 reply-check decide/confirm prohibitions; real mail 3/3 claimed actions (v2, in-sample) | `development` |
@@ -121,6 +122,19 @@ This file links to the detailed results and does not replace them: each number h
 - Command: `java -cp … org.supermas.benchmark.C1Benchmark benchmark/data/enron-raw/maildir 10000 200 docs/benchmark/results/c1-baseline-enron-2026-11-11.md runtime/bench-2026-11-11/c1-index`. Commit `2b8bba3` + working tree.
 - Result: identical to B08 in every quality measure (R@10 0.338 vs recency 0.601, MRR 0.358); retrieval p50 2.8 ms (B08: 2.3 ms).
 - Details: `docs/benchmark/results/c1-baseline-enron-2026-11-11.md`.
+
+### B70
+**Reply needed? Test on the owner's labels of the 100 Enron test emails** · 2026-11-11 · status `valid` (one labeller)
+- Question: how well do the reply-need rules, frozen in `f852349` after the development measurement (B69), agree with a person on real mail they were not built on?
+- Gold: the owner labelled all 100 frozen Enron test emails on the blind labelling tab "Reply needed?" (`0288c3e`; email only, from the recipient's side, definitions on the page), before the rules were run on them: 62 no, 22 yes, 16 unsure. Labels stay in the Git-ignored labelling folder.
+- Command (no owner setting: on Enron the reply is written as the recipient, as in W9): `java -cp … org.supermas.benchmark.ReplyNeedBenchmark enron - docs/benchmark/results/reply-need-enron-test-2026-11-11.md benchmark/data/enron/labeling/frozen-test benchmark/data/enron/labeling/reply-need R1` at `fb7c756` (no change to the rules since `f852349`).
+- Result on the 84 emails with a yes/no label: "no reply needed" precision **50 / 57 (0.88, 95 % CI 0.78-0.95)**, recall 50 / 62 (0.81, 0.70-0.90); accuracy 65 / 84. Always answering "no reply needed" would be right for 62 / 84 (0.74). Emails that need a reply but would be stopped: **7 of 22**. Of the 16 "unsure", the rules stopped 10.
+- Deciding rules (all 100): information only 41 (30 no, 4 yes, 7 unsure); broadcast 15 (10 / 2 / 3); request 19 (5 / 10 / 4); question 12 (6 / 5 / 1); no text of its own 7 (6 / 1 / 0); automated 3 (3 / 0 / 0); proposal 2; thanks 1.
+- The 7 suppressed replies, read: 2 broadcasts that ask for something without a question mark ("Please let … know if you are interested", "Please reply to this message ASAP"): the broadcast rule lets only a question through, not a request, a design flaw; 2 forwards with little or no own text; 3 short personal notes without a question ("sounds like an opportunity for our … team!"). The rules were not changed after this reading.
+- Consistency of the labeller: on the 20 emails also scored in the rubric (B68), all 10 noted there as "no reply needed" are labelled "no" here.
+- Effect in batch runs, derived exactly (the stop comes before any model call): of the 100 Enron emails 67 would be stopped, avoiding 50 drafts the owner judged unneeded and losing 7 he judged needed (and 10 judged unsure). On the synthetic main configuration, one reply-expected email (fr-12, B69) would be stopped.
+- Reading: the rules are a useful filter, clearly better than the base rate, but in batch mode they suppress about a third of the needed replies on real mail. For the mailbox, where they only add a note and a label and drafting stays possible, this costs nothing; for unattended batch use it is too aggressive. Proposed next step (not done, needs fresh data to measure without bias): a broadcast that contains a request or "please reply" counts as unsure; forwards with no own text count as unsure.
+- Caveats: one labeller; the definitions on the labelling page and the rules share the same idea of "information only"; 84 judged emails give the intervals above.
 
 ### B69
 **Reply needed? Development measurement of the rules** · 2026-11-11 · status `development`

@@ -40,3 +40,7 @@ already record `replyExpected` (14 of 24 `synthetic-dev` emails need no reply); 
 2. Classifier with unit tests, owner setting, metadata, batch stop, agent API field.
 3. Development measurement; freeze; then the test measurement on the owner's labels.
 4. Mailbox note and label.
+
+## Status (2026-11-11)
+
+Done: labelling tab, rules (`f852349`), batch stop, agent API, mailbox note and label (`fb7c756`). Measured: B69 (synthetic, development: 35/36) and B70 (owner's 100 Enron labels, test: "no reply needed" precision 0.88, 7 of 22 needed replies suppressed in batch mode). Open: broadcasts with a request and forwards without own text as unsure, to be measured on fresh labels.
