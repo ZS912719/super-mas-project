@@ -22,6 +22,7 @@ This file links to the detailed results and does not replace them: each number h
 
 | # | Date | Benchmark | Part | Data | Configuration | Commit | Headline | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [B48](#b48) | 2026-11-11 | W9 Replies on real mail, template floor | Whole system | Enron test 100 | Template | `76828c9` + harness | 100/100 drafted, all by the generic agent; greeting names the sender 0/100 | `valid` (floor) |
 | [B47](#b47) | 2026-11-11 | C02 Threading: reply headers vs subject fallback | Metadata | synthetic-dev 24 | Parser; `EmailThreader` | `cdce62a` + harness | Headers 22/24, subject fallback 24/24; the fallback is not used by the system | `development` |
 | [B46](#b46) | 2026-11-11 | C01 Parser robustness on all Enron mail | Metadata | Enron maildir, 517,401 | Parser + stripper + language | `cdce62a` + harness | 100 % parsed; 0 replies recognised (no reply headers in Enron); p50 0.04 ms | `valid` |
 | [B45](#b45) | 2026-11-11 | C14 Conversation memory after a restart | Memory | synthetic-dev 24 (+ leak trap) | Template | `c438594` + harness | Earlier messages found 4/8 (all misses: replies without reply headers); 0 cross-project leaks | `development` |
@@ -99,6 +100,14 @@ This file links to the detailed results and does not replace them: each number h
 - Command: `java -cp … org.supermas.benchmark.C1Benchmark benchmark/data/enron-raw/maildir 10000 200 docs/benchmark/results/c1-baseline-enron-2026-11-11.md runtime/bench-2026-11-11/c1-index`. Commit `2b8bba3` + working tree.
 - Result: identical to B08 in every quality measure (R@10 0.338 vs recency 0.601, MRR 0.358); retrieval p50 2.8 ms (B08: 2.3 ms).
 - Details: `docs/benchmark/results/c1-baseline-enron-2026-11-11.md`.
+
+### B48
+**W9: replies on real mail, template floor and wiring check** · 2026-11-11 · status `valid` (floor)
+- Question: on real mail with no gold answer, are the replies safe and well-formed? This run checks the harness and gives the floor; the model runs follow (the owner agreed on 2026-11-11 that the public Enron test emails may be sent to the online model).
+- Data: the frozen Enron test set (B29), 100 emails, through the system as built for the university mailbox (blackboard, university knowledge). New harness `RealMailBenchmark` (test scope) and test `RealMailBenchmarkTest`. Checks needing no gold, fixed before any model run: greeting names the sender (display name or address words) and never only a recipient; the reply checks with no facts (placeholder, signature, staff-only text, language); a fixed list of promises and claimed actions; a 6-word sequence of another test email; a fixed list of university-knowledge phrases; who answered. Email and reply text only in the Git-ignored run folder (`drafts.md`, `rubric-sample.md` with 20 replies for a person).
+- Command: `java -cp … org.supermas.prototype.RealMailBenchmark benchmark/data/enron/labeling/frozen-test docs/benchmark/results/real-mail-template-2026-11-11.md runtime/real-mail/template-2026-11-11` (add `--llm-…` flags or `SUPERMAS_LLM_*` for a model)
+- Result: drafted 100 / 100, p50 0.3 s; **answered by the generic agent in all 100**: no specialist fits company mail; greeting names the sender 0 / 100 (the template says "Hello,"); placeholder 39; promises, university knowledge and other emails' content 0.
+- Details: `docs/benchmark/results/real-mail-template-2026-11-11.md`.
 
 ### B47
 **C02: threading, reply headers vs subject fallback** · 2026-11-11 · status `development`
