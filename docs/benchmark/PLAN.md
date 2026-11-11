@@ -30,7 +30,7 @@ Legend: **done B-nn** = a protocol entry exists; **re-run** = the code or the da
 | C10 | Missing-information check: rules vs LLM | Precision and recall of missing items against the gold `mustAsk` | synthetic | done B40 (rules); LLM variant: model |
 | C11 | `ExcerptRelevance` | Gold facts kept vs unrelated excerpts removed | synthetic, knowledge | done B36 |
 | C12 | `KnowledgeRequirements` | Requirements found in the documents | knowledge | not benchmarked: about 2 requirement sentences in the knowledge; unit tests (B36) |
-| C13 | Request extractors: rules vs LLM | Request count exact; over- and under-splitting | synthetic-multi | done B41 (rules); LLM variant: model, harness ready |
+| C13 | Request extractors: rules vs LLM | Request count exact; over- and under-splitting | synthetic-multi | done B41 (rules), B49 (LLM, 3 B and 8 B) |
 | C14 | Conversation history (`ConversationRecorder`, repository) | Own-thread recall after a restart; zero cross-project leaks | synthetic, Enron | done B45 (synthetic); B12 |
 | C15 | `AutoTopicMaintainer` | Topic stability across runs, coverage | Enron | covered: re-run identical, 214 topics (B39 = B10); coverage 7,162 of 8,215 threads (B10) |
 | C16 | Routing score (`ScoreRoutingStrategy`) | Accuracy, ambiguity rate | synthetic | B11 |
@@ -48,7 +48,7 @@ Legend: **done B-nn** = a protocol entry exists; **re-run** = the code or the da
 | P4 | Specialists and routing | Confusion matrix over the statement's email types (student, lecturer, administration, project, ambiguous); plans cite only permitted evidence | B11; extend |
 | P5 | Blackboard collaboration and control | Router vs blackboard; request coverage; rounds; threshold chosen on the fresh set | done B37 (= B13); fresh set open |
 | P6 | Composition in isolation | One recorded board state, different models and prompts, scored with the reply checks: separates the composer from routing | covered: the composer's input is deterministic (B43), so W1 and W3 compare composers on identical input |
-| P7 | Review and revision loop | After rejection with feedback: feedback applied, nothing else broken | harness ready, template floor B44; model runs open |
+| P7 | Review and revision loop | After rejection with feedback: feedback applied, nothing else broken | done B50 (3 B, 8 B, one run each); floor B44 |
 | P8 | Agent service and mailbox | API latency, error paths, approval is not a send | new (functional) |
 
 ## Level 3: the whole system
@@ -63,7 +63,7 @@ Legend: **done B-nn** = a protocol entry exists; **re-run** = the code or the da
 | W6 | Human rubric (3.2) | Two raters on a sample: every request answered, no invented fact, asks for what is missing, tone | human |
 | W7 | Error analysis (3.7) | Errors by type with examples: missed request, wrong role, invented fact, disclosure, timeout | derived from W1-W4 |
 | W8 | Final run on the fresh held-out set | Best configuration vs baseline, settings frozen before the run | model; last |
-| W9 | Replies on real mail (Enron test set, 100) | No gold answer: drafted vs failed, latency; greeting names the sender and never the recipient; no placeholder, signature or wrong language; no promise or claimed action (fixed phrase list); no other email's content (shared 6-word sequences); no university knowledge imported into company mail; who answered; human rubric on a sample of 20. Sends the public Enron test emails to the online model (owner's decision, 2026-11-11) | harness ready, template floor B48; model runs open |
+| W9 | Replies on real mail (Enron test set, 100) | No gold answer: drafted vs failed, latency; greeting names the sender and never the recipient; no placeholder, signature or wrong language; no promise or claimed action (fixed phrase list); no other email's content (shared 6-word sequences); no university knowledge imported into company mail; who answered; human rubric on a sample of 20. Sends the public Enron test emails to the online model (owner's decision, 2026-11-11) | done B51 (3 B, 8 B, one run each); floor B48; rubric sample not scored |
 
 ## Rules
 

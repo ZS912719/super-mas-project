@@ -22,6 +22,9 @@ This file links to the detailed results and does not replace them: each number h
 
 | # | Date | Benchmark | Part | Data | Configuration | Commit | Headline | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [B51](#b51) | 2026-11-11 | W9 Replies on real mail, 3 B and 8 B | Whole system | Enron test 100 | Online 3 B / 8 B | `b78d2f9` | Drafted 100 / 95; sender greeted 84 / 64; verified problems: 1 invented confirmation, 2 replies with university knowledge, 0 leaks | `development` |
+| [B50](#b50) | 2026-11-11 | P7 Revision after feedback, 3 B and 8 B | Review loop | synthetic 22 | Online 3 B / 8 B | `b78d2f9` | Fact feedback applied 3/9 (3 B), 5/7 (8 B); "shorter" 7/12, 4/12 | `development` |
+| [B49](#b49) | 2026-11-11 | C13 Request extraction, LLM, 3 B and 8 B | Specialists | synthetic-multi 12 | Online 3 B / 8 B, 3 repeats | `b78d2f9` | Count exact 12/12 in all 6 runs (rules 11/12); fell back to rules 4-5 (3 B), 1-2 (8 B) of 12 | `development` |
 | [B48](#b48) | 2026-11-11 | W9 Replies on real mail, template floor | Whole system | Enron test 100 | Template | `76828c9` + harness | 100/100 drafted, all by the generic agent; greeting names the sender 0/100 | `valid` (floor) |
 | [B47](#b47) | 2026-11-11 | C02 Threading: reply headers vs subject fallback | Metadata | synthetic-dev 24 | Parser; `EmailThreader` | `cdce62a` + harness | Headers 22/24, subject fallback 24/24; the fallback is not used by the system | `development` |
 | [B46](#b46) | 2026-11-11 | C01 Parser robustness on all Enron mail | Metadata | Enron maildir, 517,401 | Parser + stripper + language | `cdce62a` + harness | 100 % parsed; 0 replies recognised (no reply headers in Enron); p50 0.04 ms | `valid` |
@@ -100,6 +103,57 @@ This file links to the detailed results and does not replace them: each number h
 - Command: `java -cp … org.supermas.benchmark.C1Benchmark benchmark/data/enron-raw/maildir 10000 200 docs/benchmark/results/c1-baseline-enron-2026-11-11.md runtime/bench-2026-11-11/c1-index`. Commit `2b8bba3` + working tree.
 - Result: identical to B08 in every quality measure (R@10 0.338 vs recency 0.601, MRR 0.358); retrieval p50 2.8 ms (B08: 2.3 ms).
 - Details: `docs/benchmark/results/c1-baseline-enron-2026-11-11.md`.
+
+### B51
+**W9: replies on real mail with the 3 B and 8 B models** · 2026-11-11 · status `development`
+- Question: on the 100 frozen Enron test emails (no gold answer), are the replies safe and well-formed? One run per model.
+- Configuration: OpenRouter `meta-llama/llama-3.2-3b-instruct` and `meta-llama/llama-3.1-8b-instruct`, blackboard, university knowledge; harness and checks as B48 (fixed before these runs). Commit `b78d2f9`. Sends the public Enron test emails to OpenRouter (owner's decision, 2026-11-11).
+- Command: `SUPERMAS_LLM_PROVIDER=online SUPERMAS_LLM_MODEL=<model> java -cp … org.supermas.prototype.RealMailBenchmark benchmark/data/enron/labeling/frozen-test docs/benchmark/results/real-mail-<3b|8b>-2026-11-11.md runtime/real-mail/<3b|8b>-2026-11-11` (key from `~/.config/supermas/llm.env`)
+- Result (automatic checks):
+
+| Measure | 3 B | 8 B |
+| --- | --- | --- |
+| Drafted | 100 / 100 | 95 / 100 (5 refused: greeting or closing only) |
+| Latency p50 / p95 | 1.0 s / 1.9 s | 2.4 s / 6.4 s |
+| Greeting names the sender | **84** / 100 | 64 / 95 |
+| Greeting names only a recipient | 1 | 2 |
+| Replies without any flag | 76 / 100 | 62 / 95 |
+| Promise or claimed action | 1 | 0 |
+| University knowledge in a reply | 3 | 1 |
+| Another email's content | 2 | 0 |
+| Check violations | wrong greeting 3 | wrong greeting 2, wrong language 4, signature 2 |
+| Answered by | generic 100 | generic 100 |
+
+- Verification of every serious flag, by reading the drafts (content kept local): **promise** (t0016, 3 B): real, the model invents "The hotel booking is confirmed". **University knowledge**: t0111 (3 B) real, a made-up "university policy on student numbers" in reply to "Here is all the contact info"; t0171 (3 B) real, an email of one character ("9") answered with the office hours and the facilities portal; t0007 (both models) a false alarm, the word "assignment" is in the email's subject, which the check did not exclude. **Another email's content** (t0019, t0034, 3 B): no leak; both replies repeat the sender's own text back, and the same passage is also in another test email of the thread. **Wrong language** (4, 8 B): false alarms; English replies to English emails, the language detector misjudged short or unusual email text (as in B46).
+- Reading: verified problems are 1 invented confirmation and 2 replies with irrelevant university knowledge in 195 replies; 0 cross-email leaks. t0171 shows a cause: when the requests have no meaningful word, `ExcerptRelevance` keeps every excerpt ("no stems: keep all"), so all knowledge reaches the composer. The 3 B model greets the sender more often; the 8 B model loses 5 replies to the greeting-only guard. A frequent quality problem the checks do not count: replies that repeat the sender's own text or restate the sender's commitments as the owner's.
+- Details: `docs/benchmark/results/real-mail-3b-2026-11-11.md`, `docs/benchmark/results/real-mail-8b-2026-11-11.md`; drafts and the 20-reply rubric sample in the Git-ignored run folders.
+- Caveats: one run per model; automatic flags need the verification above; the rubric sample (W6-style, 20 replies) is not scored yet.
+
+### B50
+**P7: revision after feedback with the 3 B and 8 B models** · 2026-11-11 · status `development`
+- Configuration: as B44 with OpenRouter 3 B and 8 B; one run each. Commit `b78d2f9`.
+- Command: `SUPERMAS_LLM_PROVIDER=online SUPERMAS_LLM_MODEL=<model> java -cp … org.supermas.prototype.RevisionBenchmark docs/benchmark/results/revision-<3b|8b>-2026-11-11.md runtime/llm-runs/p7-<3b|8b>`
+- Result:
+
+| Feedback | 3 B: applied | 8 B: applied |
+| --- | --- | --- |
+| "Please also mention: <fact>" | 3 / 9 | **5 / 7** |
+| "Please ask the sender for <item>" | 0 / 1 | — |
+| "Please make the reply shorter" | **7 / 12** | 4 / 12 |
+| Facts lost, new violations | 0, 0 | 1, 2 |
+| v1 or v2 not drafted | 0 | 2 without v1, 1 without v2 |
+
+- Reading: the larger model follows a content request more often; the smaller one shortens more often and never broke anything. With one run per model and 7-12 emails per kind, these are indications, not differences that can be claimed (B25 noise).
+- Details: `docs/benchmark/results/revision-3b-2026-11-11.md`, `docs/benchmark/results/revision-8b-2026-11-11.md`.
+- Caveats: reply checks not yet reviewed by a person (to-do 3.10); the kind of feedback depends on what v1 missed, so the two models got partly different feedback.
+
+### B49
+**C13: request extraction with the LLM, 3 B and 8 B** · 2026-11-11 · status `development`
+- Configuration: harness of B41; OpenRouter 3 B and 8 B, 3 repeats each. Commit `b78d2f9`.
+- Command: `SUPERMAS_LLM_PROVIDER=online SUPERMAS_LLM_MODEL=<model> java -cp … org.supermas.prototype.RequestExtractionBenchmark docs/benchmark/results/request-extraction-llm-<3b|8b>-2026-11-11.md --repeats 3 --llm-cache runtime/llm-runs/c13-<3b|8b>`
+- Result: count exact **12 / 12 in all six runs** (rules: 11 / 12), 23 of 23 requests. The model's answer was rejected (a quote not verbatim in the email, or invalid JSON) and the extractor fell back to the rules in 5, 5, 4 of 12 emails (3 B) and 2, 1, 2 (8 B).
+- Reading: with the verbatim-quote check and the rule fallback, the LLM extractor is never worse than the rules and fixes the one email the rules miss; the 8 B model's answers are accepted far more often. The extractor is not wired into the prototype (rules are the default).
+- Details: `docs/benchmark/results/request-extraction-llm-3b-2026-11-11.md`, `docs/benchmark/results/request-extraction-llm-8b-2026-11-11.md`.
 
 ### B48
 **W9: replies on real mail, template floor and wiring check** · 2026-11-11 · status `valid` (floor)
