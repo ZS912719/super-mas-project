@@ -22,6 +22,8 @@ This file links to the detailed results and does not replace them: each number h
 
 | # | Date | Benchmark | Part | Data | Configuration | Commit | Headline | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [B47](#b47) | 2026-11-11 | C02 Threading: reply headers vs subject fallback | Metadata | synthetic-dev 24 | Parser; `EmailThreader` | `cdce62a` + harness | Headers 22/24, subject fallback 24/24; the fallback is not used by the system | `development` |
+| [B46](#b46) | 2026-11-11 | C01 Parser robustness on all Enron mail | Metadata | Enron maildir, 517,401 | Parser + stripper + language | `cdce62a` + harness | 100 % parsed; 0 replies recognised (no reply headers in Enron); p50 0.04 ms | `valid` |
 | [B45](#b45) | 2026-11-11 | C14 Conversation memory after a restart | Memory | synthetic-dev 24 (+ leak trap) | Template | `c438594` + harness | Earlier messages found 4/8 (all misses: replies without reply headers); 0 cross-project leaks | `development` |
 | [B44](#b44) | 2026-11-11 | P7 Revision after feedback, template floor | Review loop | synthetic 22 | Template | `d69430c` + harness | 22/22 revised, feedback applied 0 (template ignores feedback) | `valid` (floor) |
 | [B43](#b43) | 2026-11-11 | P6 Composer input is deterministic (derived check) | Generation | runs C-repeat, C-repeat2 | — | `46bed76` | 48 of 48 composer requests identical across two runs | `valid` |
@@ -97,6 +99,25 @@ This file links to the detailed results and does not replace them: each number h
 - Command: `java -cp … org.supermas.benchmark.C1Benchmark benchmark/data/enron-raw/maildir 10000 200 docs/benchmark/results/c1-baseline-enron-2026-11-11.md runtime/bench-2026-11-11/c1-index`. Commit `2b8bba3` + working tree.
 - Result: identical to B08 in every quality measure (R@10 0.338 vs recency 0.601, MRR 0.358); retrieval p50 2.8 ms (B08: 2.3 ms).
 - Details: `docs/benchmark/results/c1-baseline-enron-2026-11-11.md`.
+
+### B47
+**C02: threading, reply headers vs subject fallback** · 2026-11-11 · status `development`
+- Question: how many emails get the right thread, with the reply headers the prototype uses on receipt, and with `EmailThreader` with or without its subject fallback?
+- Data: synthetic-dev 24, gold `threadId`. New harness `ThreadingBenchmark` (test scope).
+- Command: `java -cp … org.supermas.benchmark.ThreadingBenchmark docs/benchmark/results/threading-synthetic-2026-11-11.md benchmark/data/synthetic-dev`
+- Result: parser on receipt **22 / 24**; `EmailThreader` references only 22 / 24; **with subject fallback 24 / 24**. The two errors are en-03 and fr-03, replies with "Re:" but no reply headers.
+- Reading: `EmailThreader` is used only by the benchmarks; no system code calls it, so the prototype never applies the subject fallback. Together with B45 (the history of en-03 and fr-03 is lost) and B46 (Enron has no reply headers at all), this is the main gap of the memory path: on mail without reply headers, threads are not recognised. Using the threader on receipt would need care: a subject fallback can merge unrelated mail with the same subject (C1 counts 8,215 threads with the fallback for 10,206 Enron messages, B08).
+- Details: `docs/benchmark/results/threading-synthetic-2026-11-11.md`.
+
+### B46
+**C01: parser robustness on the whole Enron corpus** · 2026-11-11 · status `valid`
+- Question: does the parser, followed by the stripper and the language detector, survive real mail?
+- Data: every file of the Enron maildir, 517,401 messages in 150 mailboxes. New harness `ParserRobustnessBenchmark` (test scope); counts only.
+- Command: `java -Xmx2g -cp … org.supermas.benchmark.ParserRobustnessBenchmark benchmark/data/enron-raw/maildir docs/benchmark/results/parser-robustness-enron-2026-11-11.md`
+- Result: **parsed 517,401 (100 %)**, stripper and language detector failures 0; no sender, date or Message-ID missing; no recipients 20,382 (3.9 %); empty current text after stripping 55,564 (10.7 %, mostly forwards and attachments-only mail); **replies recognised by reply headers: 0**; detected French 231 (0.04 %, false positives: the corpus is English). Time per message: parse p50 0.036 ms, p95 0.109 ms, p99 0.299 ms; with stripping and language detection p50 0.087 ms, p95 0.473 ms, p99 1.543 ms. Wall time 183 s.
+- Reading: the parser is robust. The Enron corpus carries no `In-Reply-To` or `References` headers, so the prototype's header threading sees every message as a new thread (B47).
+- Details: `docs/benchmark/results/parser-robustness-enron-2026-11-11.md`.
+- Caveats: whether the 3.9 % without recipients truly have none (e.g. only Bcc) was not checked message by message; on the frozen test set recipients score 1.000 (B30).
 
 ### B45
 **C14: conversation memory after a restart, and isolation between projects** · 2026-11-11 · status `development`

@@ -18,8 +18,8 @@ Legend: **done B-nn** = a protocol entry exists; **re-run** = the code or the da
 
 | ID | Component | Question and metric | Data | Status |
 | --- | --- | --- | --- | --- |
-| C01 | `MimeEmailParser` | Parse rate, warnings, ms per email | Enron maildir | new |
-| C02 | `EmailThreader` | Thread-ID accuracy, wrong merges | synthetic, Enron (`ThreadingStats`) | partly in B02 |
+| C01 | `MimeEmailParser` | Parse rate, warnings, ms per email | Enron maildir | done B46 |
+| C02 | `EmailThreader` | Thread-ID accuracy, wrong merges | synthetic, Enron (`ThreadingStats`) | done B47 (synthetic); Enron has no reply headers (B46) |
 | C03 | `QuoteSignatureStripper` | `currentText` exact match and F1 | Enron test | done B30 (test); B03 on dev |
 | C04 | `LanguageDetector` | Accuracy en / fr | synthetic, Enron | done B30 (test), B02 |
 | C05 | Entity extractors: rules, GLiNER, hybrid | F1 per entity type | Enron test | done B31 (test); B04 on dev |
