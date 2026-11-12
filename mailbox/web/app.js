@@ -81,7 +81,7 @@ function renderShell() {
     <section class="message-column" aria-label="Message list"><header class="list-header"><div class="section-heading"><h1 id="list-title">All mail</h1><button class="quiet" id="refresh" aria-label="Refresh mailbox">↻</button></div><span class="muted" id="list-subtitle">Your conversations, in one place.</span><div class="search"><span>⌕</span><input id="search" aria-label="Search mail" placeholder="Search your mail"></div></header>
     <div class="list-tools"><span id="list-count"></span><button class="quiet" id="unread-toggle">Unread only</button></div><div class="message-list" id="message-list"></div><button id="load-more" class="load-more" hidden>Load older mail ↓</button></section>
     <section class="reading-column" aria-label="Conversation"><header class="reading-toolbar"><div><button class="quiet mobile-back" id="back">← Back</button><span class="eyebrow">SPACE TO THINK, ROOM TO REPLY</span></div><button class="quiet" id="classify">◇ Classification</button></header>
-    ${state.session.demo ? '<div class="demo-banner">DEMO WORKSPACE · Sample messages. Sending is simulated. Generation uses your real local model.</div>' : ''}
+    ${state.session.demo ? '<div class="demo-banner">DEMO WORKSPACE · Sample messages. Sending is simulated.</div>' : ''}
     <div id="reading" class="reading-scroll"></div></section></main>`;
   $('#compose').onclick = () => run(async () => { if (!await preserveDraft()) return; state.selected = null; state.mode = 'compose'; state.draft = null; state.thread = []; renderReader(); $('.shell').classList.add('reading-open'); });
   $('#refresh').onclick = () => run(() => refresh());
@@ -158,6 +158,7 @@ async function selectMessage(id) {
   result.messages.forEach(message => { if (!known.has(message.id)) known.set(message.id, message); });
   state.messages = [...known.values()];
   const drafts = (await api('drafts')).drafts; state.drafts = drafts;
+  if (sequence !== state.generation || state.selected !== id) return;
   state.draft = drafts.filter(draft => draft.messageId === id && !draft.sent).at(-1) ?? null;
   renderNav(); renderList(); renderReader(); $('.shell').classList.add('reading-open');
   checkReplyNeed(id, sequence);
@@ -184,6 +185,8 @@ function renderReplyNeed() {
   note.textContent = note.hidden ? '' : `Probably no reply needed${need.reasons.length ? `: ${need.reasons.join('; ')}` : ''}. You can still generate one.`;
 }
 function renderReader() {
+  state.pendingProposal = null;
+  state.modelOrigin = false;
   const selected = selectedMessage();
   $('#classify').disabled = !selected;
   if (!selected && state.mode !== 'compose' && !state.draft) {
@@ -193,19 +196,33 @@ function renderReader() {
   $('#reading').innerHTML = `<h1 class="subject-heading">${escapeHtml(selected?.subject ?? state.draft?.subject ?? 'A new conversation')}</h1>
     <div class="thread-summary"><div>${selected ? tags(selected.labels) : '<span class="tag">New message</span>'}</div><span class="muted">${thread.length ? `${thread.length} messages in this conversation` : 'A fresh start'}</span></div>
     ${thread.map((message, index) => `${index === 0 && thread.length > 1 ? '<div class="history-divider">CONVERSATION HISTORY</div>' : ''}<article class="thread-message"><div class="thread-person"><div class="avatar">${initials(message.sender)}</div><div><strong>${escapeHtml(name(message.sender))}${message.direction === 'sent' ? ' <span class="muted">· You</span>' : ''}</strong><small>To ${escapeHtml(message.recipient)}</small></div><time>${fullDate(message.date)}</time></div><p class="mail-body">${escapeHtml(message.body)}</p></article>`).join('')}
-    <section class="reply-card" aria-label="Reply editor"><div class="reply-head"><div><strong>${selected ? 'Your reply' : 'New message'}</strong><small>Written by you. Assisted locally.</small><small class="reply-need" id="reply-need-note" hidden></small></div><button id="generate" ${!selected || selected.direction === 'sent' ? 'disabled' : ''}>✧ Generate reply · local model</button></div>
+    <section class="reply-card" aria-label="Reply editor"><div class="reply-head"><div><strong>${selected ? 'Your reply' : 'New message'}</strong><small>Written by you. Assisted locally.</small><small class="reply-need" id="reply-need-note" hidden></small></div><button id="generate" ${!selected || selected.direction === 'sent' ? 'disabled' : ''}>✧ Generate reply · ${state.session.agentDrafting ? 'SuperMAS agents' : 'Ollama'}</button></div>
     <div class="review-warnings" id="review-warnings" role="alert" hidden></div>
     <div class="reply-fields"><label for="reply-to">To</label><input id="reply-to" type="email" placeholder="name@example.com" required><label for="reply-subject">Subject</label><input id="reply-subject" maxlength="500" required><label for="reply-body" class="sr-only">Message</label><textarea id="reply-body" placeholder="A thoughtful reply starts here…" maxlength="32000"></textarea></div>
     <div class="reply-footer"><span id="draft-status">Your approval is required before sending.</span><div class="reply-actions"><button id="save-draft">Save draft</button><button id="approve">Approve</button><button class="primary" id="send" disabled>${state.session.demo ? 'Simulate send ↗' : 'Send ↗'}</button></div></div></section>
-    <p class="muted">${state.session.demo ? 'Demo labels are sample data. ' : ''}Agent classification is awaiting integration. <button class="quiet inline-button" id="classification-inline">Import a JSON result ↗</button></p>`;
+    <p class="muted"><button class="quiet inline-button" id="classification-inline">Import a classification result ↗</button></p>`;
   $('#reply-to').value = state.draft?.to ?? (selected ? extractAddress(selected.direction === 'sent' ? selected.recipient : selected.replyTo || selected.sender) : '');
   $('#reply-subject').value = state.draft?.subject ?? (selected ? (/^re:/i.test(selected.subject) ? selected.subject : `Re: ${selected.subject}`) : '');
   $('#reply-body').value = state.draft?.body ?? '';
-  for (const field of ['#reply-to', '#reply-subject', '#reply-body']) $(field).oninput = () => { state.dirty = true; state.modelOrigin = false; updateDraftStatus(); };
-  $('#save-draft').onclick = () => run(async () => { await saveCurrent(); notice('Draft saved for this session.'); });
+  const editor = $('#reply-body');
+  let editRevision = 0;
+  for (const field of ['#reply-to', '#reply-subject', '#reply-body']) $(field).oninput = () => {
+    editRevision++; state.dirty = true; state.modelOrigin = false; updateDraftStatus();
+  };
+  $('#save-draft').onclick = () => run(async () => {
+    editRevision++;
+    if (await saveCurrent()) notice('Draft saved for this session.');
+  });
   $('#approve').onclick = () => run(async () => {
+    editRevision++;
     if (state.dirty || !state.draft) await saveCurrent();
-    state.draft = (await api('approve', { id: state.draft.id, version: state.draft.version })).draft;
+    if (editor !== $('#reply-body') || state.dirty || !state.draft) return;
+    const { id, version } = state.draft;
+    const { draft } = await api('approve', { id, version });
+    if (editor !== $('#reply-body') || state.draft?.id !== id || state.draft.version !== version) return;
+    state.draft = draft;
+    state.drafts = state.drafts.map(item => item.id === id ? draft : item);
+    renderList();
     updateDraftStatus(); notice(`Version ${state.draft.version} approved. Review the recipient, then send when ready.`);
   });
   $('#send').onclick = () => run(async () => {
@@ -226,29 +243,45 @@ function renderReader() {
       updateDraftStatus(); throw error;
     }
   });
-  $('#generate').onclick = () => run(async () => {
-    if ($('#reply-body').value.trim() && !await confirmAction('Replace the current reply text with a newly generated draft?')) return;
-    const messageId = state.selected; const sequence = state.generation;
-    const result = await busy('Finding the words, locally…', () => api('generate', { messageId }));
-    if (sequence !== state.generation || state.selected !== messageId) return;
-    $('#reply-body').value = result.body; state.dirty = true; state.modelOrigin = true; updateDraftStatus();
-    state.warnings = { messageId, items: Array.isArray(result.warnings) ? result.warnings : [] };
-    if (result.replyNeed && selectedMessage()) selectedMessage().replyNeed = result.replyNeed;
+  const generate = $('#generate');
+  generate.onclick = () => run(async () => {
+    const messageId = state.selected;
+    const sequence = state.generation;
+    const revision = editRevision;
+    const currentEditor = () => editor === $('#reply-body') && sequence === state.generation && state.selected === messageId && revision === editRevision;
+    generate.disabled = true;
+    let result;
+    try {
+      if (editor.value.trim() && !await confirmAction('Replace the current reply text with a newly generated draft?')) return;
+      if (!currentEditor()) return;
+      result = await busy('Generating a reply…', () => api('generate', { messageId }));
+    } finally {
+      generate.disabled = false;
+    }
+    if (!currentEditor()) return;
+    editor.value = result.body; state.dirty = true; state.modelOrigin = true;
+    state.pendingProposal = result.proposal ?? null;
+    const message = selectedMessage();
+    if (result.replyNeed && message) message.replyNeed = result.replyNeed;
+    if (Array.isArray(result.labels) && message) {
+      message.labels = result.labels;
+      const tagBox = document.querySelector('.thread-summary > div');
+      if (tagBox) tagBox.innerHTML = tags(message.labels);
+      renderNav(); renderList();
+    }
     renderWarnings(); renderReplyNeed();
-    notice(state.warnings.items.length
-      ? `Draft generated with ${state.warnings.items.length} review warning${state.warnings.items.length > 1 ? 's' : ''}. Check them before approving.`
-      : 'Local draft generated. Review its facts before approving.');
+    updateDraftStatus();
+    notice('Draft generated. Review it before approving.');
   });
   $('#classification-inline').onclick = () => $('#classify').click();
   renderWarnings(); renderReplyNeed();
   updateDraftStatus();
 }
-/** The agents' review warnings for the generated draft of the selected message; text only. */
 function renderWarnings() {
   const box = $('#review-warnings'); if (!box) return;
-  const items = state.warnings && state.warnings.messageId === state.selected ? state.warnings.items : [];
+  const items = (state.pendingProposal ?? state.draft?.proposal)?.warnings ?? [];
   box.hidden = !items.length;
-  box.innerHTML = items.length ? `<strong>Check before approving: the generated draft may decide or act for you</strong><ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul><small>The draft was not changed. These warnings refer to the text as generated; edit or delete the sentence if it is not your decision.</small>` : '';
+  box.innerHTML = items.length ? `<strong>Review warnings from the original generated text</strong><ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : '';
 }
 function extractAddress(value) { return value.match(/<([^<>]+)>/)?.[1] ?? value; }
 function updateDraftStatus() {
@@ -260,17 +293,24 @@ function updateDraftStatus() {
   $('#draft-status').textContent = draft?.sendUncertain ? 'Outcome uncertain. Check your provider Sent folder.' : state.dirty ? 'Unsaved changes · approval required' : draft?.sent ? 'Submitted to provider' : draft ? `Version ${draft.version} · ${approved ? 'approved' : 'awaiting review'}` : 'Your approval is required before sending.';
 }
 async function saveCurrent() {
-  if (!$('#reply-body')) return;
+  const editor = $('#reply-body');
+  if (!editor) return;
   if (!$('#reply-to').reportValidity() || !$('#reply-subject').reportValidity()) throw new Error('Enter a recipient and subject first.');
-  const result = await api('drafts', { id: state.draft?.id, version: state.draft?.version, messageId: state.selected,
-    to: $('#reply-to').value, subject: $('#reply-subject').value, body: $('#reply-body').value, origin: state.modelOrigin ? 'model' : 'user' });
-  state.draft = result.draft; state.dirty = false; state.modelOrigin = false;
-  state.drafts = (await api('drafts')).drafts; renderNav(); updateDraftStatus();
+  const proposal = state.pendingProposal;
+  const input = { id: state.draft?.id, version: state.draft?.version, messageId: state.selected, proposalId: proposal?.id,
+    to: $('#reply-to').value, subject: $('#reply-subject').value, body: editor.value, origin: state.modelOrigin ? 'model' : 'user' };
+  const result = await api('drafts', input);
+  if (editor !== $('#reply-body') || state.selected !== input.messageId) return;
+  state.draft = result.draft;
+  state.dirty = state.pendingProposal !== proposal || editor.value !== input.body || $('#reply-to').value !== input.to || $('#reply-subject').value !== input.subject;
+  if (!state.dirty) { state.pendingProposal = null; state.modelOrigin = false; }
+  state.drafts = [...state.drafts.filter(draft => draft.id !== result.draft.id), result.draft];
+  renderNav(); renderWarnings(); updateDraftStatus();
   return result.draft;
 }
 async function preserveDraft() {
   if (!state.dirty) return true;
-  try { await saveCurrent(); return true; }
+  try { await saveCurrent(); return !state.dirty; }
   catch (error) {
     if (await confirmAction(`${error.message}\n\nLeave this unfinished draft without saving?`)) { state.dirty = false; state.modelOrigin = false; return true; }
     return false;
@@ -293,7 +333,7 @@ async function openMailbox() {
 function settings() {
   $('#settings-content').innerHTML = `<p>Your workspace uses ${state.session.demo ? 'sample data' : escapeHtml(state.session.provider)}. Connecting another account replaces the active workspace.</p>
     ${state.session.providers.map(provider => `<div class="connection-row"><strong>${escapeHtml(provider.name)}</strong><small>${provider.configured ? 'OAuth client configured' : 'OAuth client not configured. See mailbox/README.md.'}</small><button data-setting-connect="${provider.id}">Connect ${provider.name} ↗</button></div>`).join('')}
-    <div class="connection-row"><strong>Local model</strong><small>Ollama · ${escapeHtml(state.session.model)} · loopback connections only</small><p>Configure LOCAL_MODEL_URL and LOCAL_MODEL_NAME in the server environment. The selected conversation is supplied only when you click Generate reply.</p></div>
+    <div class="connection-row"><strong>Reply drafting</strong><small>${state.session.agentDrafting ? 'SuperMAS agents · Demo workspace' : `Ollama · ${escapeHtml(state.session.model)}`}</small><p>The selected conversation is used to draft your reply.</p></div>
     <div class="connection-row"><strong>Agent integration</strong><small>Not implemented</small><p>Import classification JSON from a message to preview labels. Unknown JSON fields are retained by the adapter.</p></div>
     <p>Session data is kept in server memory for up to 8 hours. Disconnecting or restarting the server clears tokens, drafts, and labels. Provider mail remains at your provider.</p>`;
   document.querySelectorAll('[data-setting-connect]').forEach(button => button.onclick = () => run(async () => {

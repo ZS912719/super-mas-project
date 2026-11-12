@@ -3,7 +3,7 @@
 
 ## Project progress
 
-The mailbox now runs in an Electron desktop window with its own local server. Demo mail, Gmail/Outlook adapters, label views, conversation history, editable local-model replies and version-specific approval remain available. Automatic agent execution and the Java runtime remain unimplemented.
+The mailbox runs in an Electron desktop window with its own local server. It supports demo mail, Gmail/Outlook adapters, label views, conversation history, editable local-model replies and version-specific approval. The demo can use the Java agent service for reply drafting.
 
 ## Dependencies
 
@@ -97,11 +97,11 @@ LOCAL_MODEL_NAME=llama3.2
 
 ## Agent reply generation (prototype branch)
 
-Optional: the Java agents write the draft instead of Ollama. Start the agent service from the repository root, then the mailbox with the same token:
+To try agent-assisted drafting and review, start the Java agent service from the repository root with a separate demo data directory, then start the mailbox with the same token:
 
 ```bash
 export AGENT_SERVICE_TOKEN="$(head -c 32 /dev/urandom | base64)"
-mvn -q compile exec:java -Dexec.mainClass=org.supermas.prototype.AgentService
+mvn -q compile exec:java "-Dexec.mainClass=org.supermas.prototype.AgentService" "-Dexec.args=--data runtime/mailbox-review-demo --project mailbox-review-demo --llm-provider template"
 ```
 
 ```dotenv
@@ -109,7 +109,7 @@ AGENT_SERVICE_URL=http://127.0.0.1:4318
 AGENT_SERVICE_TOKEN=<the same token>
 ```
 
-**Generate reply** then sends the selected conversation to `/v1/reply` (loopback only, redirects disabled, 60 seconds, response validated in `lib/agents.js`). The routed specialist's draft fills the editor. On a clear routing match, its role becomes the message's classification, stored like an imported one and shown after **Refresh**. When you open a received message, the mailbox asks the agents (`/v1/reply-need`, rules only, no model) whether it needs a reply; if not, a note appears next to **Generate reply** with the reason and the message gets the label "No reply needed". Generating stays possible. If the agents return review warnings (sentences in which the draft decides or acts for you, such as granting an extension or claiming an attachment), they are listed in an amber box above the editor; the draft itself is not changed. Review, approval and sending are unchanged. Without `AGENT_SERVICE_URL`, Ollama is used as before. The UI text still says "local model". Contract: `docs/plans/agent-service-api.md` (a proposal).
+Select **Explore the demo**, open a received message and click **Generate reply · SuperMAS agents**. The example uses the template provider, which needs no running model. The draft fills the editor and any review warnings refer to the original generated text. Use **Save draft** and **Approve** to review a specific version. The saved draft retains its agent source and warnings when reopened. Saving edits creates a new version that requires approval. The Java service receives the conversation for generation and only the selected message for the reply-need hint. Gmail and Outlook sessions use the direct Ollama adapter. See the [agent service contract](../docs/plans/agent-service-api.md).
 
 ## Classification API usage
 
@@ -127,7 +127,7 @@ Live mail starts unclassified. Select **Classification** to import an externally
 
 The adapter accepts `labels`, `categories`, or one `category`, and retains raw JSON and unknown fields. Labels apply to individual messages inside the application and are not written to provider folders/categories. Sample mail has explicitly marked fixture classifications.
 
-`POST /api/classification` accepts `{ "messageId": "...", "result": { ... } }` with the session cookie, exact local Origin and session CSRF token. Keep this endpoint local. Agent integration remains deferred.
+`POST /api/classification` accepts `{ "messageId": "...", "result": { ... } }` with the session cookie, exact local Origin and session CSRF token. Keep this endpoint local.
 
 ## Validation commands
 

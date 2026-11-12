@@ -11,9 +11,14 @@ export function saveDraft(session, input) {
   if (typeof input.body !== 'string' || !input.body.trim() || input.body.length > 32000) throw new Error('Enter a message of up to 32,000 characters.');
   const messageId = previous?.messageId ?? input.messageId ?? null;
   if (messageId && !session.messages.has(messageId)) throw new Error('Original message not found.');
+  const generated = session.proposals?.get(input.proposalId);
+  if (input.proposalId != null && (!generated || generated.messageId !== messageId)) throw new Error('The generated draft is unavailable for this message.');
+  const proposal = generated?.proposal ?? previous?.proposal;
   const draft = { id: previous?.id ?? randomUUID(), version: (previous?.version ?? 0) + 1, to, subject: input.subject,
     body: input.body, messageId, approvedVersion: null, origin: input.origin === 'model' ? 'model' : 'user',
-    history: [...(previous?.history ?? []), ...(previous ? [{ version: previous.version, body: previous.body, subject: previous.subject, to: previous.to, origin: previous.origin }] : [])] };
+    ...(proposal && { proposal }),
+    history: [...(previous?.history ?? []), ...(previous ? [{ version: previous.version, body: previous.body, subject: previous.subject,
+      to: previous.to, origin: previous.origin, ...(previous.proposal && { proposal: previous.proposal }) }] : [])] };
   session.drafts.set(draft.id, draft);
   return draft;
 }

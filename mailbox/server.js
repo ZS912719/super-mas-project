@@ -28,11 +28,14 @@ export function createMailboxServer({ port = Number(process.env.PORT || 4317), s
   function clearAccount(session) {
     if (session.pending) pendingAuthorizations.delete(session.pending.state);
     session.account = null; session.demo = false; session.messages.clear(); session.drafts.clear(); session.cursor = ''; session.pending = null; session.authorizationAttempt = null;
+    session.proposals = new Map();
+    session.generating = new Set();
   }
   function sessionView(session) {
     return { csrf: session.csrf, connected: Boolean(session.account || session.demo), demo: session.demo,
       address: session.demo ? 'demo@supermas.example' : session.account?.address,
       provider: session.demo ? 'demo' : session.account?.provider,
+      agentDrafting: Boolean(session.demo && process.env.AGENT_SERVICE_URL),
       model: process.env.LOCAL_MODEL_NAME || 'llama3.2',
       providers: Object.entries(providers).map(([id, config]) => ({ id, name: config.name, configured: Boolean(providerConfig(id).clientId && providerConfig(id).clientSecret) })) };
   }
@@ -51,7 +54,8 @@ export function createMailboxServer({ port = Number(process.env.PORT || 4317), s
       if (session && Date.now() - session.touched > 8 * 3600000) { sessions.delete(id); session = null; }
       if (!session) {
         const sessionId = randomBytes(32).toString('hex');
-        session = { csrf: randomBytes(32).toString('hex'), messages: new Map(), drafts: new Map(), account: null, demo: false, cursor: '', touched: Date.now() };
+        session = { csrf: randomBytes(32).toString('hex'), messages: new Map(), drafts: new Map(),
+          proposals: new Map(), generating: new Set(), account: null, demo: false, cursor: '', touched: Date.now() };
         sessions.set(sessionId, session);
         response.setHeader('Set-Cookie', `${cookieName}=${sessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=28800`);
       }
@@ -141,9 +145,8 @@ export function createMailboxServer({ port = Number(process.env.PORT || 4317), s
         if (path === '/api/reply-need' && request.method === 'POST') {
           // Prototype: the agents' rules say whether the selected message needs a reply; no model, nothing stored.
           const message = session.messages.get(body.messageId);
-          if (!message || message.direction === 'sent' || !process.env.AGENT_SERVICE_URL) return json({ replyNeed: null });
-          const messages = session.demo ? [...session.messages.values()].filter(item => item.threadId === message.threadId) : await threadMail(session.account, message);
-          const replyNeed = await requestReplyNeed(messages.sort((a, b) => a.date.localeCompare(b.date)), message.id,
+          if (!message || message.direction === 'sent' || !session.demo || !process.env.AGENT_SERVICE_URL) return json({ replyNeed: null });
+          const replyNeed = await requestReplyNeed([message], message.id,
             process.env.AGENT_SERVICE_URL, process.env.AGENT_SERVICE_TOKEN);
           markReplyNeed(message, replyNeed);
           return json({ replyNeed, message });
@@ -153,16 +156,26 @@ export function createMailboxServer({ port = Number(process.env.PORT || 4317), s
           if (!message) throw new Error('Select a received message first.');
           if (message.direction === 'sent') throw new Error('Select a received message to generate a reply.');
           const messages = session.demo ? [...session.messages.values()].filter(item => item.threadId === message.threadId) : await threadMail(session.account, message);
-          if (process.env.AGENT_SERVICE_URL) {
-            // Prototype: the Java agents write the draft; their routing becomes the message's classification.
-            const result = await requestAgentReply(messages.sort((a, b) => a.date.localeCompare(b.date)), message.id,
-              process.env.AGENT_SERVICE_URL, process.env.AGENT_SERVICE_TOKEN);
-            if (result.classification) {
-              const classification = normalizeClassification(result.classification);
-              message.classification = classification; message.labels = classification.labels;
+          if (session.demo && process.env.AGENT_SERVICE_URL) {
+            const { proposals, generating } = session;
+            if (generating.has(message.id)) return json({ error: 'A draft is already being generated for this message.' }, 409);
+            generating.add(message.id);
+            try {
+              const result = await requestAgentReply(messages.sort((a, b) => a.date.localeCompare(b.date)), message.id,
+                process.env.AGENT_SERVICE_URL, process.env.AGENT_SERVICE_TOKEN);
+              if (session.proposals !== proposals) return json({ error: 'The mailbox session changed during generation.' }, 409);
+              if (result.classification) {
+                const classification = normalizeClassification(result.classification);
+                message.classification = classification; message.labels = classification.labels;
+              }
+              markReplyNeed(message, result.replyNeed);
+              const proposal = { id: randomUUID(), boardId: result.boardId, version: result.version, agent: result.agent, warnings: result.warnings };
+              proposals.set(proposal.id, { messageId: message.id, proposal });
+              if (proposals.size > 100) proposals.delete(proposals.keys().next().value);
+              return json({ body: result.body, origin: 'model', proposal, replyNeed: result.replyNeed, labels: message.labels });
+            } finally {
+              generating.delete(message.id);
             }
-            markReplyNeed(message, result.replyNeed);
-            return json({ body: result.body, origin: 'model', agent: result.agent, warnings: result.warnings, replyNeed: result.replyNeed });
           }
           const reply = await generateReply(messages.sort((a, b) => a.date.localeCompare(b.date)), process.env.LOCAL_MODEL_NAME || 'llama3.2', process.env.LOCAL_MODEL_URL || 'http://127.0.0.1:11434');
           return json({ body: reply, origin: 'model' });
