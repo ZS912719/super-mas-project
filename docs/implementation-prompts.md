@@ -33,3 +33,7 @@ Adapt Ponytail's repository guidance in the root AGENTS.md. Trace affected behav
 ## Prepare the mailbox draft and review integration for rollout
 
 Keep the Java bridge available in the demo workspace. Expose authenticated, model-free readiness and report contention while allowing only one draft to update the prototype at a time. Show the service state in mailbox settings and distinguish request limits, timeouts and incompatible service responses. Verify Java HTTP behavior, the mailbox bridge, and a synthetic draft and review flow before enabling any provider account integration.
+
+## Package the agent service independently of the source checkout
+
+Build a ZIP from the Java runtime JARs, versioned sample knowledge, launcher, license and usage instructions. Resolve bundled knowledge relative to the launcher, require an external writable data directory, and pass both paths explicitly to AgentService. Inject a shared token through the process environment and use the desktop configuration directory for any local environment file. Inspect the ZIP and start it from an unrelated directory with synthetic demo inputs.

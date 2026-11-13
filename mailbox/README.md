@@ -97,6 +97,8 @@ LOCAL_MODEL_NAME=llama3.2
 
 ## Agent reply generation (prototype branch)
 
+For a desktop installation outside the checkout, use the [Agent Service distribution](../docs/agent-service-distribution.md).
+
 To try agent-assisted drafting and review, start the Java agent service from the repository root with a separate demo data directory, then start the mailbox with the same token:
 
 ```bash
