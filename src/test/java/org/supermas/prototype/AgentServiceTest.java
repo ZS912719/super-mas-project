@@ -66,6 +66,15 @@ class AgentServiceTest {
     }
 
     @Test
+    void healthRequiresAuthenticationAndReportsTheProtocolVersion() throws Exception {
+        var request = HttpRequest.newBuilder(URI.create("http://" + service.host() + "/v1/health"));
+        assertEquals(401, client.send(request.build(), HttpResponse.BodyHandlers.discarding()).statusCode());
+        var response = client.send(request.header(AgentService.TOKEN_HEADER, TOKEN).build(), HttpResponse.BodyHandlers.ofString());
+        assertEquals(200, response.statusCode());
+        assertEquals(JSON.readTree("{\"schemaVersion\":\"1\",\"status\":\"ready\"}"), JSON.readTree(response.body()));
+    }
+
+    @Test
     void aStudentEmailComesBackAsADraftWithItsRoleAsLabel() throws Exception {
         HttpResponse<String> response = post(request("m1", STUDENT), TOKEN);
 

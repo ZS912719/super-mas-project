@@ -111,6 +111,8 @@ AGENT_SERVICE_TOKEN=<the same token>
 
 Select **Explore the demo**, open a received message and click **Generate reply · SuperMAS agents**. The example uses the template provider, which needs no running model. The draft fills the editor and any review warnings refer to the original generated text. Use **Save draft** and **Approve** to review a specific version. The saved draft retains its agent source and warnings when reopened. Saving edits creates a new version that requires approval. The Java service receives the conversation for generation and only the selected message for the reply-need hint. Gmail and Outlook sessions use the direct Ollama adapter. See the [agent service contract](../docs/plans/agent-service-api.md).
 
+In **Settings & connections**, check the agent service under **Reply drafting**. It reports when the service is ready, drafting, misconfigured, incompatible, or unreachable. After starting or restarting Java, select **Check again**. A ready status confirms that Java can accept a draft request. A successful generated reply also verifies the configured generation provider.
+
 ## Classification API usage
 
 Live mail starts unclassified. Select **Classification** to import an externally supplied result:

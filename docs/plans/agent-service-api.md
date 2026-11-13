@@ -11,10 +11,12 @@
 | Token | `X-SuperMAS-Token` must equal `AGENT_SERVICE_TOKEN` (at least 32 characters; the service refuses to start without one), else **401**. Compared in constant time. Needed because any web page in a local browser can send requests to a loopback port |
 | Method and type | `POST`, `Content-Type: application/json`, else **405** / **415** |
 | Size | At most 256,000 bytes (**413**), 200 messages, 32,000 characters per field (**400**) |
-| Concurrency | One request at a time |
+| Concurrency | One draft at a time. Another draft request received during generation gets **503**. A second HTTP worker serves health and rule checks while a draft is running. |
 | Trust | Every email field is untrusted data. It only ever reaches the agents as data, never as instructions or permissions |
 
 ## Request
+
+`GET /v1/health` uses the same Host and token checks and returns `{"schemaVersion":"1","status":"ready"}` or `"busy"` while drafting. It checks the Java service and its draft slot. It does not run inference or verify the configured model.
 
 ```json
 {

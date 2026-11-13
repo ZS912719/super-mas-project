@@ -15,7 +15,7 @@ test('the reply-need verdict is validated as untrusted data', async () => {
   assert.equal(normalizeReplyNeed(null), null);
   let target;
   const need = await requestReplyNeed([], 'm1', 'http://127.0.0.1:4318', TOKEN, async url => {
-    target = String(url); return { ok: true, status: 200, json: async () => ({ replyNeed: { verdict: 'NEEDED', reasons: ['asks a question'] } }) };
+    target = String(url); return { ok: true, status: 200, json: async () => ({ schemaVersion: '1', replyNeed: { verdict: 'NEEDED', reasons: ['asks a question'] } }) };
   });
   assert.equal(target, 'http://127.0.0.1:4318/v1/reply-need');
   assert.deepEqual(need, { verdict: 'NEEDED', reasons: ['asks a question'] });
@@ -70,12 +70,18 @@ test('agent requests send the token and only conversation fields, and reject unu
 test('agent proposals carry their source through saved edits and version-specific approval', async t => {
   let received;
   const agents = http.createServer((request, response) => {
+    if (request.url === '/v1/health') {
+      assert.equal(request.headers['x-supermas-token'], TOKEN);
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify({ schemaVersion: '1', status: 'ready' }));
+      return;
+    }
     let data = '';
     request.on('data', chunk => { data += chunk; });
     request.on('end', () => {
       if (request.url === '/v1/reply-need') {
         response.writeHead(200, { 'Content-Type': 'application/json' });
-        response.end(JSON.stringify({ replyNeed: { verdict: 'NOT_NEEDED', reasons: ['broadcast: sent to a group address'] } }));
+        response.end(JSON.stringify({ schemaVersion: '1', replyNeed: { verdict: 'NOT_NEEDED', reasons: ['broadcast: sent to a group address'] } }));
         return;
       }
       received = { token: request.headers['x-supermas-token'], body: JSON.parse(data) };
@@ -110,6 +116,8 @@ test('agent proposals carry their source through saved edits and version-specifi
   };
   assert.equal(session.agentDrafting, false);
   assert.equal((await post('demo', {})).agentDrafting, true);
+  const health = await fetch(`${origin}/api/agent-status`, { headers: { Cookie: cookie } });
+  assert.deepEqual(await health.json(), { status: 'ready' });
 
   const judged = await post('reply-need', { messageId: 'demo-0' });
   assert.equal(judged.status, 200);

@@ -333,7 +333,8 @@ async function openMailbox() {
 function settings() {
   $('#settings-content').innerHTML = `<p>Your workspace uses ${state.session.demo ? 'sample data' : escapeHtml(state.session.provider)}. Connecting another account replaces the active workspace.</p>
     ${state.session.providers.map(provider => `<div class="connection-row"><strong>${escapeHtml(provider.name)}</strong><small>${provider.configured ? 'OAuth client configured' : 'OAuth client not configured. See mailbox/README.md.'}</small><button data-setting-connect="${provider.id}">Connect ${provider.name} ↗</button></div>`).join('')}
-    <div class="connection-row"><strong>Reply drafting</strong><small>${state.session.agentDrafting ? 'SuperMAS agents · Demo workspace' : `Ollama · ${escapeHtml(state.session.model)}`}</small><p>The selected conversation is used to draft your reply.</p></div>
+    <div class="connection-row"><strong>Reply drafting</strong><small>${state.session.agentDrafting ? 'SuperMAS agents · Demo workspace' : `Ollama · ${escapeHtml(state.session.model)}`}</small>
+    ${state.session.agentDrafting ? '<p id="agent-status" role="status">Checking the agent service…</p><button class="quiet" id="check-agents">Check again</button>' : ''}</div>
     <div class="connection-row"><strong>Agent integration</strong><small>Not implemented</small><p>Import classification JSON from a message to preview labels. Unknown JSON fields are retained by the adapter.</p></div>
     <p>Session data is kept in server memory for up to 8 hours. Disconnecting or restarting the server clears tokens, drafts, and labels. Provider mail remains at your provider.</p>`;
   document.querySelectorAll('[data-setting-connect]').forEach(button => button.onclick = () => run(async () => {
@@ -343,6 +344,25 @@ function settings() {
     await connect(button.dataset.settingConnect);
   }));
   $('#settings-dialog').showModal();
+  if (state.session.agentDrafting) {
+    const status = $('#agent-status');
+    const check = $('#check-agents');
+    check.onclick = async () => {
+      const descriptions = {
+        ready: 'Agent service ready for a draft.',
+        busy: 'The agents are generating a draft. Try again shortly.',
+        configuration: 'Check the agent service address and shared token.',
+        incompatible: 'The agent service version is incompatible.',
+        unavailable: 'The agent service did not respond. Check that it is running.'
+      };
+      check.disabled = true;
+      status.textContent = 'Checking the agent service…';
+      const result = await api('agent-status').catch(() => null);
+      status.textContent = descriptions[result?.status] ?? descriptions.unavailable;
+      check.disabled = false;
+    };
+    check.click();
+  }
 }
 document.querySelectorAll('[data-close]').forEach(button => button.onclick = () => document.getElementById(button.dataset.close).close());
 $('#classification-form').onsubmit = event => {

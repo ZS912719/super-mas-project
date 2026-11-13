@@ -29,3 +29,7 @@ Create a feature branch from the checked-out prototype. Reuse the loopback Java 
 ## Adopt the Ponytail implementation approach on the mailbox review branch
 
 Adapt Ponytail's repository guidance in the root AGENTS.md. Trace affected behavior before editing, prefer existing code and platform facilities, and keep changes focused while preserving validation, readability, and relevant checks. Keep the shared knowledge entry point and completion gate in place.
+
+## Prepare the mailbox draft and review integration for rollout
+
+Keep the Java bridge available in the demo workspace. Expose authenticated, model-free readiness and report contention while allowing only one draft to update the prototype at a time. Show the service state in mailbox settings and distinguish request limits, timeouts and incompatible service responses. Verify Java HTTP behavior, the mailbox bridge, and a synthetic draft and review flow before enabling any provider account integration.

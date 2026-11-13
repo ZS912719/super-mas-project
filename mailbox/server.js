@@ -5,7 +5,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { authorization, exchangeCode, profile, providers, providerConfig, listMail, threadMail, sendMail } from './lib/providers.js';
 import { normalizeClassification } from './lib/classification.js';
 import { generateReply } from './lib/model.js';
-import { requestAgentReply, requestReplyNeed } from './lib/agents.js';
+import { checkAgentService, requestAgentReply, requestReplyNeed } from './lib/agents.js';
 import { demoMessages } from './lib/demo.js';
 import { saveDraft, approveDraft, beginSend } from './lib/drafts.js';
 
@@ -117,6 +117,11 @@ export function createMailboxServer({ port = Number(process.env.PORT || 4317), s
       if (path === '/api/logout' && request.method === 'POST') { clearAccount(session); session.csrf = randomBytes(32).toString('hex'); return json(sessionView(session)); }
       if (path.startsWith('/api/')) {
         if (!session.account && !session.demo) return json({ error: 'Connect an account or open the demo first.' }, 401);
+        if (path === '/api/agent-status' && request.method === 'GET') {
+          const endpoint = process.env.AGENT_SERVICE_URL;
+          const status = session.demo && endpoint ? await checkAgentService(endpoint, process.env.AGENT_SERVICE_TOKEN) : 'disabled';
+          return json({ status });
+        }
         if (path === '/api/messages' && request.method === 'GET') {
           if (session.account) {
             const result = await listMail(session.account, url.searchParams.get('cursor') || '');

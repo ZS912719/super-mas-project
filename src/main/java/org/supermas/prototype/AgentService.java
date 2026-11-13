@@ -70,7 +70,8 @@ public final class AgentService implements AutoCloseable {
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private final HttpServer server;
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final ExecutorService executor = Executors.newFixedThreadPool(2);
+    private final java.util.concurrent.Semaphore drafting = new java.util.concurrent.Semaphore(1);
     private final byte[] token;
     private final String host;
     private final ProjectIndexes indexes;
@@ -188,8 +189,25 @@ public final class AgentService implements AutoCloseable {
             int status = 200;
             JsonNode body;
             try {
-                JsonNode request = read(exchange);
-                body = exchange.getRequestURI().getPath().equals(REPLY_NEED_PATH) ? replyNeed(request) : reply(request);
+                authenticate(exchange);
+                body = switch (exchange.getRequestURI().getPath()) {
+                    case "/v1/health" -> {
+                        if (!"GET".equals(exchange.getRequestMethod())) throw new Refused(405, "Use GET");
+                        yield JSON.createObjectNode().put("schemaVersion", "1")
+                                .put("status", drafting.availablePermits() == 0 ? "busy" : "ready");
+                    }
+                    case REPLY_NEED_PATH -> replyNeed(read(exchange));
+                    case "/v1/reply" -> {
+                        JsonNode request = read(exchange);
+                        if (!drafting.tryAcquire()) throw new Refused(503, "The agents are already generating a draft. Try again shortly.");
+                        try {
+                            yield reply(request);
+                        } finally {
+                            drafting.release();
+                        }
+                    }
+                    default -> throw new Refused(404, "Unknown path");
+                };
             } catch (Refused e) {
                 status = e.status;
                 body = error(e.getMessage());
@@ -207,8 +225,7 @@ public final class AgentService implements AutoCloseable {
         }
     }
 
-    /** Every check that does not need the body's meaning, in the order a refusal is cheapest. */
-    private JsonNode read(HttpExchange exchange) throws IOException {
+    private void authenticate(HttpExchange exchange) {
         if (!host.equals(exchange.getRequestHeaders().getFirst("Host"))) {
             throw new Refused(403, "Use http://" + host);
         }
@@ -216,10 +233,9 @@ public final class AgentService implements AutoCloseable {
         if (supplied == null || !MessageDigest.isEqual(token, supplied.getBytes(StandardCharsets.UTF_8))) {
             throw new Refused(401, "Missing or wrong " + TOKEN_HEADER);
         }
-        String path = exchange.getRequestURI().getPath();
-        if (!path.equals("/v1/reply") && !path.equals(REPLY_NEED_PATH)) {
-            throw new Refused(404, "Unknown path");
-        }
+    }
+
+    private JsonNode read(HttpExchange exchange) throws IOException {
         if (!"POST".equals(exchange.getRequestMethod())) {
             throw new Refused(405, "Use POST");
         }

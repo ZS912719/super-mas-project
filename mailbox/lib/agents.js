@@ -17,6 +17,25 @@ export function agentServiceEndpoint(value, path = '/v1/reply') {
   return new URL(path, url);
 }
 
+export async function checkAgentService(endpoint, token) {
+  let target;
+  try { target = agentServiceEndpoint(endpoint, '/v1/health'); }
+  catch { return 'configuration'; }
+  if (typeof token !== 'string' || token.length < 32) return 'configuration';
+  try {
+    const response = await fetch(target, {
+      redirect: 'error', signal: AbortSignal.timeout(2500), headers: { 'X-SuperMAS-Token': token }
+    });
+    if (response.status === 401 || response.status === 403) return 'configuration';
+    if (response.status === 404) return 'incompatible';
+    if (!response.ok) return 'unavailable';
+    const result = await response.json();
+    return result?.schemaVersion === '1' && ['ready', 'busy'].includes(result.status) ? result.status : 'incompatible';
+  } catch {
+    return 'unavailable';
+  }
+}
+
 /** Asks the agents, without a model, whether the selected received message needs a reply (plan reply-needed). */
 export async function requestReplyNeed(messages, messageId, endpoint, token, request = fetch) {
   if (typeof token !== 'string' || token.length < 32) throw new Error('Set AGENT_SERVICE_TOKEN (at least 32 characters) to use the agents.');
@@ -31,7 +50,10 @@ export async function requestReplyNeed(messages, messageId, endpoint, token, req
     headers: { 'Content-Type': 'application/json', 'X-SuperMAS-Token': token }, body: input
   }); } catch { return null; }
   if (!response.ok) return null;
-  try { return normalizeReplyNeed((await response.json())?.replyNeed); } catch { return null; }
+  try {
+    const result = await response.json();
+    return result?.schemaVersion === '1' ? normalizeReplyNeed(result.replyNeed) : null;
+  } catch { return null; }
 }
 
 /** Asks the agents for a reply to one received message of the conversation. Email text stays data. */
@@ -42,6 +64,10 @@ export async function requestAgentReply(messages, messageId, endpoint, token, re
     ({ id, threadId, sender, recipient, subject, body, date, direction }));
   const input = JSON.stringify({ messageId, messages: conversation });
   if (Buffer.byteLength(input) > 256000) throw new Error('Conversation exceeds the 256 KB agent service limit.');
+  if (conversation.length > 200 || conversation.some(message =>
+    Object.values(message).some(value => typeof value === 'string' && value.length > 32000))) {
+    throw new Error('Conversation exceeds the agent service limit of 200 messages or 32,000 characters per field.');
+  }
   let response;
   try { response = await request(target, {
     method: 'POST', redirect: 'error', signal: AbortSignal.timeout(60000),
@@ -51,7 +77,10 @@ export async function requestAgentReply(messages, messageId, endpoint, token, re
     throw new Error('Cannot reach the agent service. Start it and check AGENT_SERVICE_URL.');
   }
   let result;
-  try { result = await response.json(); } catch { throw new Error(`Agent service returned HTTP ${response.status} without JSON.`); }
+  try { result = await response.json(); } catch (error) {
+    if (error.name === 'AbortError' || error.name === 'TimeoutError') throw new Error('The agents did not answer within 60 seconds.');
+    throw new Error(`Agent service returned HTTP ${response.status} without JSON.`);
+  }
   if (!response.ok) throw new Error(`Agent service refused the request: ${typeof result?.error === 'string' ? result.error.slice(0, 300) : `HTTP ${response.status}`}`);
   if (result?.schemaVersion !== '1') throw new Error('Unsupported agent service response version.');
   const body = result?.draft?.body;
