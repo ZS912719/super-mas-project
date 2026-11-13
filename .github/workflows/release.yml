@@ -98,12 +98,26 @@ jobs:
         if: needs.validate.outputs.component == 'blackboard'
         shell: pwsh
         run: ./scripts/package-blackboard.ps1
-      - name: Download tested mailbox executable
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         if: needs.validate.outputs.component == 'mailbox'
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: mailbox-windows-x64
-          path: target/release
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: mailbox/package-lock.json
+      - name: Package mailbox with registered desktop clients
+        if: needs.validate.outputs.component == 'mailbox'
+        working-directory: mailbox
+        shell: pwsh
+        env:
+          GOOGLE_DESKTOP_CLIENT_ID: ${{ vars.GOOGLE_DESKTOP_CLIENT_ID }}
+          MICROSOFT_DESKTOP_CLIENT_ID: ${{ vars.MICROSOFT_DESKTOP_CLIENT_ID }}
+        run: |
+          npm ci
+          if ($LASTEXITCODE -ne 0) { throw 'Mailbox dependency installation failed.' }
+          npm run package:win:release -- --publish never
+          if ($LASTEXITCODE -ne 0) { throw 'Mailbox release packaging failed.' }
+          New-Item -ItemType Directory -Force ../target/release | Out-Null
+          Copy-Item dist/*.exe ../target/release/
       - name: Generate SHA-256 checksums
         shell: pwsh
         run: |

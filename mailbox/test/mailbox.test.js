@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeClassification } from '../lib/classification.js';
 import { localModelEndpoint, generateReply } from '../lib/model.js';
-import { authorization, normalizeGmail, normalizeOutlook, mimeMessage, mailAddress, listMail, threadMail, sendMail } from '../lib/providers.js';
+import { authorization, exchangeCode, hasMailPermission, normalizeGmail, normalizeOutlook, mimeMessage, mailAddress, listMail, threadMail, sendMail } from '../lib/providers.js';
 import { saveDraft, approveDraft, beginSend } from '../lib/drafts.js';
 import { createMailboxServer } from '../server.js';
 import { navigationTarget } from '../desktop/navigation.js';
@@ -54,7 +54,35 @@ test('OAuth creates independent state and PKCE challenge without exposing client
   assert.equal(url.searchParams.get('code_challenge_method'), 'S256');
   assert.ok(url.searchParams.get('code_challenge'));
   assert.equal(url.searchParams.get('client_secret'), null);
-  assert.throws(() => authorization('outlook', 'http://127.0.0.1', {}), /Configure/);
+  assert.throws(() => authorization('outlook', 'http://127.0.0.1', {}), /not configured/);
+});
+
+test('desktop OAuth exchanges and refreshes with the public client and respects granted scopes', async t => {
+  const redirectUri = 'http://127.0.0.1:4317/auth/callback';
+  const pending = authorization('outlook', redirectUri, {}, { outlook: 'desktop-client' });
+  assert.equal(new URL(pending.url).searchParams.get('client_id'), 'desktop-client');
+  let exchanges = 0;
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    if (url.endsWith('/token')) {
+      exchanges++;
+      assert.equal(options.body.get('client_id'), 'desktop-client');
+      assert.equal(options.body.has('client_secret'), false);
+      if (exchanges === 1) {
+        assert.equal(options.body.get('redirect_uri'), redirectUri);
+        assert.equal(options.body.get('code_verifier'), pending.verifier);
+        return new Response(JSON.stringify({ access_token: 'initial', refresh_token: 'refresh', expires_in: 0, scope: 'Mail.Read' }));
+      }
+      assert.equal(options.body.get('refresh_token'), 'refresh');
+      return new Response(JSON.stringify({ access_token: 'refreshed' }));
+    }
+    assert.equal(options.headers.Authorization, 'Bearer refreshed');
+    return new Response(JSON.stringify({ value: [] }));
+  });
+  const account = { provider: 'outlook', config: pending.config, ...await exchangeCode(pending, 'code', redirectUri) };
+  await Promise.all([listMail(account), listMail(account)]);
+  assert.equal(exchanges, 2);
+  assert.equal(hasMailPermission(account, 'read'), true);
+  assert.equal(hasMailPermission(account, 'send'), false);
 });
 
 test('provider normalization extracts nested text and retains conversation identity', () => {
@@ -96,12 +124,11 @@ test('Gmail adapter paginates, retrieves threads and submits the reviewed MIME d
   assert.match(Buffer.from(payload.raw, 'base64url').toString(), /To: you@example.com/);
 });
 
-test('Outlook adapter uses text history and creates, updates and submits a threaded reply', async t => {
+test('Outlook adapter submits the approved threaded reply in one Mail.Send operation', async t => {
   const calls = [];
   t.mock.method(globalThis, 'fetch', async (path, options) => {
     calls.push({ path, options });
-    if (path.endsWith('/createReply')) return { ok: true, status: 201, json: async () => ({ id: 'provider-draft' }) };
-    if (options.method === 'PATCH' || path.endsWith('/send')) return { ok: true, status: 204 };
+    if (path.endsWith('/reply')) return { ok: true, status: 202 };
     return { ok: true, status: 200, json: async () => ({ value: [{ id: 'original', conversationId: 'conversation', from: { emailAddress: { address: 'you@example.com' } }, body: { content: 'Plain text' }, receivedDateTime: '2026-10-24T12:00:00Z' }], '@odata.nextLink': undefined }) };
   });
   const account = { provider: 'outlook', address: 'me@example.com', accessToken: 'test-only', expiresAt: Date.now() + 3600000 };
@@ -110,10 +137,13 @@ test('Outlook adapter uses text history and creates, updates and submits a threa
   assert.equal(calls[0].options.headers.Prefer, 'outlook.body-content-type="text"');
   const result = await sendMail(account, { to: 'you@example.com', subject: 'Re: Hello', body: 'Reviewed reply' }, page.messages[0]);
   assert.equal(result.status, 'accepted');
-  assert.match(calls[1].path, /original\/createReply$/);
-  assert.equal(calls[2].options.method, 'PATCH');
-  assert.equal(JSON.parse(calls[2].options.body).body.content, 'Reviewed reply');
-  assert.match(calls[3].path, /provider-draft\/send$/);
+  assert.match(calls[1].path, /original\/reply$/);
+  assert.equal(calls.length, 2);
+  assert.equal(calls[1].options.method, 'POST');
+  assert.deepEqual(JSON.parse(calls[1].options.body).message, {
+    subject: 'Re: Hello', body: { contentType: 'Text', content: 'Reviewed reply' },
+    toRecipients: [{ emailAddress: { address: 'you@example.com' } }]
+  });
 });
 
 test('draft edits invalidate approval, stale writes fail and repeated sends are blocked', () => {
@@ -170,22 +200,15 @@ test('HTTP workflow isolates sessions, checks CSRF, applies labels and simulates
 });
 
 test('desktop OAuth returns to the initiating session across separate browser cookies and rejects replay', async t => {
-  const previousClientId = process.env.GOOGLE_CLIENT_ID;
-  const previousClientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  process.env.GOOGLE_CLIENT_ID = 'test-client';
-  process.env.GOOGLE_CLIENT_SECRET = 'test-secret';
-  t.after(() => {
-    if (previousClientId === undefined) delete process.env.GOOGLE_CLIENT_ID;
-    else process.env.GOOGLE_CLIENT_ID = previousClientId;
-    if (previousClientSecret === undefined) delete process.env.GOOGLE_CLIENT_SECRET;
-    else process.env.GOOGLE_CLIENT_SECRET = previousClientSecret;
-  });
   const port = 14318;
   const origin = `http://127.0.0.1:${port}`;
   let exchangeCalls = 0;
   let connectedEvents = 0;
-  const server = createMailboxServer({ port, externalOAuth: true,
-    exchangeAuthorizationCode: async () => { exchangeCalls++; return { accessToken: 'test-only', expiresAt: Date.now() + 3600000 }; },
+  const server = createMailboxServer({ port, externalOAuth: true, desktopClients: { gmail: 'test-client' },
+    exchangeAuthorizationCode: async () => {
+      exchangeCalls++;
+      return { accessToken: 'test-only', expiresAt: Date.now() + 3600000, scopes: ['https://www.googleapis.com/auth/gmail.readonly'] };
+    },
     loadProfile: async () => 'desktop@example.com' });
   server.on('account-connected', () => connectedEvents++);
   await new Promise(resolve => server.listen(port, '127.0.0.1', resolve));
@@ -206,6 +229,8 @@ test('desktop OAuth returns to the initiating session across separate browser co
   assert.match(await result.text(), /return to SuperMAS Mail/);
   const connected = await (await fetch(`${origin}/api/session`, { headers: { Cookie: cookie } })).json();
   assert.equal(connected.address, 'desktop@example.com');
+  assert.equal(connected.canSend, false);
+  assert.equal((await post('send')).status, 403);
   assert.equal(exchangeCalls, 1); assert.equal(connectedEvents, 1);
   assert.equal((await fetch(callback)).status, 400);
   assert.equal(exchangeCalls, 1);

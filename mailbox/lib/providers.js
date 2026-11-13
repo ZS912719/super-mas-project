@@ -9,39 +9,53 @@ export const providers = {
 const graph = 'https://graph.microsoft.com/v1.0';
 const gmail = 'https://gmail.googleapis.com/gmail/v1/users/me';
 const encode = encodeURIComponent;
-export function providerConfig(provider, env = process.env) {
+export function providerConfig(provider, env = process.env, desktopClients = null) {
+  if (!Object.hasOwn(providers, provider)) throw new Error('Unknown email provider.');
   const config = providers[provider];
-  if (!config) throw new Error('Unknown email provider.');
-  return { ...config, clientId: env[`${config.prefix}_CLIENT_ID`], clientSecret: env[`${config.prefix}_CLIENT_SECRET`] };
+  const clientId = desktopClients ? desktopClients[provider] : env[`${config.prefix}_CLIENT_ID`];
+  const clientSecret = desktopClients ? undefined : env[`${config.prefix}_CLIENT_SECRET`];
+  return { ...config, clientId, clientSecret, configured: Boolean(clientId && (desktopClients || clientSecret)) };
 }
-export function authorization(provider, redirectUri, env = process.env) {
-  const config = providerConfig(provider, env);
-  if (!config.clientId || !config.clientSecret) throw new Error(`Configure ${config.prefix}_CLIENT_ID and ${config.prefix}_CLIENT_SECRET before connecting.`);
+export function authorization(provider, redirectUri, env = process.env, desktopClients = null) {
+  const config = providerConfig(provider, env, desktopClients);
+  if (!config.configured) throw new Error(`${config.name} sign-in is not configured for this build.`);
   const verifier = randomBytes(32).toString('base64url');
   const state = randomBytes(32).toString('base64url');
   const parameters = new URLSearchParams({ client_id: config.clientId, redirect_uri: redirectUri, response_type: 'code', scope: config.scope,
     state, code_challenge: createHash('sha256').update(verifier).digest('base64url'), code_challenge_method: 'S256' });
   if (provider === 'gmail') { parameters.set('access_type', 'offline'); parameters.set('prompt', 'consent'); }
-  return { url: `${config.authorize}?${parameters}`, state, verifier, provider, createdAt: Date.now() };
+  return { url: `${config.authorize}?${parameters}`, state, verifier, provider, config, createdAt: Date.now() };
 }
-async function tokenRequest(provider, values) {
-  const config = providerConfig(provider);
+async function tokenRequest(config, values) {
+  const body = new URLSearchParams({ client_id: config.clientId, ...values });
+  if (config.clientSecret) body.set('client_secret', config.clientSecret);
   const response = await fetch(config.token, { method: 'POST', redirect: 'error', signal: AbortSignal.timeout(20000),
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ client_id: config.clientId, client_secret: config.clientSecret, ...values }) });
+    body });
   if (!response.ok) throw new Error(`Email authorization failed (HTTP ${response.status}). Reconnect your account.`);
   const token = await response.json();
   if (!token.access_token) throw new Error('Provider did not return an access token.');
-  return { accessToken: token.access_token, refreshToken: token.refresh_token, expiresAt: Date.now() + (token.expires_in ?? 3600) * 1000 };
+  return { accessToken: token.access_token, refreshToken: token.refresh_token,
+    scopes: typeof token.scope === 'string' ? token.scope.split(/\s+/) : undefined,
+    expiresAt: Date.now() + (token.expires_in ?? 3600) * 1000 };
 }
 export async function exchangeCode(pending, code, redirectUri) {
-  return tokenRequest(pending.provider, { grant_type: 'authorization_code', code, redirect_uri: redirectUri, code_verifier: pending.verifier });
+  return tokenRequest(pending.config, { grant_type: 'authorization_code', code, redirect_uri: redirectUri, code_verifier: pending.verifier });
+}
+export function hasMailPermission(account, operation) {
+  const permission = account.provider === 'gmail'
+    ? `https://www.googleapis.com/auth/gmail.${operation === 'read' ? 'readonly' : 'send'}`
+    : `Mail.${operation === 'read' ? 'Read' : 'Send'}`;
+  return !account.scopes || account.scopes.includes(permission);
 }
 async function api(account, path, options = {}) {
   if (Date.now() > account.expiresAt - 60000) {
     if (!account.refreshToken) throw new Error('Email session expired. Reconnect your account.');
-    const token = await tokenRequest(account.provider, { grant_type: 'refresh_token', refresh_token: account.refreshToken });
-    Object.assign(account, { ...token, refreshToken: token.refreshToken ?? account.refreshToken });
+    account.refreshing ??= tokenRequest(account.config, { grant_type: 'refresh_token', refresh_token: account.refreshToken })
+      .then(token => Object.assign(account, { ...token, refreshToken: token.refreshToken ?? account.refreshToken,
+        scopes: token.scopes ?? account.scopes }))
+      .finally(() => { delete account.refreshing; });
+    await account.refreshing;
   }
   const response = await fetch(path, { ...options, redirect: 'error', signal: AbortSignal.timeout(25000),
     headers: { Authorization: `Bearer ${account.accessToken}`, 'Content-Type': 'application/json', ...options.headers } });
@@ -125,15 +139,13 @@ export async function sendMail(account, draft, original) {
     const result = await api(account, `${gmail}/messages/send`, { method: 'POST', body: JSON.stringify({ raw: mimeMessage(account, draft, original), ...(original ? { threadId: original.threadId } : {}) }) });
     return { providerId: result.id, status: 'accepted' };
   }
-  // Graph reply preserves conversation membership when replying to an existing message.
+  const message = { subject: draft.subject, body: { contentType: 'Text', content: draft.body },
+    toRecipients: [{ emailAddress: { address: mailAddress(draft.to) } }] };
+  // Submit a reply with Mail.Send, without creating or editing a server-side draft.
   if (original) {
-    const created = await api(account, `${graph}/me/messages/${encode(original.id)}/createReply`, { method: 'POST', body: '{}' });
-    await api(account, `${graph}/me/messages/${encode(created.id)}`, { method: 'PATCH', body: JSON.stringify({ subject: draft.subject,
-      body: { contentType: 'Text', content: draft.body }, toRecipients: [{ emailAddress: { address: mailAddress(draft.to) } }] }) });
-    await api(account, `${graph}/me/messages/${encode(created.id)}/send`, { method: 'POST', body: '{}' });
-    return { providerId: created.id, status: 'accepted' };
+    await api(account, `${graph}/me/messages/${encode(original.id)}/reply`, { method: 'POST', body: JSON.stringify({ message }) });
+  } else {
+    await api(account, `${graph}/me/sendMail`, { method: 'POST', body: JSON.stringify({ message, saveToSentItems: true }) });
   }
-  await api(account, `${graph}/me/sendMail`, { method: 'POST', body: JSON.stringify({ message: { subject: draft.subject,
-    body: { contentType: 'Text', content: draft.body }, toRecipients: [{ emailAddress: { address: mailAddress(draft.to) } }] }, saveToSentItems: true }) });
   return { status: 'accepted' };
 }

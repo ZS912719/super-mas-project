@@ -12,6 +12,7 @@
     "start": "npm run build && electron .",
     "start:web": "node --env-file-if-exists=.env server.js",
     "package:win": "npm run build && electron-builder --win portable --x64",
+    "package:win:release": "npm run build && electron-builder --config scripts/release-config.cjs --win portable --x64",
     "test": "node --test"
   },
   "devDependencies": { "esbuild": "0.25.12", "electron": "45.2.1", "electron-builder": "26.18.0" },

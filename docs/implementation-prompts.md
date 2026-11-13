@@ -41,3 +41,7 @@ Build a ZIP from the Java runtime JARs, versioned sample knowledge, launcher, li
 ## Fit the desktop mailbox landing page to the window
 
 Use a responsive landing grid with height-aware spacing and headline sizing so the sign-in and demo actions fit within supported Electron window sizes. Hide the landing scrollbar while retaining overflow access for extreme zoom and small browser viewports. Keep the inbox scroll regions independent. Build the frontend and check rendered login controls across short, narrow, default and large viewports.
+
+## Prepare a Windows mailbox release with built-in provider sign-in
+
+Package the project-owned public Google Desktop and Microsoft Entra client IDs with the Electron app so end users can connect through their system browser. Reuse the loopback callback, one-time state, and PKCE. Preserve Web client configuration for development, handle partial consent and token refresh, and use the Graph Mail.Send reply operation after version-specific approval. Keep a demo build available. Offer an opt-in live-mail agent endpoint with isolated request-scoped storage and local inference. Verify the build with fixture IDs and simulated provider requests. Once real registrations are configured, have testers sign in through the provider pages with dedicated Gmail and Outlook accounts and validate reading, draft review, sending, and reconnecting.

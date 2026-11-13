@@ -71,7 +71,25 @@ class AgentServiceTest {
         assertEquals(401, client.send(request.build(), HttpResponse.BodyHandlers.discarding()).statusCode());
         var response = client.send(request.header(AgentService.TOKEN_HEADER, TOKEN).build(), HttpResponse.BodyHandlers.ofString());
         assertEquals(200, response.statusCode());
-        assertEquals(JSON.readTree("{\"schemaVersion\":\"1\",\"status\":\"ready\"}"), JSON.readTree(response.body()));
+        assertEquals(JSON.readTree("{\"schemaVersion\":\"1\",\"status\":\"ready\",\"privateDrafting\":true}"), JSON.readTree(response.body()));
+    }
+
+    @Test
+    void privateDraftsReuseThePipelineWithoutWritingMailToTheSharedWorkspace() throws Exception {
+        String earlier = STUDENT.replace("\"m1\"", "\"m0\"").replace("2026-11-05T09:00:00Z", "2026-11-04T09:00:00Z");
+        var response = post("/v1/private-reply", request("m1", earlier, STUDENT), TOKEN);
+        assertEquals(200, response.statusCode(), response.body());
+        assertEquals("AWAITING_REVIEW", JSON.readTree(response.body()).path("status").asText());
+
+        // The next request can reuse these provider IDs without seeing or overwriting the earlier workspace.
+        response = post("/v1/private-reply", request("m1", STUDENT), TOKEN);
+        assertEquals(200, response.statusCode(), response.body());
+        try (var connection = java.sql.DriverManager.getConnection("jdbc:sqlite:" + data.resolve("blackboard.db"));
+             var statement = connection.createStatement();
+             var rows = statement.executeQuery("SELECT count(*) FROM boards")) {
+            assertTrue(rows.next());
+            assertEquals(0, rows.getInt(1));
+        }
     }
 
     @Test

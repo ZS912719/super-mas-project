@@ -15,17 +15,21 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.supermas.agent.role.Contribution;
 import org.supermas.agent.role.ReplyPlan;
 import org.supermas.agent.role.RoleDefinition;
+import org.supermas.blackboard.persistence.sqlite.SqliteBlackboardStore;
 import org.supermas.context.ProjectIndexes;
 import org.supermas.llm.LlmSettings;
 import org.supermas.metadata.MetadataAgent;
@@ -76,6 +80,7 @@ public final class AgentService implements AutoCloseable {
     private final String host;
     private final ProjectIndexes indexes;
     private final PrototypeApp.Wiring wiring;
+    private final PrototypeApp.Options options;
     private final String project;
     private final MetadataAgent metadata;
     /** Model-free: whether the selected message needs a reply, for the mailbox's note before Generate. */
@@ -100,6 +105,7 @@ public final class AgentService implements AutoCloseable {
             throw new IllegalArgumentException("AGENT_SERVICE_TOKEN must have at least " + MIN_TOKEN + " characters");
         }
         checkModel(options.llm());
+        this.options = options;
         this.token = token.getBytes(StandardCharsets.UTF_8);
         this.project = options.project();
         this.architecture = options.architecture();
@@ -194,14 +200,16 @@ public final class AgentService implements AutoCloseable {
                     case "/v1/health" -> {
                         if (!"GET".equals(exchange.getRequestMethod())) throw new Refused(405, "Use GET");
                         yield JSON.createObjectNode().put("schemaVersion", "1")
+                                .put("privateDrafting", !options.llm().leavesComputer())
                                 .put("status", drafting.availablePermits() == 0 ? "busy" : "ready");
                     }
                     case REPLY_NEED_PATH -> replyNeed(read(exchange));
-                    case "/v1/reply" -> {
+                    case "/v1/reply", "/v1/private-reply" -> {
                         JsonNode request = read(exchange);
                         if (!drafting.tryAcquire()) throw new Refused(503, "The agents are already generating a draft. Try again shortly.");
                         try {
-                            yield reply(request);
+                            yield exchange.getRequestURI().getPath().equals("/v1/private-reply")
+                                    ? privateReply(request) : reply(request);
                         } finally {
                             drafting.release();
                         }
@@ -319,7 +327,24 @@ public final class AgentService implements AutoCloseable {
     }
 
     JsonNode reply(JsonNode request) {
+        return reply(validated(request), wiring);
+    }
+
+    private JsonNode privateReply(JsonNode request) {
+        if (options.llm().leavesComputer()) throw new Refused(409, "Private drafts require a local model.");
         List<Message> checked = validated(request);
+        String url = "jdbc:sqlite:file:" + UUID.randomUUID() + "?mode=memory&cache=shared";
+        try (var keeper = DriverManager.getConnection(url); ProjectIndexes privateIndexes = ProjectIndexes.inMemory()) {
+            var store = SqliteBlackboardStore.inMemory(url, keeper);
+            var privateWiring = PrototypeApp.Wiring.create(privateIndexes, options,
+                    org.supermas.agent.role.RoleCatalog.bundled(), false, store);
+            return reply(checked, privateWiring);
+        } catch (SQLException | IOException e) {
+            throw new IllegalStateException("Cannot use the private drafting workspace", e);
+        }
+    }
+
+    private JsonNode reply(List<Message> checked, PrototypeApp.Wiring wiring) {
         Message selected = checked.get(0);
         List<Message> messages = checked.subList(1, checked.size());
         List<String> notes = new ArrayList<>();

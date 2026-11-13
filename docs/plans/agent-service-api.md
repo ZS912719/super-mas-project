@@ -16,7 +16,9 @@
 
 ## Request
 
-`GET /v1/health` uses the same Host and token checks and returns `{"schemaVersion":"1","status":"ready"}` or `"busy"` while drafting. It checks the Java service and its draft slot. It does not run inference or verify the configured model.
+`GET /v1/health` uses the same Host and token checks and returns `{"schemaVersion":"1","status":"ready","privateDrafting":true}` or `"busy"` while drafting. `privateDrafting` is false when the configured model sends requests off-device. Health checks the Java service and its draft slot without running inference.
+
+`POST /v1/private-reply` accepts the same request and returns the same draft schema. Use this endpoint for connected mailboxes. Each request gets a fresh in-memory Lucene index, topic catalog and SQLite blackboard, and the endpoint refuses remote inference. The shared draft slot applies to both endpoints.
 
 ```json
 {

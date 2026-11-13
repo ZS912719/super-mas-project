@@ -352,6 +352,11 @@ public final class PrototypeApp {
          *                              measuring improved rules
          */
         static Wiring create(ProjectIndexes indexes, Options options, RoleCatalog roles, boolean stopWhenNoReplyNeeded) {
+            return create(indexes, options, roles, stopWhenNoReplyNeeded, null);
+        }
+
+        static Wiring create(ProjectIndexes indexes, Options options, RoleCatalog roles, boolean stopWhenNoReplyNeeded,
+                             SqliteBlackboardStore transientStore) {
             String project = options.project();
             Map<String, ContextSource> sources = new HashMap<>(new KnowledgeLoader(indexes).load(options.knowledge()).sources());
             // Every agent that should read mail is a reader of the mail source, in trusted configuration.
@@ -364,7 +369,7 @@ public final class PrototypeApp {
             LuceneContextRetriever retriever = new LuceneContextRetriever(indexes, sources,
                     id -> Optional.ofNullable(configs.get(id)));
 
-            TopicCatalog catalog = TopicCatalog.onDisk(options.data().resolve("topics"));
+            TopicCatalog catalog = transientStore == null ? TopicCatalog.onDisk(options.data().resolve("topics")) : TopicCatalog.inMemory();
             IndexConversationRepository repository = new IndexConversationRepository(indexes,
                     id -> Optional.ofNullable(sources.get(MAIL)).filter(source -> source.projectId().equals(id)));
             ConversationRecorder recorder = new ConversationRecorder(repository, MessageTagger.discovered(catalog));
@@ -384,7 +389,8 @@ public final class PrototypeApp {
             configs.put(check.config().id(), check.config());
 
             RoleServices services = withGeneration(RoleServices.planOnly().withRetriever(retriever), options.llm());
-            SqliteBlackboardStore store = new SqliteBlackboardStore(options.data().resolve("blackboard.db"));
+            SqliteBlackboardStore store = transientStore == null
+                    ? new SqliteBlackboardStore(options.data().resolve("blackboard.db")) : transientStore;
             InMemoryAgentRegistry registry = new InMemoryAgentRegistry();
             boolean blackboard = options.architecture() == Architecture.BLACKBOARD;
             if (blackboard) {

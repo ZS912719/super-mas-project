@@ -10,7 +10,7 @@ The mailbox runs in an Electron desktop window with its own local server. It sup
 - Development: Node.js 22.12 or later, npm, Electron, esbuild and electron-builder; versions are in [package.json](package.json) and [package-lock.json](package-lock.json).
 - Packaged desktop builds include the runtime; end users do not need Node.js or npm.
 - Reply generation: a local Ollama service and an installed model.
-- Live accounts: user-supplied OAuth application credentials and an Internet connection.
+- Live accounts: a system browser and an Internet connection. Release builds carry the project's desktop OAuth client IDs.
 - Animation: vendored [ascii-sharks](https://github.com/stackedlol/ascii-sharks), with its [MIT license](vendor/ascii-sharks/LICENSE) and [revision record](vendor/ascii-sharks/UPSTREAM.md).
 
 ## Code structure and calls
@@ -70,15 +70,21 @@ Session mail, tokens, labels, draft versions and approval metadata remain in mem
 
 ## Connect a real mailbox
 
-Register the exact web redirect URI `http://127.0.0.1:4317/auth/callback`. Update it if `PORT` changes. This prototype uses user-supplied web OAuth clients. Do not distribute a shared confidential client secret in a desktop package; public distribution needs a separately reviewed native-client or hosted authorization design.
+Choose **Connect Gmail** or **Connect Outlook**, grant mailbox read access in the system browser, and return to SuperMAS Mail. Grant sending permission to enable submission. Read-only sessions can create drafts. **Disconnect** clears the active local session. Revoke authorization through the provider's account settings.
+
+### Build a release with live sign-in
+
+Maintainers set `GOOGLE_DESKTOP_CLIENT_ID` and `MICROSOFT_DESKTOP_CLIENT_ID` before running `npm run package:win:release`. The GitHub mailbox release workflow reads both public IDs from repository variables with those names. The release build requires both IDs and embeds them as application metadata. The normal `package:win` build supports demo and legacy development configuration.
 
 ### Gmail
 
-Enable Gmail API, configure the consent screen, and create a Web application OAuth client with the redirect URI above. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Add your account as a test user if applicable, then select **Connect Gmail**. Requested scopes are `gmail.readonly` and `gmail.send`.
+Enable Gmail API, configure the consent screen, and register a **Desktop app** client. Copy its client ID to `GOOGLE_DESKTOP_CLIENT_ID`. Add the test address to the consent screen's test users when the app is in testing. The desktop uses `http://127.0.0.1:4317/auth/callback` and requests `gmail.readonly` and `gmail.send`. Complete [Google's restricted scope verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification) before broad distribution. See also [Google Desktop OAuth](https://developers.google.com/identity/protocols/oauth2/native-app).
 
 ### Outlook
 
-Register a Microsoft Entra application with the intended account audience, a Web platform redirect URI and an application secret. Set `MICROSOFT_CLIENT_ID` and `MICROSOFT_CLIENT_SECRET`. Enable delegated `User.Read`, `Mail.Read` and `Mail.Send`; tenant policy may require administrator consent. Select **Connect Outlook**. The application also requests `offline_access` for token refresh.
+Register a Microsoft Entra application for personal Microsoft accounts and work or school accounts, with the public-client redirect `http://127.0.0.1:4317/auth/callback`. Follow the [Entra loopback registration instructions](https://learn.microsoft.com/entra/identity-platform/reply-url) for the HTTP IP literal. Copy its application client ID to `MICROSOFT_DESKTOP_CLIENT_ID`. Enable delegated `User.Read`, `Mail.Read` and `Mail.Send`. The application also requests `offline_access` for token refresh. Tenant policy can require administrator consent.
+
+For source development, set the desktop IDs before running `npm start`. Browser-only development continues to use Web clients and their `*_CLIENT_ID` and `*_CLIENT_SECRET` variables. Register the exact loopback Web redirect for that mode.
 
 Messages are rendered as plain text. **Load older mail** paginates provider mail; opening a message fetches its conversation in the same window. Outlook thread history is capped at 1,000 messages.
 
@@ -111,7 +117,9 @@ AGENT_SERVICE_URL=http://127.0.0.1:4318
 AGENT_SERVICE_TOKEN=<the same token>
 ```
 
-Select **Explore the demo**, open a received message and click **Generate reply · SuperMAS agents**. The example uses the template provider, which needs no running model. The draft fills the editor and any review warnings refer to the original generated text. Use **Save draft** and **Approve** to review a specific version. The saved draft retains its agent source and warnings when reopened. Saving edits creates a new version that requires approval. The Java service receives the conversation for generation and only the selected message for the reply-need hint. Gmail and Outlook sessions use the direct Ollama adapter. See the [agent service contract](../docs/plans/agent-service-api.md).
+Select **Explore the demo**, open a received message and click **Generate reply · SuperMAS agents**. The example uses the template provider, which needs no running model. The draft fills the editor and any review warnings refer to the original generated text. Use **Save draft** and **Approve** to review a specific version. The saved draft retains its agent source and warnings when reopened. Saving edits creates a new version that requires approval. The Java service receives the conversation for generation and only the selected message for the reply-need hint. See the [agent service contract](../docs/plans/agent-service-api.md).
+
+Set `AGENT_SERVICE_LIVE_MAIL=yes` alongside the same URL and token to use Java for connected mailboxes. **Generate reply** sends the selected conversation to `/v1/private-reply`. Each request uses a fresh in-memory blackboard, Lucene index and topic catalog. Use a loopback model or the template provider. The resulting draft remains in the mailbox session for version-specific review and submission. Connected mailboxes use the direct Ollama adapter by default.
 
 In **Settings & connections**, check the agent service under **Reply drafting**. It reports when the service is ready, drafting, misconfigured, incompatible, or unreachable. After starting or restarting Java, select **Check again**. A ready status confirms that Java can accept a draft request. A successful generated reply also verifies the configured generation provider.
 

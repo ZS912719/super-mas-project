@@ -19,3 +19,5 @@ AGENT_SERVICE_TOKEN=<same value used to start Java>
 ```
 
 Select **Explore the demo**, then check the service under **Settings & connections → Reply drafting**. Keep the desktop `.env`, database and actual mail outside the extracted distribution. The archive is assembled from runtime JARs, the launcher, documentation and versioned sample knowledge.
+
+To enable the agents for connected Gmail or Outlook accounts, also set `AGENT_SERVICE_LIVE_MAIL=yes` in the mailbox environment. Use the template provider or configure a loopback model in the Java service. The live-mail endpoint processes each requested conversation in an isolated in-memory workspace.

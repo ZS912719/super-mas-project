@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, shell, Menu } from 'electron';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createMailboxServer } from '../server.js';
@@ -17,16 +17,23 @@ function focusWindow() {
 }
 
 async function startDesktop() {
-  // Packaged credentials live outside the application archive and are never shipped.
+  // Only public OAuth client identifiers are included in a release.
   const configurationDirectory = app.isPackaged ? app.getPath('userData') : join(dirname(fileURLToPath(import.meta.url)), '..');
   const environmentFile = join(configurationDirectory, '.env');
   if (existsSync(environmentFile)) process.loadEnvFile(environmentFile);
+  const packagedClients = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).desktopOAuthClients;
+  const developmentClients = {
+    gmail: process.env.GOOGLE_DESKTOP_CLIENT_ID,
+    outlook: process.env.MICROSOFT_DESKTOP_CLIENT_ID
+  };
+  const desktopClients = app.isPackaged ? packagedClients
+    : developmentClients.gmail || developmentClients.outlook ? developmentClients : null;
   const port = Number(process.env.PORT || 4317);
   if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('PORT must be an integer between 1024 and 65535.');
   const origin = `http://127.0.0.1:${port}`;
 
   // The desktop owns its server; never attach to an unknown process using this port.
-  mailboxServer = createMailboxServer({ port, externalOAuth: true });
+  mailboxServer = createMailboxServer({ port, externalOAuth: true, desktopClients: desktopClients ?? null });
   await new Promise((resolve, reject) => {
     mailboxServer.once('error', reject);
     mailboxServer.listen(port, '127.0.0.1', resolve);

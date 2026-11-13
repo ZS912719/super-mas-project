@@ -49,7 +49,8 @@ function landing() {
     <header class="landing-header"><div class="brand"><span class="brand-mark">≋</span>SuperMAS <span class="muted">/ MAIL</span></div><span class="muted">A little less noise. A little more focus.</span></header>
     <section class="landing-main"><span class="eyebrow">A CALMER SPACE FOR YOUR INBOX</span><h1>Good ideas.<br>Clear conversations.</h1>
     <p>Your mail, thoughtfully organized. Keep every conversation in view and find the words with a model running on your own machine.</p>
-    <div class="landing-actions"><button data-connect="gmail">Connect Gmail ↗</button><button data-connect="outlook" class="secondary">Connect Outlook ↗</button></div>
+    <div class="landing-actions">${state.session.providers.map(provider => `<button data-connect="${provider.id}" class="${provider.id === 'outlook' ? 'secondary' : ''}" ${provider.configured ? '' : 'disabled'}>Connect ${provider.name} ↗</button>`).join('')}</div>
+    ${state.session.providers.some(provider => !provider.configured) ? '<p class="muted">Unavailable sign-in options are not configured in this build.</p>' : ''}
     <button class="secondary demo-start" id="demo-start">Explore the demo →</button><div class="status-line">LOCAL INFERENCE &nbsp; / &nbsp; HUMAN REVIEW &nbsp; / &nbsp; YOUR MAIL</div></section>
     <footer class="landing-footer"><span>Built around your attention.</span><span>ASCII ocean by stackedlol / ascii-sharks</span></footer></main>`;
   landingOcean = new OceanEngine($('#landing-ocean'), [{ kind: 'hammerhead', size: 1 }, { kind: 'classic', size: .8 }, { kind: 'mako', size: .65 }]);
@@ -287,10 +288,10 @@ function extractAddress(value) { return value.match(/<([^<>]+)>/)?.[1] ?? value;
 function updateDraftStatus() {
   const draft = state.draft;
   const approved = draft && !state.dirty && draft.approvedVersion === draft.version && !draft.sent;
-  $('#send').disabled = !approved;
+  $('#send').disabled = !approved || !state.session.canSend;
   $('#approve').disabled = Boolean(draft?.sent);
   $('#save-draft').disabled = Boolean(draft?.sent);
-  $('#draft-status').textContent = draft?.sendUncertain ? 'Outcome uncertain. Check your provider Sent folder.' : state.dirty ? 'Unsaved changes · approval required' : draft?.sent ? 'Submitted to provider' : draft ? `Version ${draft.version} · ${approved ? 'approved' : 'awaiting review'}` : 'Your approval is required before sending.';
+  $('#draft-status').textContent = draft?.sendUncertain ? 'Outcome uncertain. Check your provider Sent folder.' : draft?.sent ? 'Submitted to provider' : !state.session.canSend ? 'Read-only mailbox. Reconnect to grant sending permission.' : state.dirty ? 'Unsaved changes · approval required' : draft ? `Version ${draft.version} · ${approved ? 'approved' : 'awaiting review'}` : 'Your approval is required before sending.';
 }
 async function saveCurrent() {
   const editor = $('#reply-body');
@@ -332,7 +333,7 @@ async function openMailbox() {
 }
 function settings() {
   $('#settings-content').innerHTML = `<p>Your workspace uses ${state.session.demo ? 'sample data' : escapeHtml(state.session.provider)}. Connecting another account replaces the active workspace.</p>
-    ${state.session.providers.map(provider => `<div class="connection-row"><strong>${escapeHtml(provider.name)}</strong><small>${provider.configured ? 'OAuth client configured' : 'OAuth client not configured. See mailbox/README.md.'}</small><button data-setting-connect="${provider.id}">Connect ${provider.name} ↗</button></div>`).join('')}
+    ${state.session.providers.map(provider => `<div class="connection-row"><strong>${escapeHtml(provider.name)}</strong><small>${provider.configured ? 'Ready to connect' : 'Unavailable in this build'}</small><button data-setting-connect="${provider.id}" ${provider.configured ? '' : 'disabled'}>Connect ${provider.name} ↗</button></div>`).join('')}
     <div class="connection-row"><strong>Reply drafting</strong><small>${state.session.agentDrafting ? 'SuperMAS agents · Demo workspace' : `Ollama · ${escapeHtml(state.session.model)}`}</small>
     ${state.session.agentDrafting ? '<p id="agent-status" role="status">Checking the agent service…</p><button class="quiet" id="check-agents">Check again</button>' : ''}</div>
     <div class="connection-row"><strong>Agent integration</strong><small>Not implemented</small><p>Import classification JSON from a message to preview labels. Unknown JSON fields are retained by the adapter.</p></div>

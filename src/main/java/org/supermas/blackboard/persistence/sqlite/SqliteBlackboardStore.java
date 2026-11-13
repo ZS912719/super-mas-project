@@ -25,14 +25,32 @@ public final class SqliteBlackboardStore implements BlackboardStore {
     public SqliteBlackboardStore(Path database) { this(database, Clock.systemUTC()); }
 
     public SqliteBlackboardStore(Path database, Clock clock) {
-        this.clock = Objects.requireNonNull(clock);
+        this(databaseUrl(database), clock, true);
+    }
+
+    private static String databaseUrl(Path database) {
         Path path = database.toAbsolutePath().normalize();
         try { Files.createDirectories(path.getParent()); }
         catch (java.io.IOException e) { throw new StorageException("Cannot create database directory", e); }
-        url = "jdbc:sqlite:" + path;
-        try (Connection c = connection(); Statement s = c.createStatement()) {
-            s.execute("PRAGMA journal_mode=WAL");
-        } catch (SQLException e) { throw new StorageException("Cannot enable WAL", e); }
+        return "jdbc:sqlite:" + path;
+    }
+
+    /** The caller owns this connection and keeps the named in-memory database alive. */
+    public static SqliteBlackboardStore inMemory(String url, Connection keeper) throws SQLException {
+        if (!keeper.getMetaData().getURL().equals(url) || !url.matches("jdbc:sqlite:file:[a-zA-Z0-9-]+\\?mode=memory&cache=shared")) {
+            throw new IllegalArgumentException("Expected a matching shared in-memory SQLite connection");
+        }
+        return new SqliteBlackboardStore(url, Clock.systemUTC(), false);
+    }
+
+    private SqliteBlackboardStore(String url, Clock clock, boolean durable) {
+        this.url = url;
+        this.clock = Objects.requireNonNull(clock);
+        if (durable) {
+            try (Connection c = connection(); Statement s = c.createStatement()) {
+                s.execute("PRAGMA journal_mode=WAL");
+            } catch (SQLException e) { throw new StorageException("Cannot enable WAL", e); }
+        }
         transaction(c -> {
             try (Statement s = c.createStatement(); ResultSet r = s.executeQuery("PRAGMA user_version")) {
                 r.next();

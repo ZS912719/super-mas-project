@@ -2,7 +2,7 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { authorization, exchangeCode, profile, providers, providerConfig, listMail, threadMail, sendMail } from './lib/providers.js';
+import { authorization, exchangeCode, profile, providers, providerConfig, hasMailPermission, listMail, threadMail, sendMail } from './lib/providers.js';
 import { normalizeClassification } from './lib/classification.js';
 import { generateReply } from './lib/model.js';
 import { checkAgentService, requestAgentReply, requestReplyNeed } from './lib/agents.js';
@@ -19,12 +19,14 @@ function markReplyNeed(message, replyNeed) {
 }
 
 export function createMailboxServer({ port = Number(process.env.PORT || 4317), send = sendMail,
-  externalOAuth = false, exchangeAuthorizationCode = exchangeCode, loadProfile = profile } = {}) {
+  externalOAuth = false, desktopClients = null, exchangeAuthorizationCode = exchangeCode, loadProfile = profile } = {}) {
   const origin = `http://127.0.0.1:${port}`;
   const sessions = new Map();
   const pendingAuthorizations = new Map();
   const cookieName = 'supermas_session';
   const redirectUri = `${origin}/auth/callback`;
+  const agentDrafting = session => Boolean(process.env.AGENT_SERVICE_URL &&
+    (session.demo || (session.account && process.env.AGENT_SERVICE_LIVE_MAIL === 'yes')));
   function clearAccount(session) {
     if (session.pending) pendingAuthorizations.delete(session.pending.state);
     session.account = null; session.demo = false; session.messages.clear(); session.drafts.clear(); session.cursor = ''; session.pending = null; session.authorizationAttempt = null;
@@ -35,9 +37,11 @@ export function createMailboxServer({ port = Number(process.env.PORT || 4317), s
     return { csrf: session.csrf, connected: Boolean(session.account || session.demo), demo: session.demo,
       address: session.demo ? 'demo@supermas.example' : session.account?.address,
       provider: session.demo ? 'demo' : session.account?.provider,
-      agentDrafting: Boolean(session.demo && process.env.AGENT_SERVICE_URL),
+      canSend: session.demo || Boolean(session.account && hasMailPermission(session.account, 'send')),
+      agentDrafting: agentDrafting(session),
       model: process.env.LOCAL_MODEL_NAME || 'llama3.2',
-      providers: Object.entries(providers).map(([id, config]) => ({ id, name: config.name, configured: Boolean(providerConfig(id).clientId && providerConfig(id).clientSecret) })) };
+      providers: Object.entries(providers).map(([id, config]) => ({ id, name: config.name,
+        configured: providerConfig(id, process.env, desktopClients).configured })) };
   }
   const server = http.createServer(async (request, response) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
@@ -51,7 +55,7 @@ export function createMailboxServer({ port = Number(process.env.PORT || 4317), s
       const url = new URL(request.url, origin);
       const id = request.headers.cookie?.split(';').map(item => item.trim()).find(item => item.startsWith(`${cookieName}=`))?.slice(cookieName.length + 1);
       let session = sessions.get(id);
-      if (session && Date.now() - session.touched > 8 * 3600000) { sessions.delete(id); session = null; }
+      if (session && Date.now() - session.touched > 8 * 3600000) { clearAccount(session); sessions.delete(id); session = null; }
       if (!session) {
         const sessionId = randomBytes(32).toString('hex');
         session = { csrf: randomBytes(32).toString('hex'), messages: new Map(), drafts: new Map(),
@@ -89,8 +93,10 @@ export function createMailboxServer({ port = Number(process.env.PORT || 4317), s
         const code = url.searchParams.get('code');
         if (!code) throw new Error('Missing authorization code.');
         const token = await exchangeAuthorizationCode(pending, code, redirectUri);
-        const account = { provider: pending.provider, ...token };
+        const account = { provider: pending.provider, config: pending.config, ...token };
+        if (!hasMailPermission(account, 'read')) throw new Error('Mailbox read permission is required. Connect again and allow read access.');
         account.address = await loadProfile(account);
+        if (typeof account.address !== 'string' || !account.address.trim()) throw new Error('The provider did not return a mailbox address.');
         if (session.authorizationAttempt !== pending.state) throw new Error('Authorization was cancelled or replaced. Please reconnect.');
         clearAccount(session); session.account = account;
         if (externalOAuth) {
@@ -102,7 +108,7 @@ export function createMailboxServer({ port = Number(process.env.PORT || 4317), s
         return redirect('/?connected=1');
       }
       if (path === '/api/connect' && request.method === 'POST') {
-        const pending = authorization(body.provider, redirectUri);
+        const pending = authorization(body.provider, redirectUri, process.env, desktopClients);
         if (session.pending) pendingAuthorizations.delete(session.pending.state);
         session.pending = pending;
         session.authorizationAttempt = pending.state;
@@ -119,12 +125,14 @@ export function createMailboxServer({ port = Number(process.env.PORT || 4317), s
         if (!session.account && !session.demo) return json({ error: 'Connect an account or open the demo first.' }, 401);
         if (path === '/api/agent-status' && request.method === 'GET') {
           const endpoint = process.env.AGENT_SERVICE_URL;
-          const status = session.demo && endpoint ? await checkAgentService(endpoint, process.env.AGENT_SERVICE_TOKEN) : 'disabled';
+          const status = agentDrafting(session) ? await checkAgentService(endpoint, process.env.AGENT_SERVICE_TOKEN, !session.demo) : 'disabled';
           return json({ status });
         }
         if (path === '/api/messages' && request.method === 'GET') {
           if (session.account) {
-            const result = await listMail(session.account, url.searchParams.get('cursor') || '');
+            const account = session.account;
+            const result = await listMail(account, url.searchParams.get('cursor') || '');
+            if (session.account !== account) return json({ error: 'The mailbox session changed during synchronization.' }, 409);
             for (const message of result.messages) {
               const previous = session.messages.get(message.id);
               session.messages.set(message.id, { ...message, labels: previous?.labels ?? [], classification: previous?.classification ?? null });
@@ -136,7 +144,9 @@ export function createMailboxServer({ port = Number(process.env.PORT || 4317), s
         if (path === '/api/thread' && request.method === 'GET') {
           const message = session.messages.get(url.searchParams.get('id'));
           if (!message) throw new Error('Message not found.');
-          const messages = session.demo ? [...session.messages.values()].filter(item => item.threadId === message.threadId) : await threadMail(session.account, message);
+          const account = session.account;
+          const messages = session.demo ? [...session.messages.values()].filter(item => item.threadId === message.threadId) : await threadMail(account, message);
+          if (session.account !== account) return json({ error: 'The mailbox session changed while opening the conversation.' }, 409);
           for (const item of messages) session.messages.set(item.id, { ...item, labels: session.messages.get(item.id)?.labels ?? message.labels ?? [], classification: session.messages.get(item.id)?.classification ?? null });
           return json({ messages: messages.sort((a, b) => a.date.localeCompare(b.date)) });
         }
@@ -160,14 +170,16 @@ export function createMailboxServer({ port = Number(process.env.PORT || 4317), s
           const message = session.messages.get(body.messageId);
           if (!message) throw new Error('Select a received message first.');
           if (message.direction === 'sent') throw new Error('Select a received message to generate a reply.');
-          const messages = session.demo ? [...session.messages.values()].filter(item => item.threadId === message.threadId) : await threadMail(session.account, message);
-          if (session.demo && process.env.AGENT_SERVICE_URL) {
-            const { proposals, generating } = session;
+          const { proposals, generating, demo, account } = session;
+          const useAgents = agentDrafting(session);
+          const messages = demo ? [...session.messages.values()].filter(item => item.threadId === message.threadId) : await threadMail(account, message);
+          if (session.proposals !== proposals) return json({ error: 'The mailbox session changed during generation.' }, 409);
+          if (useAgents) {
             if (generating.has(message.id)) return json({ error: 'A draft is already being generated for this message.' }, 409);
             generating.add(message.id);
             try {
               const result = await requestAgentReply(messages.sort((a, b) => a.date.localeCompare(b.date)), message.id,
-                process.env.AGENT_SERVICE_URL, process.env.AGENT_SERVICE_TOKEN);
+                process.env.AGENT_SERVICE_URL, process.env.AGENT_SERVICE_TOKEN, fetch, !demo);
               if (session.proposals !== proposals) return json({ error: 'The mailbox session changed during generation.' }, 409);
               if (result.classification) {
                 const classification = normalizeClassification(result.classification);
@@ -183,12 +195,16 @@ export function createMailboxServer({ port = Number(process.env.PORT || 4317), s
             }
           }
           const reply = await generateReply(messages.sort((a, b) => a.date.localeCompare(b.date)), process.env.LOCAL_MODEL_NAME || 'llama3.2', process.env.LOCAL_MODEL_URL || 'http://127.0.0.1:11434');
+          if (session.proposals !== proposals) return json({ error: 'The mailbox session changed during generation.' }, 409);
           return json({ body: reply, origin: 'model' });
         }
         if (path === '/api/drafts' && request.method === 'POST') return json({ draft: saveDraft(session, body) });
         if (path === '/api/drafts' && request.method === 'GET') return json({ drafts: [...session.drafts.values()] });
         if (path === '/api/approve' && request.method === 'POST') return json({ draft: approveDraft(session, body.id, body.version) });
         if (path === '/api/send' && request.method === 'POST') {
+          if (session.account && !hasMailPermission(session.account, 'send')) {
+            return json({ error: 'Sending permission is required. Reconnect and allow sending email.' }, 403);
+          }
           const draft = beginSend(session, body.id, body.version);
           try {
             const original = session.messages.get(draft.messageId);

@@ -17,7 +17,7 @@ export function agentServiceEndpoint(value, path = '/v1/reply') {
   return new URL(path, url);
 }
 
-export async function checkAgentService(endpoint, token) {
+export async function checkAgentService(endpoint, token, privateDrafting = false) {
   let target;
   try { target = agentServiceEndpoint(endpoint, '/v1/health'); }
   catch { return 'configuration'; }
@@ -30,6 +30,7 @@ export async function checkAgentService(endpoint, token) {
     if (response.status === 404) return 'incompatible';
     if (!response.ok) return 'unavailable';
     const result = await response.json();
+    if (privateDrafting && result?.privateDrafting !== true) return 'incompatible';
     return result?.schemaVersion === '1' && ['ready', 'busy'].includes(result.status) ? result.status : 'incompatible';
   } catch {
     return 'unavailable';
@@ -57,9 +58,9 @@ export async function requestReplyNeed(messages, messageId, endpoint, token, req
 }
 
 /** Asks the agents for a reply to one received message of the conversation. Email text stays data. */
-export async function requestAgentReply(messages, messageId, endpoint, token, request = fetch) {
+export async function requestAgentReply(messages, messageId, endpoint, token, request = fetch, privateDrafting = false) {
   if (typeof token !== 'string' || token.length < 32) throw new Error('Set AGENT_SERVICE_TOKEN (at least 32 characters) to use the agents.');
-  const target = agentServiceEndpoint(endpoint);
+  const target = agentServiceEndpoint(endpoint, privateDrafting ? '/v1/private-reply' : '/v1/reply');
   const conversation = messages.map(({ id, threadId, sender, recipient, subject, body, date, direction }) =>
     ({ id, threadId, sender, recipient, subject, body, date, direction }));
   const input = JSON.stringify({ messageId, messages: conversation });
