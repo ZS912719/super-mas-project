@@ -47,3 +47,9 @@ Documentation follow-up `2b8bba3dadc3097a651a9b315bbe7e60a1379cb8` was also push
 ## Desktop drafting and review feature branch: 2026-11-13
 
 [Mailbox-Draft-Review](Mailbox-Draft-Review.md) records the published feature branch, opt-in demo generation, mailbox draft review, and validation. The branch has not been merged into prototype.
+
+## Main integration: 2026-11-13
+
+The desktop mailbox branch was fast-forwarded into `main` from `d62e4fc` to `926c18972e49761d1a489773111015689e403e48`. The remote main ref was verified at that revision. This includes the prototype ancestry, Java runtime, blackboard and Grafana observation, and the desktop mailbox release preparation described in [Mailbox](Mailbox.md). The baseline table above is historical.
+
+Before the merge, all 16 mailbox tests passed and the frontend built. Maven reported 460 tests, one failure, one error and four skips. The reply benchmark asserts forward slashes in a rendered path, while Windows renders backslashes. The knowledge-loader symlink test could not create a symbolic link under the Windows account. Real OAuth, real mail sending and hosted CI remain unverified.
