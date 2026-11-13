@@ -4,6 +4,21 @@
 
 A blackboard-based multi-agent email reply assistant project with a local Java blackboard runtime and a separate desktop mailbox.
 
+## Project status
+
+### Implemented
+
+- **Desktop mailbox.** Electron provides a demo inbox, conversation history, labels and a versioned draft editor. Gmail and Outlook adapters implement OAuth, mail retrieval and submission. A user must approve the current saved draft and explicitly send it.
+- **Multi-agent drafting.** The Java prototype takes `.eml` files through metadata analysis, context retrieval, specialist contributions and reply composition. The mailbox can call the Java Agent Service over loopback. With live-mail drafting enabled, each request uses a fresh in-memory workspace and keeps approval in the mailbox.
+- **Blackboard and observation.** SQLite stores durable board revisions and supports task leases and recovery. Markdown projections can be viewed in Obsidian, and a separate read-only API feeds the Grafana dashboard.
+- **Windows packaging.** The portable build includes the desktop runtime. The release build can embed the project's public Google and Microsoft desktop OAuth client IDs. Packaging has been checked with fixture IDs.
+
+### Next milestones
+
+1. **Prepare a live-account test build.** Register the Google Desktop and Microsoft Entra clients, configure the release build with their public IDs, and build the Windows package. The demo and synthetic tests can be used while live-account testing is pending.
+2. **Validate the end-to-end mailbox flow.** With dedicated Gmail and Outlook test accounts, verify authorization, token refresh, message and thread retrieval, local model and agent drafting, versioned approval, sending and reconnecting. Live provider behavior and real-mail inference still need validation.
+3. **Prepare wider distribution.** Complete the applicable Gmail scope verification, validate organizational account consent where supported, and verify a signed Windows release. Desktop sessions currently hold tokens, drafts and labels in memory. Persistent sign-in and draft recovery are future work.
+
 ## Dependencies
 
 | Module | Requirements | Dependency configuration |
@@ -13,7 +28,7 @@ A blackboard-based multi-agent email reply assistant project with a local Java b
 | Blackboard observation | Obsidian for viewing generated Markdown; nuXmv for formal checks | [Runtime usage](docs/blackboard-runtime.md), [model-checking setup](formal/README.md) |
 | Desktop mailbox development | Node.js 22.12 or later and npm | [mailbox/package.json](mailbox/package.json) and [lockfile](mailbox/package-lock.json); Electron runs the window, esbuild bundles assets and electron-builder packages Windows builds |
 | Reply generation | A running local Ollama service and an installed model; during development optionally an OpenRouter key (online stand-in, synthetic mail only by default) | [mailbox/.env.example](mailbox/.env.example), [model setup](docs/plans/llm-setup.md) |
-| Live mail accounts | User-provided Gmail or Outlook OAuth credentials and an Internet connection | [Mailbox setup](mailbox/README.md#connect-a-real-mailbox) |
+| Live mail accounts | Internet access, a system browser, and registered OAuth clients. Release builds embed public client IDs | [Mailbox setup](mailbox/README.md#connect-a-real-mailbox) |
 | UML rendering | A JDK and a locally supplied PlantUML JAR | [Rendering instructions](docs/uml/README.md#render-locally) |
 
 The independent JavaFX demonstration also uses Gson 2.13.2 and JavaFX Controls 17.0.18. Its UI tests require a graphical desktop, or Xvfb on Linux. See [generation workspace integration](docs/person3.md).
@@ -88,7 +103,7 @@ The independent JavaFX demonstration also uses Gson 2.13.2 and JavaFX Controls 1
 | `review` | Versioned editing, rejection feedback and explicit approval contracts |
 | `prototype` | Marked stand-ins for parts not built yet (coordinator, routing, scheduling, generation, in-memory board) and the `PrototypeApp` entry point |
 
-The desktop entry in `mailbox/desktop/main.js` starts `mailbox/server.js` and opens the UI from `mailbox/web` in an isolated application window. Its `lib` modules handle provider calls, local generation, draft review, classification imports and demo data. This application operates independently of the Java interfaces.
+The desktop entry in `mailbox/desktop/main.js` starts `mailbox/server.js` and opens the UI from `mailbox/web` in an isolated application window. Its `lib` modules handle provider calls, local generation, draft review, classification imports and demo data. The optional Java integration uses the [loopback Agent Service API](docs/plans/agent-service-api.md).
 
 See [project progress](docs/project-progress.md), [implementation prompts](docs/implementation-prompts.md), [architecture details](docs/architecture.md), [current UML](docs/uml/README.md) and [mailbox documentation](mailbox/README.md) for module boundaries and API usage.
 
@@ -107,11 +122,11 @@ npm run build
 npm start
 ```
 
-`npm start` opens the desktop application. Select **Explore the demo** to browse sample mail without credentials. Demo sending is simulated; **Generate reply** still requires a running local model. `npm run package:win` produces a portable executable in `mailbox/dist` with its runtime included.
+`npm start` opens the desktop application. Select **Explore the demo** to browse sample mail without credentials. Demo sending is simulated. Generate replies with local Ollama or with the Java Agent Service configured to use its template provider. `npm run package:win` produces a portable executable in `mailbox/dist` with its runtime included.
 
 For browser-only debugging, use `npm run start:web` after building the assets. Do not run it alongside the desktop application on the same port.
 
-For real accounts or local generation, copy `mailbox/.env.example` to `mailbox/.env` and configure the required values before starting the server. See [OAuth setup](mailbox/README.md#connect-a-real-mailbox) and [local model configuration](mailbox/README.md#local-reply-generation). The mailbox uses **Save draft → Approve → Send** with version-specific approval.
+For a release with live sign-in, maintainers provide the public client IDs and run `npm run package:win:release`. Users connect through their system browser. For source development and optional local generation settings, use `mailbox/.env.example` as the configuration template. The mailbox uses **Save draft → Approve → Send** with version-specific approval. See [OAuth setup](mailbox/README.md#connect-a-real-mailbox), [local model configuration](mailbox/README.md#local-reply-generation) and [Agent Service distribution](docs/agent-service-distribution.md).
 
 Rebuild after editing browser source; restart the server after changing server code or environment configuration. Session data is held in memory and is lost on restart. This is a local application, not a public multi-user deployment.
 

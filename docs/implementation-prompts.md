@@ -49,3 +49,7 @@ Package the project-owned public Google Desktop and Microsoft Entra client IDs w
 ## Publish and merge the desktop mailbox branch
 
 Publish the verified mailbox commits and record their behavior and release limits in a separate team knowledge commit. Integrate the complete mailbox branch history into main using a normal fast-forward when main is its ancestor. Verify the remote feature, main and knowledge refs and preserve existing unrelated local changes.
+
+## Summarize project status and next milestones in the README
+
+Keep the root README's dependency, structure, deployment, and usage information. Add an English overview of the implemented desktop mailbox, Java drafting, blackboard and observation, and Windows packaging. Distinguish the demo and fixture evidence from live-account validation. List production OAuth setup, dedicated-account verification, and wider distribution as upcoming milestones. Align the existing OAuth and agent usage notes with the implementation and use relative documentation links.
