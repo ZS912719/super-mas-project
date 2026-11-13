@@ -37,3 +37,7 @@ Keep the Java bridge available in the demo workspace. Expose authenticated, mode
 ## Package the agent service independently of the source checkout
 
 Build a ZIP from the Java runtime JARs, versioned sample knowledge, launcher, license and usage instructions. Resolve bundled knowledge relative to the launcher, require an external writable data directory, and pass both paths explicitly to AgentService. Inject a shared token through the process environment and use the desktop configuration directory for any local environment file. Inspect the ZIP and start it from an unrelated directory with synthetic demo inputs.
+
+## Fit the desktop mailbox landing page to the window
+
+Use a responsive landing grid with height-aware spacing and headline sizing so the sign-in and demo actions fit within supported Electron window sizes. Hide the landing scrollbar while retaining overflow access for extreme zoom and small browser viewports. Keep the inbox scroll regions independent. Build the frontend and check rendered login controls across short, narrow, default and large viewports.

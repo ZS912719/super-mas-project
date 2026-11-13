@@ -7,4 +7,32 @@
 
 #confirm-text{white-space:pre-wrap}.confirm-actions{display:flex;justify-content:flex-end;gap:8px}.confirm-actions .primary{margin-top:0}
 
-html,body{height:100%;overflow:hidden}.landing{height:100dvh;overflow:auto}.shell{height:100dvh}
+html,body{height:100%;overflow:hidden}.shell{height:100dvh}
+
+.landing {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100dvh;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: none;
+}
+.landing-header { padding-block: clamp(12px, 4dvh, 36px); }
+.landing-main {
+  align-self: center;
+  margin-block: 0;
+  padding-block: clamp(8px, 2.5dvh, 24px);
+}
+.landing h1 {
+  font-size: clamp(34px, min(7vw, 9dvh), 76px);
+  margin-block: clamp(8px, 3dvh, 28px);
+}
+.landing-main > p { margin-block: 0 clamp(12px, 3.5dvh, 32px); }
+.landing .status-line { margin-top: clamp(10px, 3dvh, 28px); }
+.landing-footer { padding-block: clamp(8px, 2.8dvh, 25px); }
+
+@media (max-height: 520px) {
+  .landing-main > .eyebrow,
+  .landing-header > .muted,
+  .landing .status-line { display: none; }
+}
