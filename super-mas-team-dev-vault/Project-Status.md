@@ -43,3 +43,7 @@ The earlier table above is historical. Prototype now contains a runnable multi-a
 Prototype revision `f9151ac97f0f0654f5c215030a1627e11e55f115` adds a separate authenticated read-only observation API and provisioned Grafana dashboard through five focused commits based on 5504b71. It was pushed and the remote tip was verified at this exact revision on 2026-11-08. Synthetic Docker/browser validation passed; native Windows Grafana and real Windows-database/mailbox integration remain unverified. See [Grafana-Blackboard-Observation](Grafana-Blackboard-Observation.md). The earlier generation-workspace merge remains part of its ancestry.
 
 Documentation follow-up `2b8bba3dadc3097a651a9b315bbe7e60a1379cb8` was also pushed and remotely verified on 2026-11-08. It adds versioned English implementation prompts and moves README progress into `docs/project-progress.md`; runtime validation still applies to the unchanged feature code at f9151ac.
+
+## Desktop drafting and review feature branch: 2026-11-13
+
+[Mailbox-Draft-Review](Mailbox-Draft-Review.md) records the published feature branch, opt-in demo generation, mailbox draft review, and validation. The branch has not been merged into prototype.

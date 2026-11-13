@@ -56,3 +56,7 @@ See [Generation-UI-Integration](Generation-UI-Integration.md) for the exact merg
 [Grafana-Blackboard-Observation](Grafana-Blackboard-Observation.md) maps published prototype revision `f9151ac97f0f0654f5c215030a1627e11e55f115`. Entry points: ObservationSource, SqliteObservationSource, ObservationView and ObservationServer under src/main/java/org/supermas/observation/; versioned provisioning/dashboard under observability/grafana/; startup scripts, the Docker synthetic fixture server, the real Grafana query verifier and field dictionary listed in that note. These paths are present in that published revision and absent from the earlier 5504b71 baseline.
 
 Prototype documentation revision `2b8bba3dadc3097a651a9b315bbe7e60a1379cb8` adds `docs/implementation-prompts.md` for reproducible task requirements and `docs/project-progress.md` for progress outside README. These are code-branch documents, not files in this knowledge-only tree.
+
+## Desktop drafting and review
+
+[Mailbox-Draft-Review](Mailbox-Draft-Review.md) maps the Node adapter, session proposal handling, versioned drafts, editor and contract to the feature revision.

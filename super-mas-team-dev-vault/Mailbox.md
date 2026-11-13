@@ -38,3 +38,7 @@ Classification is an import adapter, not autonomous agent execution. Local gener
 Recorded tests simulate provider/model responses. Live OAuth and inference remain separate validation work. Public distribution requires review of native authorization/client-secret handling, signing and deployment. Durable storage, attachments, rich HTML and background synchronization remain deferred.
 
 Build and historical evidence: [Build-CI-and-Delivery](Build-CI-and-Delivery.md), [Validation-and-Limits](Validation-and-Limits.md).
+
+## Desktop drafting and review feature branch
+
+See [Mailbox-Draft-Review](Mailbox-Draft-Review.md) for the opt-in Java drafting flow and mailbox versioned review on the 2026-11-13 feature branch.
