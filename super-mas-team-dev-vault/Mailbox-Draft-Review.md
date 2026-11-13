@@ -13,7 +13,7 @@ The feature branch `codex/mailbox-draft-review` at `7e96d933e52db3217a41388dcffb
 
 In the demo workspace, the Node mailbox calls the loopback Java AgentService when configured. It checks the reply schema, review status, board ID and Java draft version. The mailbox associates the proposal with the session and selected message. Saved drafts and edits retain the proposal and its original warnings. Approval applies to one saved mailbox draft version. Saving edits clears the previous approval. The editor ignores generation results after a message change or an edit. The reply-need check sends only the selected demo message.
 
-Use the template provider and a dedicated demo data directory as shown in the code-branch `mailbox/README.md`. Gmail and Outlook continue to use the direct local model adapter. Approvals stay within the mailbox session. Provider submission, sent-history synchronization and restart recovery are outside this integration.
+Use the template provider and a dedicated demo data directory as shown in the code-branch `mailbox/README.md`. At this revision Gmail and Outlook used the direct local model adapter. See [Mailbox](Mailbox.md) for the later opt-in live-mail agent endpoint. Approvals stay within the mailbox session. Provider submission, sent-history synchronization and restart recovery are outside this integration.
 
 Source paths on the feature branch: `mailbox/server.js`, `mailbox/lib/agents.js`, `mailbox/lib/drafts.js`, `mailbox/web/app.js`, `mailbox/test/agents.test.js`, and `docs/plans/agent-service-api.md`.
 
