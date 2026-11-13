@@ -18,3 +18,7 @@ Use the template provider and a dedicated demo data directory as shown in the co
 Source paths on the feature branch: `mailbox/server.js`, `mailbox/lib/agents.js`, `mailbox/lib/drafts.js`, `mailbox/web/app.js`, `mailbox/test/agents.test.js`, and `docs/plans/agent-service-api.md`.
 
 On 2026-11-13, all 15 mailbox tests passed, the frontend built, and 30 selected Java tests passed (AgentServiceTest, BlackboardCollaborationTest and ReplyRepairsTest). A loopback smoke test using real Node and Java processes, synthetic demo mail, and the Java template provider verified generation, saved provenance, editing, rejection of the stale approval, and approval of the current version. No interactive Electron, live mailbox, model inference or sending was exercised in that smoke test.
+
+## Implementation approach on the feature branch
+
+Commit `0cfce67244bc1dff31fe3f62d37783ac1de3f7fe` on `codex/mailbox-draft-review` adapts the [Ponytail decision ladder](https://github.com/DietrichGebert/ponytail) in the code branch's root `AGENTS.md`. It asks contributors to trace the affected flow and prefer existing repository code, standard libraries, platform facilities, and installed dependencies. The guidance preserves validation, error handling, readability, accessibility, and relevant regression coverage. The implementation prompt is in `docs/implementation-prompts.md`. The documentation diff passed `git diff --check`; application tests were not rerun.
