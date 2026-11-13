@@ -2,7 +2,7 @@
 
 > STOP AI SLOP!!! Every line written shall be verified manually!!!
 
-A blackboard-based multi-agent email reply assistant project with a local Java blackboard runtime and a separate desktop mailbox.
+A local-first desktop email assistant that uses blackboard-based multi-agent drafting and requires human approval before sending.
 
 ## Introduction
 
