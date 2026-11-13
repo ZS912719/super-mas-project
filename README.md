@@ -1,5 +1,11 @@
 # SuperMASProject
 
+> STOP AI SLOP!!! Every line written shall be verified manually!!!
+
+A blackboard-based multi-agent email reply assistant project with a local Java blackboard runtime and a separate desktop mailbox.
+
+## Introduction
+
 We built Super MAS, a Java multi-agent framework that uses a locally running language model to draft email replies for human review. The framework analyzes an incoming email, asks the relevant specialists to find information, and combines their contributions into a single draft. We built it to meet the requirements of Université Côte d’Azur’s SMEIA305 – ECUE Multiagent systems course project, Multi-Agent Systems Project: Design of a multi-agent system for automatic email responses using local LLMs.
 
 As email can contain private exchanges or unpublished material, we use local inference to limit the need to transfer that material to a model provider. This raises the question that guides the project: can a small local model write a more useful reply when specialized agents gather the relevant facts and instructions for it?
@@ -7,10 +13,6 @@ As email can contain private exchanges or unpublished material, we use local inf
 Consider a student who asks a lecturer for both an assignment extension and a signature on a registration form. The first request calls for the course’s extension policy, while the second may require an administrative procedure. If the system chooses a role from the sender’s address alone, it can easily overlook the second request.
 
 Super MAS uses a shared blackboard so that the student and administration specialists can each record their findings. The coordinator decides which work to do next, and the composer uses those findings to prepare a draft. The worked example in chapter 4 follows the mixed request from receipt to review. The experiments then examine whether the system involves the right specialists and whether the draft answers the email.
-
-> STOP AI SLOP!!! Every line written shall be verified manually!!!
-
-A blackboard-based multi-agent email reply assistant project with a local Java blackboard runtime and a separate desktop mailbox.
 
 ## Project status
 
