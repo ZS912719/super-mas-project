@@ -58,3 +58,9 @@ PR packaging uses `--publish never`. Manual delivery uploads artifacts without r
 ## Grafana observation deployment
 
 See [Grafana-Blackboard-Observation](Grafana-Blackboard-Observation.md) for published prototype revision `f9151ac97f0f0654f5c215030a1627e11e55f115`. The code branch adds start-observation.ps1 and start-observation-grafana.ps1 under scripts/, with provisioning under observability/grafana/. Grafana 13.1.2 and Infinity 4.1.6 are pinned. Native launchers use same-host loopback and require an existing distribution/plugin. The 2026-11-08 Docker synthetic stack was actually started with digest-pinned images and only host-loopback Grafana publication; API loopback is shared inside the container namespace. Start it with scripts/start-observation-docker.ps1 and verify real queries with scripts/verify-observation-grafana.py --fault-tests. No native Windows startup or hosted CI result is claimed.
+
+## Standalone Agent Service distribution
+
+Commit `1d4a891c2634984ead4a77f1a2d352592fec7a6c` on `codex/mailbox-draft-review` adds `scripts/package-agent-service.ps1`, `scripts/start-agent-service.ps1` and `docs/agent-service-distribution.md`. The ZIP contains runtime JARs, versioned sample knowledge, the launcher, license and instructions. The launcher passes explicit knowledge and external data directories. The service and desktop use the same injected token. The desktop can load its local environment file from its existing packaged configuration folder.
+
+A Windows PowerShell check on 2026-11-13 inspected the archive for its seven knowledge files and absence of environment files, databases and mail files. From a temporary working directory outside the checkout, the extracted launcher started Java, required the token, generated a synthetic template draft and wrote SQLite into the external data directory. This check used the HTTP API. It did not rebuild or exercise the Electron executable. The remote feature branch was verified at this revision.
