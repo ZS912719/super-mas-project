@@ -62,7 +62,7 @@ The development URL is `http://127.0.0.1:4317`. Do not run the browser server an
 npm run package:win
 ```
 
-Output: `dist/SuperMAS-Mail-0.1.0-win-x64.exe`. Launch this portable executable directly; a separate browser or Node.js installation is not required. The executable is unsigned unless a signing identity is configured for electron-builder.
+Output: `dist/SuperMAS-Mail-1.0.0-win-x64.exe`. Launch this portable executable directly; a separate browser or Node.js installation is not required. The executable is unsigned unless a signing identity is configured for electron-builder.
 
 For source runs, copy [.env.example](.env.example) to `.env` in this directory. For packaged runs, press **Alt**, select **Application → Open configuration folder**, and put `.env` in the opened directory using the same template. Restart after editing configuration. Existing environment variables take precedence. Configuration and credentials are excluded from the package.
 

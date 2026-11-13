@@ -2,7 +2,7 @@ name: Delivery
 
 on:
   push:
-    tags: ['mailbox-v*', 'blackboard-v*']
+    tags: ['v*', 'mailbox-v*', 'blackboard-v*']
   workflow_dispatch:
     inputs:
       component:
@@ -42,19 +42,21 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           if ($env:EVENT_NAME -eq 'push') {
-              if ($env:TAG_NAME -notmatch '^(mailbox|blackboard)-v(\d+\.\d+\.\d+)$') {
-                  throw 'Use a mailbox-vX.Y.Z or blackboard-vX.Y.Z release tag.'
+              if ($env:TAG_NAME -notmatch '^(?:(mailbox|blackboard)-)?v(\d+\.\d+\.\d+)$') {
+                  throw 'Use a vX.Y.Z, mailbox-vX.Y.Z or blackboard-vX.Y.Z release tag.'
               }
-              $component = $Matches[1]
+              $component = if ($Matches[1]) { $Matches[1] } else { 'project' }
               $version = $Matches[2]
               git merge-base --is-ancestor HEAD "origin/$env:DEFAULT_BRANCH"
               if ($LASTEXITCODE -ne 0) { throw 'Release commit must belong to the default branch.' }
-              if ($component -eq 'mailbox') {
+              if ($component -in @('mailbox', 'project')) {
                   if (-not (Test-Path mailbox/package.json)) { throw 'Mailbox is not available on this branch.' }
                   $codeVersion = (Get-Content -Raw mailbox/package.json | ConvertFrom-Json).version
                   $lockVersion = (Get-Content -Raw mailbox/package-lock.json | ConvertFrom-Json).version
                   if ($lockVersion -ne $version) { throw 'Tag and npm lockfile version differ.' }
-              } else {
+                  if ($codeVersion -ne $version) { throw 'Tag and mailbox version differ.' }
+              }
+              if ($component -in @('blackboard', 'project')) {
                   [xml]$pom = Get-Content -Raw pom.xml
                   $codeVersion = $pom.project.version
               }
@@ -63,7 +65,7 @@ jobs:
               $component = $env:REQUESTED_COMPONENT
               if ($component -notin @('mailbox', 'blackboard')) { throw 'Unknown component.' }
           }
-          if ($component -eq 'mailbox') {
+          if ($component -in @('mailbox', 'project')) {
               if (-not (Test-Path mailbox/package.json)) { throw 'Mailbox is not available on this branch.' }
               $package = Get-Content -Raw mailbox/package.json | ConvertFrom-Json
               if (-not $package.scripts.'package:win') { throw 'Desktop mailbox packaging is not available on this branch.' }
@@ -89,23 +91,27 @@ jobs:
         with:
           persist-credentials: false
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
-        if: needs.validate.outputs.component == 'blackboard'
+        if: needs.validate.outputs.component != 'mailbox'
         with:
           distribution: temurin
           java-version: '17'
           cache: maven
       - name: Package blackboard with runtime dependencies
-        if: needs.validate.outputs.component == 'blackboard'
+        if: needs.validate.outputs.component != 'mailbox'
         shell: pwsh
         run: ./scripts/package-blackboard.ps1
+      - name: Package standalone Agent Service
+        if: needs.validate.outputs.component == 'project'
+        shell: pwsh
+        run: ./scripts/package-agent-service.ps1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        if: needs.validate.outputs.component == 'mailbox'
+        if: needs.validate.outputs.component != 'blackboard'
         with:
           node-version: '22'
           cache: npm
           cache-dependency-path: mailbox/package-lock.json
-      - name: Package mailbox with registered desktop clients
-        if: needs.validate.outputs.component == 'mailbox'
+      - name: Package Windows desktop mailbox
+        if: needs.validate.outputs.component != 'blackboard'
         working-directory: mailbox
         shell: pwsh
         env:
@@ -114,15 +120,22 @@ jobs:
         run: |
           npm ci
           if ($LASTEXITCODE -ne 0) { throw 'Mailbox dependency installation failed.' }
-          npm run package:win:release -- --publish never
+          if ('${{ needs.validate.outputs.component }}' -eq 'project') {
+              npm run package:win -- --publish never
+          } else {
+              npm run package:win:release -- --publish never
+          }
           if ($LASTEXITCODE -ne 0) { throw 'Mailbox release packaging failed.' }
           New-Item -ItemType Directory -Force ../target/release | Out-Null
           Copy-Item dist/*.exe ../target/release/
       - name: Generate SHA-256 checksums
         shell: pwsh
+        env:
+          COMPONENT: ${{ needs.validate.outputs.component }}
         run: |
           $files = @(Get-ChildItem target/release -File | Where-Object { $_.Extension -in '.exe', '.zip' })
-          if ($files.Count -ne 1) { throw 'Expected exactly one delivery package.' }
+          $expected = if ($env:COMPONENT -eq 'project') { 3 } else { 1 }
+          if ($files.Count -ne $expected) { throw "Expected $expected delivery packages." }
           $files | ForEach-Object {
               $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
               "$hash  $($_.Name)"
@@ -136,8 +149,8 @@ jobs:
 
   draft-release:
     name: Create draft release
-    if: github.event_name == 'push'
-    needs: package
+    if: github.event_name == 'push' && needs.validate.outputs.component != 'project'
+    needs: [validate, package]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -154,3 +167,38 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           gh release create "$RELEASE_TAG" release/* --verify-tag --draft --generate-notes --title "$RELEASE_TAG"
+
+  publish-project:
+    name: Publish project release and Maven package
+    if: needs.validate.outputs.component == 'project'
+    needs: [validate, package]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: delivery-bundle
+          path: release
+      - name: Deploy Maven library
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: mvn -B -ntp -DskipTests deploy
+      - name: Publish release with verified assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          (cd release && sha256sum --check SHA256SUMS.txt)
+          gh release create "$RELEASE_TAG" release/* --verify-tag --title "SuperMAS $RELEASE_TAG" --notes-file docs/release-notes.md

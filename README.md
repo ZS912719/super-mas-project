@@ -169,7 +169,7 @@ Run from the repository root with JDK 17 selected in the environment:
 mvn package
 ```
 
-The output is `target/supermas-1.0.0-SNAPSHOT.jar`, a library with demo/observer entry classes invoked by the script above and the `PrototypeApp` entry class, without an executable JAR manifest. Maven may download dependencies and build plugins on first use.
+The output is `target/supermas-1.0.0.jar`, a library with demo/observer entry classes invoked by the script above and the `PrototypeApp` entry class, without an executable JAR manifest. Maven may download dependencies and build plugins on first use.
 
 ### Validation commands
 

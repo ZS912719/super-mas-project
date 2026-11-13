@@ -53,3 +53,7 @@ Publish the verified mailbox commits and record their behavior and release limit
 ## Summarize project status and next milestones in the README
 
 Keep the root README's dependency, structure, deployment, and usage information. Add an English overview of the implemented desktop mailbox, Java drafting, blackboard and observation, and Windows packaging. Distinguish the demo and fixture evidence from live-account validation. List production OAuth setup, dedicated-account verification, and wider distribution as upcoming milestones. Align the existing OAuth and agent usage notes with the implementation and use relative documentation links.
+
+## Publish the first project release
+
+Set the Maven and mailbox versions to 1.0.0. Use the project tag v1.0.0 to run CI, package the Windows demo and Java distributions, verify checksums, publish a GitHub Release, and deploy the Maven library to GitHub Packages. Clearly describe the desktop demo and pending live OAuth validation. Preserve component tag and manual workflows. Fix the observed Windows-only test assumptions before running release validation.

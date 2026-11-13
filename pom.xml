@@ -3,7 +3,13 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.supermas</groupId>
   <artifactId>supermas</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
+  <version>1.0.0</version>
+  <distributionManagement>
+    <repository>
+      <id>github</id>
+      <url>https://maven.pkg.github.com/zs912719/super-mas-project</url>
+    </repository>
+  </distributionManagement>
   <properties>
     <maven.compiler.release>17</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

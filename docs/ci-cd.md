@@ -40,10 +40,11 @@ For local blackboard packaging after the runtime implementation is merged:
 
 The ZIP in `target/release/` includes the application JAR, runtime dependencies, a launcher, usage instructions and the project license. Extract it and follow its README. JDK 17 and PowerShell 7 are required on the destination machine. The JAR uploaded by ordinary CI is a library artifact and does not include runtime dependencies.
 
-## Create a draft release
+## Publish a project release or prepare a component draft
 
 Release tags use exact stable versions:
 
+- `vX.Y.Z` must match `pom.xml`, `mailbox/package.json` and `mailbox/package-lock.json`. After CI passes, the workflow publishes the Maven library to GitHub Packages and publishes the portable Windows demo and both Java distributions in a GitHub Release. Update [release notes](release-notes.md) for the tagged version.
 - `mailbox-vX.Y.Z` must match `mailbox/package.json` and `mailbox/package-lock.json`.
 - `blackboard-vX.Y.Z` must match `pom.xml`; a `-SNAPSHOT` version must first be changed to a release version.
 
