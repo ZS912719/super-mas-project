@@ -57,3 +57,7 @@ Keep the root README's dependency, structure, deployment, and usage information.
 ## Publish the first project release
 
 Set the Maven and mailbox versions to 1.0.0. Use the project tag v1.0.0 to run CI, package the Windows demo and Java distributions, verify checksums, publish a GitHub Release, and deploy the Maven library to GitHub Packages. Clearly describe the desktop demo and pending live OAuth validation. Preserve component tag and manual workflows. Fix the observed Windows-only test assumptions before running release validation.
+
+## Add the course project introduction to the README
+
+Insert the supplied English introduction directly below the root README title. Preserve its wording, paragraph breaks and chapter reference. Treat the pasted backslashes as line continuations. Commit and push the documentation update to main.
