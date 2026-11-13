@@ -12,7 +12,7 @@ As email can contain private exchanges or unpublished material, we use local inf
 
 Consider a student who asks a lecturer for both an assignment extension and a signature on a registration form. The first request calls for the course’s extension policy, while the second may require an administrative procedure. If the system chooses a role from the sender’s address alone, it can easily overlook the second request.
 
-Super MAS uses a shared blackboard so that the student and administration specialists can each record their findings. The coordinator decides which work to do next, and the composer uses those findings to prepare a draft. The worked example in chapter 4 follows the mixed request from receipt to review. The experiments then examine whether the system involves the right specialists and whether the draft answers the email.
+Super MAS uses a shared blackboard so that the student and administration specialists can each record their findings. The coordinator decides which work to do next, and the composer uses those findings to prepare a draft. The experiments then examine whether the system involves the right specialists and whether the draft answers the email.
 
 ## Project status
 
