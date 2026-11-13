@@ -22,3 +22,9 @@ On 2026-11-13, all 15 mailbox tests passed, the frontend built, and 30 selected 
 ## Implementation approach on the feature branch
 
 Commit `0cfce67244bc1dff31fe3f62d37783ac1de3f7fe` on `codex/mailbox-draft-review` adapts the [Ponytail decision ladder](https://github.com/DietrichGebert/ponytail) in the code branch's root `AGENTS.md`. It asks contributors to trace the affected flow and prefer existing repository code, standard libraries, platform facilities, and installed dependencies. The guidance preserves validation, error handling, readability, accessibility, and relevant regression coverage. The implementation prompt is in `docs/implementation-prompts.md`. The documentation diff passed `git diff --check`; application tests were not rerun.
+
+## Service readiness before rollout
+
+On 2026-11-13, commit `df0ef5bbb36827fefc62da7ff779069fc03be19d` on `codex/mailbox-draft-review` added authenticated Java readiness, a mailbox settings status check, and explicit service request limits. The Java service admits one generation at a time. Its second HTTP worker can answer health and reply-need requests during generation. Readiness reports the draft slot and does not verify model inference. See `src/main/java/org/supermas/prototype/AgentService.java`, `mailbox/lib/agents.js`, `mailbox/server.js`, `mailbox/web/app.js`, and `docs/plans/agent-service-api.md`.
+
+All 15 mailbox tests and 31 selected Java tests passed, and the mailbox frontend built. A synthetic smoke test with actual Node and Java processes verified unavailable-to-ready recovery and draft generation, save and approval through the template provider. Interactive Electron, live accounts, and local model inference were not exercised. The Java bridge remains scoped to demo mail. The remote feature branch was verified at this revision.
