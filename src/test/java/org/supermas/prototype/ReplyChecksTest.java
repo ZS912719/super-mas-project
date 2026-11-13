@@ -135,7 +135,7 @@ class ReplyChecksTest {
                 "--dev-repeats", "0", "--multi-repeats", "1", "--knowledge", "benchmark/knowledge-variants/none"}, Map.of()));
         assertTrue(Files.readString(router.resolve("results.md")).contains("Router architecture"));
         String bareResults = Files.readString(bare.resolve("results.md"));
-        assertTrue(bareResults.contains("knowledge `benchmark/knowledge-variants/none`"), bareResults);
+        assertTrue(bareResults.contains("knowledge `" + Path.of("benchmark/knowledge-variants/none") + "`"), bareResults);
         assertEquals(12, Files.readAllLines(bare.resolve("scores.jsonl")).size());
     }
 

@@ -3,6 +3,7 @@ package org.supermas.memory;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -87,7 +88,12 @@ class KnowledgeLoaderTest {
     void aLinkLeavingTheFolderIsNotFollowed(@TempDir Path outside) throws IOException {
         twoSources();
         Files.writeString(outside.resolve("secret.md"), "extension secret");
-        Files.createSymbolicLink(folder.resolve("student-faq/link.md"), outside.resolve("secret.md"));
+        try {
+            Files.createSymbolicLink(folder.resolve("student-faq/link.md"), outside.resolve("secret.md"));
+        } catch (java.nio.file.FileSystemException e) {
+            assumeTrue(!System.getProperty("os.name").startsWith("Windows"), "Symbolic link creation is unavailable: " + e.getReason());
+            throw e;
+        }
 
         KnowledgeLoader.Report report = new KnowledgeLoader(indexes).load(folder);
 
