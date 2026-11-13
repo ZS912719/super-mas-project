@@ -25,3 +25,7 @@ Keep this English prompt record versioned with code and update it after each imp
 ## 2026-11-13: Connect desktop drafting and human review
 
 Create a feature branch from the checked-out prototype. Reuse the loopback Java agent service for demo drafting. Validate the version, review status and provenance of generated drafts. Bind each proposal and its warnings to the originating message and preserve that source when the mailbox saves a version. Ignore late responses when the editor has changed. Keep approval scoped to the current saved version and keep provider submission and sent history outside this integration. Use a dedicated demo data directory and keep connected mailboxes on the direct local model adapter. Verify the Node and Java contracts and exercise generation, editing and approval across the local services with synthetic mail.
+
+## Adopt the Ponytail implementation approach on the mailbox review branch
+
+Adapt Ponytail's repository guidance in the root AGENTS.md. Trace affected behavior before editing, prefer existing code and platform facilities, and keep changes focused while preserving validation, readability, and relevant checks. Keep the shared knowledge entry point and completion gate in place.

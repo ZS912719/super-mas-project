@@ -5,6 +5,12 @@ Follow the [Conventional Commits specification](https://www.conventionalcommits.
 Unless explicitly instructed otherwise, limit README content to code dependencies, code structure, deployment instructions, usage and invocation instructions.
 Never include machine-specific local paths in README files. Use relative paths for file and directory references.
 
+## Implementation approach
+
+Apply the [Ponytail decision ladder](https://github.com/DietrichGebert/ponytail) when choosing an implementation. Trace the affected flow and inspect its callers first. Check whether the requested behavior already exists, then prefer reuse of repository code, standard libraries, native platform features, and existing dependencies, in that order. Add focused code for the remaining gap and fix defects at their shared cause when the callers require the same behavior.
+
+Preserve readability, supported edge cases, validation at trust boundaries, error handling, security, and accessibility. Use the existing test tools for meaningful regression coverage and run the checks appropriate to the change. Document deliberate trade-offs when their limits affect maintainers.
+
 ## Shared development context entry point
 
 At the start of every project task, load the shared agent guidance and team notes from the separate `team-knowledge-vault` branch using Git object reads. Do not require a checked-out vault, personal notes, an installed skill or a Git hook.
