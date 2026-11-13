@@ -52,8 +52,10 @@ jobs:
               if ($component -in @('mailbox', 'project')) {
                   if (-not (Test-Path mailbox/package.json)) { throw 'Mailbox is not available on this branch.' }
                   $codeVersion = (Get-Content -Raw mailbox/package.json | ConvertFrom-Json).version
-                  $lockVersion = (Get-Content -Raw mailbox/package-lock.json | ConvertFrom-Json).version
-                  if ($lockVersion -ne $version) { throw 'Tag and npm lockfile version differ.' }
+                  $lockfile = Get-Content -Raw mailbox/package-lock.json | ConvertFrom-Json -AsHashtable
+                  if ($lockfile.version -ne $version -or $lockfile.packages[''].version -ne $version) {
+                      throw 'Tag and npm lockfile version differ.'
+                  }
                   if ($codeVersion -ne $version) { throw 'Tag and mailbox version differ.' }
               }
               if ($component -in @('blackboard', 'project')) {
