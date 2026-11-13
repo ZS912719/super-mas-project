@@ -45,3 +45,7 @@ Use a responsive landing grid with height-aware spacing and headline sizing so t
 ## Prepare a Windows mailbox release with built-in provider sign-in
 
 Package the project-owned public Google Desktop and Microsoft Entra client IDs with the Electron app so end users can connect through their system browser. Reuse the loopback callback, one-time state, and PKCE. Preserve Web client configuration for development, handle partial consent and token refresh, and use the Graph Mail.Send reply operation after version-specific approval. Keep a demo build available. Offer an opt-in live-mail agent endpoint with isolated request-scoped storage and local inference. Verify the build with fixture IDs and simulated provider requests. Once real registrations are configured, have testers sign in through the provider pages with dedicated Gmail and Outlook accounts and validate reading, draft review, sending, and reconnecting.
+
+## Publish and merge the desktop mailbox branch
+
+Publish the verified mailbox commits and record their behavior and release limits in a separate team knowledge commit. Integrate the complete mailbox branch history into main using a normal fast-forward when main is its ancestor. Verify the remote feature, main and knowledge refs and preserve existing unrelated local changes.
